@@ -1,0 +1,49 @@
+# Source files
+src/
+scripts/
+*.test.ts
+*.spec.ts
+
+# Development files
+tsconfig.json
+tsup.config.ts
+.eslintrc.json
+.prettierrc.json
+
+# Version control
+.git
+.gitignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation
+docs/
+examples/
+.github/

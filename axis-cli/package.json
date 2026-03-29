@@ -1,0 +1,31 @@
+{
+  "name": "@nextera.one/axis-cli",
+  "version": "1.1.0",
+  "description": "AXIS Protocol CLI",
+  "author": "NextEra.One",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digital-pages-co/axis.git",
+    "directory": "axis-cli"
+  },
+  "homepage": "https://axisprotocol.io",
+  "bin": {
+    "axis": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "chalk": "^5.6.2",
+    "@nextera.one/axis-client-sdk": "file:../axis-client-sdk",
+    "commander": "^14.0.2",
+    "ora": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "typescript": "^5.9.3"
+  }
+}

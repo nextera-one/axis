@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+/**/node_modules
+/**/dist
+
+# Environment files (may contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Identity / key material
+node-identity.json
+
+# Test artifacts
+bigfile.bin
+small.bin
+*.bin
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# TypeScript cache
+*.tsbuildinfo

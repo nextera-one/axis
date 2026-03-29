@@ -1,0 +1,17 @@
+# Ignore test artifacts
+bigfile.bin
+small.bin
+node-identity.json
+
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
