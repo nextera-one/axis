@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-cli",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "AXIS Protocol CLI",
   "author": "NextEra.One",
   "license": "Apache-2.0",
@@ -13,14 +13,19 @@
   "bin": {
     "axis": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js"
   },
   "dependencies": {
     "axios": "^1.13.2",
     "chalk": "^5.6.2",
-    "@nextera.one/axis-client-sdk": "file:../axis-client-sdk",
+    "@nextera.one/axis-client-sdk": "^1.4.1",
     "commander": "^14.0.2",
     "ora": "^9.0.0"
   },

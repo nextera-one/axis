@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-client-sdk",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Official TypeScript/JavaScript client SDK for the AXIS Protocol v1",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -66,7 +66,6 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
-    "@axis/core": "file:../packages/axis-core",
     "@noble/ed25519": "^3.0.0",
     "@noble/hashes": "^2.0.1",
     "axios": "^1.13.2",
