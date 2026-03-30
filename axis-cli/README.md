@@ -38,6 +38,24 @@ axis issue-node-cert --out ./certs
 
 # Stream sensor data
 axis stream sensors.temp
+
+# NestFlow device management
+axis device list --endpoint http://localhost:7777 --actor 00000000000000000000000000000001
+axis device promote dev_web_abc123 --label "My Laptop"
+axis device rename dev_web_abc123 "Work Chrome"
+axis device revoke dev_web_abc123 --reason "lost device"
+
+# NestFlow session management
+axis session refresh --reason "keepalive"
+axis session logout --reason "manual"
+
+# NestFlow backend QR flow
+axis qr challenge --origin https://app.example.com
+axis qr browser-proof chlg_123 nonce_123 --key <browser_seed_hex>
+axis qr attach-key chlg_123 --browser-public-key <spki_b64url> --proof-signature <sig_b64url> --trust-device
+axis qr approve chlg_123 -a actor_123 -k <mobile_seed_hex> --mobile-device-uid dev_mobile_01 --browser-public-key <spki_b64url> --nonce nonce_123 --tickauth-challenge-uid tick_123 --expires-at 1760000000000 --scope axis.auth.*,axis.files.*
+axis qr verify chlg_123 --browser-public-key <spki_b64url>
+axis qr reject chlg_123 -a actor_123
 ```
 
 ## Configuration

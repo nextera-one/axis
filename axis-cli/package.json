@@ -25,7 +25,7 @@
   "dependencies": {
     "axios": "^1.13.2",
     "chalk": "^5.6.2",
-    "@nextera.one/axis-client-sdk": "^1.4.1",
+    "@nextera.one/axis-client-sdk": "file:../axis-client-sdk",
     "commander": "^14.0.2",
     "ora": "^9.0.0"
   },

@@ -3,7 +3,7 @@
  */
 
 // Core client
-export { AxisClient, verifyAxisFrameSignature } from './client/axis-client';
+export { AxisClient, verifyAxisFrameSignature } from "./client/axis-client";
 export type {
   AxisClientConfig,
   ProgressCallback,
@@ -11,31 +11,43 @@ export type {
   UploadResult,
   IntentResult,
   AxisFrame,
-} from './client/axis-client';
-export type { AxisFrame as AxisIntentFrame } from './client/axis-client';
-export { TypedAxisClient } from './client/typed-intents';
+} from "./client/axis-client";
+export type { AxisFrame as AxisIntentFrame } from "./client/axis-client";
+export { TypedAxisClient } from "./client/typed-intents";
 
 // Binary-transport client (low-level)
-export { AxisBinaryClient } from './client/index';
-export type { AxisBinaryClientOptions } from './client/index';
+export { AxisBinaryClient } from "./client/index";
+export type { AxisBinaryClientOptions } from "./client/index";
 
 // Binary utilities
-export * from './binary';
+export * from "./binary";
 
 // Signer
-export { Ed25519Signer } from './signer';
-export type { Signer } from './signer';
+export {
+  Ed25519Signer,
+  P256Signer,
+  ed25519PublicKeyToSpki,
+  exportSignerPublicKeySpki,
+  exportSignerPublicKeySpkiBase64Url,
+  generateP256KeyPair,
+} from "./signer";
+export type {
+  P256KeyPair,
+  P256PrivateKeyInput,
+  P256SignerOptions,
+  Signer,
+} from "./signer";
 
 // Encoding utilities
 export {
   canonicalJson,
   toBase64Url as b64urlEncode,
   fromBase64Url as b64urlDecode,
-} from './utils/encoding';
+} from "./utils/encoding";
 
 // Re-export from core
-export { decodeFrame, encodeFrame } from './core/axis-bin';
-export type { AxisBinaryFrame } from './core/axis-bin';
+export { decodeFrame, encodeFrame } from "./core/axis-bin";
+export type { AxisBinaryFrame } from "./core/axis-bin";
 export {
   createCapsule,
   signCapsule,
@@ -46,12 +58,12 @@ export {
   isCapsuleExpired,
   hashCapsule,
   generateCapsuleKeyPair,
-} from './core/capsule';
+} from "./core/capsule";
 export type {
   Capsule,
   SerializedCapsule,
   CapsuleCreateOptions,
-} from './core/capsule';
+} from "./core/capsule";
 
 // AXIS TLV (varint-based, backend compatible)
 // REST bridge and utilities for converting REST requests to AXIS frames
@@ -85,7 +97,7 @@ export {
   readU16,
   readU32,
   readU64,
-} from './tlv';
+} from "./tlv";
 export type {
   AxisTag,
   ProofTypeValue,
@@ -93,7 +105,7 @@ export type {
   AxisBuildOptions,
   RestResponseLike,
   AxisProxyClientOptions,
-} from './tlv';
+} from "./tlv";
 
 // NestFlow - Passwordless QR login, device trust, TickAuth, sessions
-export * from './nestflow';
+export * from "./nestflow";

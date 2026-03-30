@@ -1,14 +1,14 @@
-import { AXIS_MAGIC, encodeFrame, TLV_ACTOR_ID, TLV_INTENT, TLV_KID, TLV_NONCE, TLV_PID, TLV_PROOF_REF, TLV_PROOF_TYPE, TLV_TRACE_ID, TLV_TS } from '@nextera.one/axis-client-sdk/core';
-import { randomBytes } from 'crypto';
+import { AXIS_MAGIC, encodeFrame, TLV_ACTOR_ID, TLV_INTENT, TLV_KID, TLV_NONCE, TLV_PID, TLV_PROOF_REF, TLV_PROOF_TYPE, TLV_TRACE_ID, TLV_TS } from "@nextera.one/axis-client-sdk/core";
+import { randomBytes } from "crypto";
 
-import { CircuitBreaker } from './middleware/circuit-breaker';
+import { CircuitBreaker } from "./middleware/circuit-breaker";
 /**
  * AXIS Protocol Translator
  *
  * Translates REST requests to AXIS binary frames and forwards to backend.
  * Self-contained implementation without external dependencies.
  */
-import { ProxyConfig } from './config';
+import { ProxyConfig } from "./config";
 
 export interface TranslateRequest {
   intent: string;
@@ -24,8 +24,16 @@ export interface TranslateRequest {
   sessionId?: string;
   /** NestFlow: Device UID for device-scoped requests */
   deviceUid?: string;
+  /** NestFlow: Identity UID for identity-scoped requests */
+  identityUid?: string;
   /** NestFlow: Auth level (SESSION, SESSION_BROWSER, STEP_UP, PRIMARY_DEVICE) */
   authLevel?: string;
+  /** NestFlow: Trust mode requested by browser login */
+  requestedTrust?: "ephemeral_session" | "trusted_device";
+  /** NestFlow: Temporal coordinate used in TickAuth */
+  tpsCoordinate?: string;
+  /** NestFlow: Header-derived body fields for QR helper flows */
+  bodyAugment?: Record<string, unknown>;
 }
 
 export interface TranslateResponse {
@@ -64,7 +72,7 @@ export class AxisTranslator {
       return this.parseResponse(response);
     } catch (error: any) {
       // Re-throw circuit breaker errors
-      if (error.name === 'CircuitOpenError') {
+      if (error.name === "CircuitOpenError") {
         throw error;
       }
 
@@ -72,7 +80,7 @@ export class AxisTranslator {
       return {
         statusCode: 500,
         body: {
-          error: 'TRANSLATION_ERROR',
+          error: "TRANSLATION_ERROR",
           message: error.message,
           intent: request.intent,
         },
@@ -94,8 +102,8 @@ export class AxisTranslator {
         return {
           statusCode: 400,
           body: {
-            error: 'INVALID_MAGIC',
-            message: 'Frame does not have valid AXIS magic bytes',
+            error: "INVALID_MAGIC",
+            message: "Frame does not have valid AXIS magic bytes",
           },
         };
       }
@@ -113,14 +121,14 @@ export class AxisTranslator {
       };
     } catch (error: any) {
       // Re-throw circuit breaker errors
-      if (error.name === 'CircuitOpenError') {
+      if (error.name === "CircuitOpenError") {
         throw error;
       }
 
       return {
         statusCode: 502,
         body: {
-          error: 'BACKEND_ERROR',
+          error: "BACKEND_ERROR",
           message: error.message,
         },
       };
@@ -168,10 +176,18 @@ export class AxisTranslator {
     }
 
     // Merge NestFlow context into body before encoding
-    const bodyPayload: Record<string, unknown> = { ...request.body };
+    const bodyPayload: Record<string, unknown> = {
+      ...(request.bodyAugment ?? {}),
+      ...request.body,
+    };
     if (request.sessionId) bodyPayload._sessionId = request.sessionId;
     if (request.deviceUid) bodyPayload._deviceUid = request.deviceUid;
+    if (request.identityUid) bodyPayload._identityUid = request.identityUid;
     if (request.authLevel) bodyPayload._authLevel = request.authLevel;
+    if (request.requestedTrust)
+      bodyPayload._requestedTrust = request.requestedTrust;
+    if (request.tpsCoordinate)
+      bodyPayload._tpsCoordinate = request.tpsCoordinate;
 
     // Build body
     const bodyBytes = new TextEncoder().encode(JSON.stringify(bodyPayload));
@@ -195,23 +211,23 @@ export class AxisTranslator {
     correlationId?: string,
   ): Promise<any> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/axis-bin',
-      'Content-Length': frame.length.toString(),
+      "Content-Type": "application/axis-bin",
+      "Content-Length": frame.length.toString(),
     };
 
     if (correlationId) {
-      headers['X-Correlation-Id'] = correlationId;
+      headers["X-Correlation-Id"] = correlationId;
     }
 
     const response = await fetch(this.config.backendUrl, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: frame,
     });
 
     // Try to parse as JSON, otherwise return raw
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
       return {
         status: response.status,
         data: await response.json(),
@@ -265,9 +281,9 @@ export class AxisTranslator {
    */
   private hexToBytes(hex: string): Uint8Array {
     // Remove 0x prefix if present
-    const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
     // Pad to 32 chars (16 bytes) if needed
-    const paddedHex = cleanHex.padStart(32, '0');
+    const paddedHex = cleanHex.padStart(32, "0");
     const bytes = new Uint8Array(16);
     for (let i = 0; i < 16; i++) {
       bytes[i] = parseInt(paddedHex.substring(i * 2, i * 2 + 2), 16);

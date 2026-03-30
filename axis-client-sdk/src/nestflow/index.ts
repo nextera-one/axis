@@ -7,8 +7,10 @@
  * @module nestflow
  */
 
-export * from './types';
-export * from './intents';
-export * from './device-identity';
-export * from './qr-challenge';
-export * from './tickauth-client';
+export * from "./types";
+export * from "./intents";
+export * from "./device-identity";
+export * from "./qr-challenge";
+export * from "./qr-auth-client";
+export * from "./tickauth-client";
+export * from "./request-builders";

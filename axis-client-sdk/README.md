@@ -117,6 +117,179 @@ await client.downloadFile('file-id', './downloaded-file.dat', {
 });
 ```
 
+### NestFlow Device And Session Requests
+
+```typescript
+import {
+  buildDeviceTrustPromoteRequest,
+  buildSessionRefreshRequest,
+} from '@nextera.one/axis-client-sdk';
+
+const actor = {
+  deviceUid: 'dev_mobile_primary_01',
+  identityUid: 'id_abc123',
+  sessionUid: 'sess_xyz',
+  origin: 'nestflow-key://mobile-app',
+};
+
+const promoteReq = buildDeviceTrustPromoteRequest(
+  { target_device_uid: 'dev_web_01', label: 'Work Chrome' },
+  actor,
+);
+
+const refreshReq = buildSessionRefreshRequest({ reason: 'keepalive' }, actor);
+
+await client.send(promoteReq.intent, promoteReq.payload);
+await client.send(refreshReq.intent, refreshReq.payload);
+```
+
+### Backend QR Login Flow
+
+```typescript
+import {
+  AxisQrAuthIntents,
+  Ed25519Signer,
+  buildAxisQrApproveRequest,
+  buildAxisQrAttachKeyRequest,
+  buildAxisQrChallengeRequest,
+  buildAxisQrVerifyRequest,
+  buildQrApprovalPayload,
+  ed25519PublicKeyToSpkiBase64Url,
+  signBrowserProofMessage,
+  signQrApprovalPayload,
+} from '@nextera.one/axis-client-sdk';
+
+const browserSigner = new Ed25519Signer(browserSeed);
+const mobileSigner = new Ed25519Signer(mobileSeed);
+
+const challenge = await client.send(
+  AxisQrAuthIntents.CHALLENGE,
+  buildAxisQrChallengeRequest({ origin: 'https://app.example.com' }),
+);
+
+const browserPublicKey = ed25519PublicKeyToSpkiBase64Url(
+  await browserSigner.getPublicKey(),
+);
+const browserProofSignature = await signBrowserProofMessage(
+  challenge.data.challengeUid,
+  challenge.data.nonce,
+  browserSigner,
+);
+
+await client.send(
+  AxisQrAuthIntents.ATTACH_KEY,
+  buildAxisQrAttachKeyRequest({
+    challengeUid: challenge.data.challengeUid,
+    browserPublicKey,
+    browserKeyAlgorithm: 'ed25519',
+    browserProofSignature,
+    trustDeviceRequested: true,
+  }),
+);
+
+const approvalPayload = buildQrApprovalPayload({
+  challengeUid: challenge.data.challengeUid,
+  browserPublicKey,
+  nonce: challenge.data.nonce,
+  tickauthChallengeUid: JSON.parse(challenge.data.qrPayload).tickAuthChallengeUid,
+  expiresAt: challenge.data.expiresAt,
+  actorId: 'actor_123',
+  approvedAt: Date.now(),
+  scope: ['axis.auth.*', 'axis.files.*'],
+});
+
+const { signedPayload, signature } = await signQrApprovalPayload(
+  approvalPayload,
+  mobileSigner,
+);
+
+await client.send(
+  AxisQrAuthIntents.APPROVE,
+  buildAxisQrApproveRequest({
+    challengeUid: challenge.data.challengeUid,
+    actorId: 'actor_123',
+    mobileDeviceUid: 'dev_mobile_primary_01',
+    signedPayload,
+    signature,
+    scope: ['axis.auth.*', 'axis.files.*'],
+  }),
+);
+
+const verified = await client.send(
+  AxisQrAuthIntents.VERIFY,
+  buildAxisQrVerifyRequest({
+    challengeUid: challenge.data.challengeUid,
+    browserPublicKey,
+  }),
+);
+```
+
+### P-256 Signer Support
+
+```typescript
+import {
+  P256Signer,
+  exportSignerPublicKeySpkiBase64Url,
+  generateP256KeyPair,
+} from '@nextera.one/axis-client-sdk';
+
+const keyPair = generateP256KeyPair();
+const signer = new P256Signer(keyPair.privateKeyPkcs8Der, {
+  format: 'der',
+  type: 'pkcs8',
+});
+
+const publicKey = await exportSignerPublicKeySpkiBase64Url(signer);
+const signature = await signer.sign(new TextEncoder().encode('hello'));
+```
+
+### High-Level QR Orchestration
+
+```typescript
+import {
+  AxisClient,
+  Ed25519Signer,
+  approveAxisQrLogin,
+  initiateAxisQrLogin,
+  waitForAxisQrVerification,
+} from '@nextera.one/axis-client-sdk';
+
+const browserSigner = new Ed25519Signer(browserSeed);
+const mobileSigner = new Ed25519Signer(mobileSeed);
+
+const browserClient = new AxisClient({
+  baseUrl: 'http://localhost:3000',
+  actorId: 'actor:web',
+});
+
+const mobileClient = new AxisClient({
+  baseUrl: 'http://localhost:3000',
+  actorId: 'actor:mobile',
+});
+
+const started = await initiateAxisQrLogin(browserClient, browserSigner, {
+  origin: 'https://app.example.com',
+  trustDeviceRequested: true,
+});
+
+await approveAxisQrLogin(mobileClient, {
+  challengeUid: started.challenge.challengeUid,
+  browserPublicKey: started.browserPublicKey,
+  nonce: started.challenge.nonce,
+  tickAuthChallengeUid: started.qr.tickAuthChallengeUid,
+  expiresAt: started.challenge.expiresAt,
+  actorId: 'actor_123',
+  mobileDeviceUid: 'dev_mobile_01',
+  signer: mobileSigner,
+  scope: ['axis.auth.*', 'axis.files.*'],
+});
+
+const verified = await waitForAxisQrVerification(browserClient, {
+  challengeUid: started.challenge.challengeUid,
+  browserPublicKey: started.browserPublicKey,
+});
+```
+
 ## API Reference
 
 ### AxisClient

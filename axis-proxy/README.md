@@ -73,6 +73,18 @@ Content-Type: application/json
 X-Actor-Id: <actor-id-hex>
 X-Proof-Type: 1
 X-Capsule-Id: <capsule-id-hex>
+X-Session-Id: <session-uid>
+X-Device-Uid: <device-uid>
+X-Identity-Uid: <identity-uid>
+X-Auth-Level: <session|session_browser|step_up|primary_device>
+X-Kid: <key-id>
+X-Requested-Trust: <ephemeral_session|trusted_device>
+X-Tps-Coordinate: <temporal-presence-coordinate>
+X-Challenge-Uid: <challenge-uid>
+X-Browser-Public-Key: <base64url-spki>
+X-Browser-Key-Algorithm: <ed25519|p256>
+X-Browser-Proof-Signature: <base64url-signature>
+X-Mobile-Device-Uid: <device-uid>
 
 {
   "field": "value"
@@ -80,6 +92,23 @@ X-Capsule-Id: <capsule-id-hex>
 ```
 
 The intent path uses dots as separators: `/api/passport/issue` → `passport.issue`
+
+For NestFlow-aware requests, the proxy forwards additional context fields into the AXIS payload:
+
+- `_sessionId`
+- `_deviceUid`
+- `_identityUid`
+- `_authLevel`
+- `_requestedTrust`
+- `_tpsCoordinate`
+
+The proxy can also map QR helper headers into JSON body fields for `axis.auth.qr.*` requests:
+
+- `challengeUid`
+- `browserPublicKey`
+- `browserKeyAlgorithm`
+- `browserProofSignature`
+- `mobileDeviceUid`
 
 ### Binary Passthrough
 
