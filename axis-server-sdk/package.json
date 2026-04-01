@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-server-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Axis Protocol server-side SDK — decorators, interfaces, and routing primitives for building Axis handlers",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
