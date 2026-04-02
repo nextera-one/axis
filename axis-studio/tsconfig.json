@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "src/*": ["src/*"],
+      "stores/*": ["src/stores/*"],
+      "components/*": ["src/components/*"],
+      "pages/*": ["src/pages/*"],
+      "services/*": ["src/services/*"]
+    },
+    "types": ["quasar", "node"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}

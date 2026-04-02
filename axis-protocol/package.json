@@ -1,0 +1,49 @@
+{
+  "name": "@nextera.one/axis-protocol",
+  "version": "1.0.0",
+  "description": "AXIS Protocol core — canonical TLV encoding, frame codec, and protocol constants shared by all AXIS SDKs",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
+    "dev": "tsup --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digital-pages-co/axis.git",
+    "directory": "axis-protocol"
+  },
+  "homepage": "https://axisprotocol.io",
+  "keywords": [
+    "axis",
+    "protocol",
+    "typescript",
+    "tlv",
+    "varint",
+    "binary",
+    "frame",
+    "codec"
+  ],
+  "author": "NextEra.One",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2"
+  }
+}

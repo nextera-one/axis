@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-cli",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "AXIS Protocol CLI",
   "author": "NextEra.One",
   "license": "Apache-2.0",
@@ -25,7 +25,7 @@
   "dependencies": {
     "axios": "^1.13.2",
     "chalk": "^5.6.2",
-    "@nextera.one/axis-client-sdk": "file:../axis-client-sdk",
+    "@nextera.one/axis-client-sdk": "^2.0.0",
     "commander": "^14.0.2",
     "ora": "^9.0.0"
   },

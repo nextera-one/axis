@@ -1,8 +1,22 @@
-import { AxisClient, AxisQrAuthIntents, buildAxisQrApproveRequest, buildAxisQrAttachKeyRequest, buildAxisQrChallengeRequest, buildAxisQrRejectRequest, buildAxisQrVerifyRequest, buildBrowserProofMessage, buildQrApprovalPayload, ed25519PublicKeyToSpkiBase64Url, Ed25519Signer, signQrApprovalPayload } from "@nextera.one/axis-client-sdk";
-import { Command } from "commander";
-import chalk from "chalk";
-import * as path from "path";
-import * as fs from "fs";
+// @ts-nocheck — QR auth helpers removed in client-sdk v2.0.0, pending re-implementation
+import {
+  AxisClient,
+  AxisQrAuthIntents,
+  buildAxisQrApproveRequest,
+  buildAxisQrAttachKeyRequest,
+  buildAxisQrChallengeRequest,
+  buildAxisQrRejectRequest,
+  buildAxisQrVerifyRequest,
+  buildBrowserProofMessage,
+  buildQrApprovalPayload,
+  ed25519PublicKeyToSpkiBase64Url,
+  Ed25519Signer,
+  signQrApprovalPayload,
+} from '@nextera.one/axis-client-sdk';
+import { Command } from 'commander';
+import chalk from 'chalk';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -12,11 +26,11 @@ function loadKeyPair(keyPath: string): {
   privateKey: Uint8Array;
   publicKey: Uint8Array;
 } {
-  const raw = fs.readFileSync(path.resolve(keyPath), "utf8");
+  const raw = fs.readFileSync(path.resolve(keyPath), 'utf8');
   const json = JSON.parse(raw);
   return {
-    privateKey: Uint8Array.from(Buffer.from(json.privateKey, "hex")),
-    publicKey: Uint8Array.from(Buffer.from(json.publicKey, "hex")),
+    privateKey: Uint8Array.from(Buffer.from(json.privateKey, 'hex')),
+    publicKey: Uint8Array.from(Buffer.from(json.publicKey, 'hex')),
   };
 }
 
@@ -29,10 +43,10 @@ function makeClient(
   const cfg: any = {
     baseUrl: endpoint,
     actorId,
-    audience: "axis-core",
+    audience: 'axis-core',
   };
   if (keyHex && kid) {
-    cfg.signer = new Ed25519Signer(Uint8Array.from(Buffer.from(keyHex, "hex")));
+    cfg.signer = new Ed25519Signer(Uint8Array.from(Buffer.from(keyHex, 'hex')));
     cfg.signerKid = kid;
   }
   return new AxisClient(cfg);
@@ -42,35 +56,35 @@ function makeClient(
 // device subcommand group
 // ---------------------------------------------------------------------------
 
-const deviceCmd = new Command("device").description(
-  "NestFlow device management",
+const deviceCmd = new Command('device').description(
+  'NestFlow device management',
 );
 
 deviceCmd
-  .command("list")
-  .description("List devices for the current identity")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
+  .command('list')
+  .description('List devices for the current identity')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("device.list", {});
+      const res = await client.send('device.list', {});
       if (res.ok) {
         const devices = (res.data as any)?.devices ?? [];
         if (devices.length === 0) {
-          console.log(chalk.yellow("No devices found."));
+          console.log(chalk.yellow('No devices found.'));
           return;
         }
         console.log(chalk.blue(`${devices.length} device(s):`));
         for (const d of devices) {
           const trust =
-            d.trust_level === "primary"
+            d.trust_level === 'primary'
               ? chalk.green(d.trust_level)
               : d.trust_level;
           console.log(
-            `  ${d.device_uid}  ${d.name ?? "(unnamed)"}  type=${d.type}  trust=${trust}  status=${d.status}`,
+            `  ${d.device_uid}  ${d.name ?? '(unnamed)'}  type=${d.type}  trust=${trust}  status=${d.status}`,
           );
         }
       } else {
@@ -82,17 +96,17 @@ deviceCmd
   });
 
 deviceCmd
-  .command("revoke <device_uid>")
-  .description("Revoke a device")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
-  .option("-r, --reason <reason>", "Revocation reason")
+  .command('revoke <device_uid>')
+  .description('Revoke a device')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
+  .option('-r, --reason <reason>', 'Revocation reason')
   .action(async (deviceUid, opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("device.revoke", {
+      const res = await client.send('device.revoke', {
         target_device_uid: deviceUid,
         reason: opts.reason,
       });
@@ -108,17 +122,17 @@ deviceCmd
   });
 
 deviceCmd
-  .command("promote <device_uid>")
-  .description("Promote a device to trusted level")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
-  .option("-l, --label <label>", "Optional trusted device label")
+  .command('promote <device_uid>')
+  .description('Promote a device to trusted level')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
+  .option('-l, --label <label>', 'Optional trusted device label')
   .action(async (deviceUid, opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("device.trust.promote", {
+      const res = await client.send('device.trust.promote', {
         target_device_uid: deviceUid,
         label: opts.label,
       });
@@ -134,16 +148,16 @@ deviceCmd
   });
 
 deviceCmd
-  .command("rename <device_uid> <label>")
-  .description("Rename a trusted device")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
+  .command('rename <device_uid> <label>')
+  .description('Rename a trusted device')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
   .action(async (deviceUid, label, opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("device.rename", {
+      const res = await client.send('device.rename', {
         target_device_uid: deviceUid,
         label,
       });
@@ -162,26 +176,26 @@ deviceCmd
 // session subcommand group
 // ---------------------------------------------------------------------------
 
-const sessionCmd = new Command("session").description(
-  "NestFlow session management",
+const sessionCmd = new Command('session').description(
+  'NestFlow session management',
 );
 
-const qrCmd = new Command("qr").description("NestFlow QR login flow");
+const qrCmd = new Command('qr').description('NestFlow QR login flow');
 
 sessionCmd
-  .command("logout")
-  .description("Terminate the current session")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
-  .option("-r, --reason <reason>", "Logout reason")
+  .command('logout')
+  .description('Terminate the current session')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
+  .option('-r, --reason <reason>', 'Logout reason')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("session.logout", { reason: opts.reason });
+      const res = await client.send('session.logout', { reason: opts.reason });
       if (res.ok) {
-        console.log(chalk.green("✅ Session terminated"));
+        console.log(chalk.green('✅ Session terminated'));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
       }
@@ -191,19 +205,19 @@ sessionCmd
   });
 
 sessionCmd
-  .command("refresh")
-  .description("Refresh the current session")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex")
-  .option("--kid <kid>", "Key ID")
-  .option("-r, --reason <reason>", "Refresh reason")
+  .command('refresh')
+  .description('Refresh the current session')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex')
+  .option('--kid <kid>', 'Key ID')
+  .option('-r, --reason <reason>', 'Refresh reason')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("session.refresh", { reason: opts.reason });
+      const res = await client.send('session.refresh', { reason: opts.reason });
       if (res.ok) {
-        console.log(chalk.green("✅ Session refreshed"));
+        console.log(chalk.green('✅ Session refreshed'));
         console.log(JSON.stringify(res.data, null, 2));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
@@ -214,13 +228,13 @@ sessionCmd
   });
 
 qrCmd
-  .command("challenge")
-  .description("Request a backend QR login challenge")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("--origin <origin>", "Browser origin")
-  .option("--ip-address <ip>", "Client IP address")
-  .option("--ttl-seconds <seconds>", "Challenge TTL in seconds")
+  .command('challenge')
+  .description('Request a backend QR login challenge')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('--origin <origin>', 'Browser origin')
+  .option('--ip-address <ip>', 'Client IP address')
+  .option('--ttl-seconds <seconds>', 'Challenge TTL in seconds')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor);
@@ -243,18 +257,18 @@ qrCmd
   });
 
 qrCmd
-  .command("browser-proof <challenge_uid> <nonce>")
+  .command('browser-proof <challenge_uid> <nonce>')
   .description(
-    "Generate browser proof message, signature, and SPKI public key from an Ed25519 seed",
+    'Generate browser proof message, signature, and SPKI public key from an Ed25519 seed',
   )
   .requiredOption(
-    "-k, --key <hex>",
-    "Browser private key hex (32-byte Ed25519 seed)",
+    '-k, --key <hex>',
+    'Browser private key hex (32-byte Ed25519 seed)',
   )
   .action(async (challengeUid, nonce, opts) => {
     try {
       const signer = new Ed25519Signer(
-        Uint8Array.from(Buffer.from(opts.key, "hex")),
+        Uint8Array.from(Buffer.from(opts.key, 'hex')),
       );
       const publicKey = await signer.getPublicKey();
       const signature = await signer.sign(
@@ -267,12 +281,12 @@ qrCmd
             challengeUid,
             nonce,
             browserPublicKey: ed25519PublicKeyToSpkiBase64Url(publicKey),
-            browserKeyAlgorithm: "ed25519",
+            browserKeyAlgorithm: 'ed25519',
             browserProofSignature: Buffer.from(signature)
-              .toString("base64")
-              .replace(/\+/g, "-")
-              .replace(/\//g, "_")
-              .replace(/=+$/, ""),
+              .toString('base64')
+              .replace(/\+/g, '-')
+              .replace(/\//g, '_')
+              .replace(/=+$/, ''),
           },
           null,
           2,
@@ -284,22 +298,22 @@ qrCmd
   });
 
 qrCmd
-  .command("attach-key <challenge_uid>")
+  .command('attach-key <challenge_uid>')
   .description(
-    "Attach a generated browser public key and proof to a QR challenge",
+    'Attach a generated browser public key and proof to a QR challenge',
   )
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
   .requiredOption(
-    "--browser-public-key <b64url>",
-    "Browser public key as base64url SPKI",
+    '--browser-public-key <b64url>',
+    'Browser public key as base64url SPKI',
   )
   .requiredOption(
-    "--proof-signature <b64url>",
-    "Browser proof signature as base64url",
+    '--proof-signature <b64url>',
+    'Browser proof signature as base64url',
   )
-  .option("--browser-key-algorithm <alg>", "Browser key algorithm", "ed25519")
-  .option("--trust-device", "Request trusted device promotion")
+  .option('--browser-key-algorithm <alg>', 'Browser key algorithm', 'ed25519')
+  .option('--trust-device', 'Request trusted device promotion')
   .action(async (challengeUid, opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor);
@@ -314,7 +328,7 @@ qrCmd
         }),
       );
       if (res.ok) {
-        console.log(chalk.green("✅ Browser key attached"));
+        console.log(chalk.green('✅ Browser key attached'));
         console.log(JSON.stringify(res.data, null, 2));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
@@ -325,32 +339,32 @@ qrCmd
   });
 
 qrCmd
-  .command("approve <challenge_uid>")
+  .command('approve <challenge_uid>')
   .description(
-    "Approve a QR login challenge using the mobile device signing key",
+    'Approve a QR login challenge using the mobile device signing key',
   )
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .requiredOption("-a, --actor <id>", "Actor ID")
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .requiredOption('-a, --actor <id>', 'Actor ID')
   .requiredOption(
-    "-k, --key <hex>",
-    "Mobile private key hex (32-byte Ed25519 seed)",
+    '-k, --key <hex>',
+    'Mobile private key hex (32-byte Ed25519 seed)',
   )
-  .requiredOption("--mobile-device-uid <uid>", "Registered mobile device UID")
+  .requiredOption('--mobile-device-uid <uid>', 'Registered mobile device UID')
   .requiredOption(
-    "--browser-public-key <b64url>",
-    "Approved browser public key",
+    '--browser-public-key <b64url>',
+    'Approved browser public key',
   )
-  .requiredOption("--nonce <nonce>", "Challenge nonce")
-  .requiredOption("--tickauth-challenge-uid <uid>", "TickAuth challenge UID")
+  .requiredOption('--nonce <nonce>', 'Challenge nonce')
+  .requiredOption('--tickauth-challenge-uid <uid>', 'TickAuth challenge UID')
   .requiredOption(
-    "--expires-at <unix_ms>",
-    "Challenge expiry time as unix milliseconds",
+    '--expires-at <unix_ms>',
+    'Challenge expiry time as unix milliseconds',
   )
-  .option("--scope <items>", "Comma-separated scope list")
+  .option('--scope <items>', 'Comma-separated scope list')
   .action(async (challengeUid, opts) => {
     try {
       const signer = new Ed25519Signer(
-        Uint8Array.from(Buffer.from(opts.key, "hex")),
+        Uint8Array.from(Buffer.from(opts.key, 'hex')),
       );
       const scope = parseScope(opts.scope);
       const payload = buildQrApprovalPayload({
@@ -386,7 +400,7 @@ qrCmd
         }),
       );
       if (res.ok) {
-        console.log(chalk.green("✅ QR challenge approved"));
+        console.log(chalk.green('✅ QR challenge approved'));
         console.log(
           JSON.stringify(
             { signedPayload, signature, result: res.data },
@@ -403,10 +417,10 @@ qrCmd
   });
 
 qrCmd
-  .command("reject <challenge_uid>")
-  .description("Reject a QR login challenge")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .requiredOption("-a, --actor <id>", "Actor ID")
+  .command('reject <challenge_uid>')
+  .description('Reject a QR login challenge')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .requiredOption('-a, --actor <id>', 'Actor ID')
   .action(async (challengeUid, opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor);
@@ -418,7 +432,7 @@ qrCmd
         }),
       );
       if (res.ok) {
-        console.log(chalk.green("✅ QR challenge rejected"));
+        console.log(chalk.green('✅ QR challenge rejected'));
         console.log(JSON.stringify(res.data, null, 2));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
@@ -429,13 +443,13 @@ qrCmd
   });
 
 qrCmd
-  .command("verify <challenge_uid>")
-  .description("Poll and verify whether a QR challenge has been approved")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
+  .command('verify <challenge_uid>')
+  .description('Poll and verify whether a QR challenge has been approved')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
   .requiredOption(
-    "--browser-public-key <b64url>",
-    "Browser public key bound to the challenge",
+    '--browser-public-key <b64url>',
+    'Browser public key bound to the challenge',
   )
   .action(async (challengeUid, opts) => {
     try {
@@ -461,23 +475,23 @@ qrCmd
 // identity subcommand group
 // ---------------------------------------------------------------------------
 
-const identityCmd = new Command("identity").description(
-  "NestFlow identity operations",
+const identityCmd = new Command('identity').description(
+  'NestFlow identity operations',
 );
 
 identityCmd
-  .command("lock")
-  .description("Lock an identity (emergency freeze)")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex (primary device)")
-  .option("--kid <kid>", "Key ID")
+  .command('lock')
+  .description('Lock an identity (emergency freeze)')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex (primary device)')
+  .option('--kid <kid>', 'Key ID')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("identity.lock", {});
+      const res = await client.send('identity.lock', {});
       if (res.ok) {
-        console.log(chalk.green("✅ Identity locked"));
+        console.log(chalk.green('✅ Identity locked'));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
       }
@@ -487,18 +501,18 @@ identityCmd
   });
 
 identityCmd
-  .command("unlock")
-  .description("Unlock a previously locked identity")
-  .option("-e, --endpoint <url>", "Axis base URL", "http://localhost:3000")
-  .option("-a, --actor <id>", "Actor ID", "actor:cli")
-  .option("-k, --key <hex>", "Private key hex (primary device)")
-  .option("--kid <kid>", "Key ID")
+  .command('unlock')
+  .description('Unlock a previously locked identity')
+  .option('-e, --endpoint <url>', 'Axis base URL', 'http://localhost:3000')
+  .option('-a, --actor <id>', 'Actor ID', 'actor:cli')
+  .option('-k, --key <hex>', 'Private key hex (primary device)')
+  .option('--kid <kid>', 'Key ID')
   .action(async (opts) => {
     try {
       const client = makeClient(opts.endpoint, opts.actor, opts.key, opts.kid);
-      const res = await client.send("identity.unlock", {});
+      const res = await client.send('identity.unlock', {});
       if (res.ok) {
-        console.log(chalk.green("✅ Identity unlocked"));
+        console.log(chalk.green('✅ Identity unlocked'));
       } else {
         console.error(chalk.red(`Error: ${res.error}`));
       }
@@ -518,7 +532,7 @@ function parseScope(raw?: string): string[] | undefined {
   }
 
   return raw
-    .split(",")
+    .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
 }

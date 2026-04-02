@@ -22,7 +22,7 @@ export interface DtoSchema {
  */
 export function extractDtoSchema(dto: Function): DtoSchema {
   const fieldMetas: TlvFieldMeta[] =
-    Reflect.getOwnMetadata(TLV_FIELDS_KEY, dto) || [];
+    Reflect.getMetadata(TLV_FIELDS_KEY, dto) || [];
 
   if (fieldMetas.length === 0) {
     throw new Error(
@@ -45,7 +45,7 @@ export function extractDtoSchema(dto: Function): DtoSchema {
   });
 
   const validatorMetas: TlvValidatorMeta[] =
-    Reflect.getOwnMetadata(TLV_VALIDATORS_KEY, dto) || [];
+    Reflect.getMetadata(TLV_VALIDATORS_KEY, dto) || [];
 
   const validators = new Map<number, TlvValidatorFn[]>();
   for (const vm of validatorMetas) {
@@ -80,7 +80,7 @@ export function buildDtoDecoder(
   dto: Function,
 ): (bodyBytes: Buffer) => Record<string, any> {
   const fieldMetas: TlvFieldMeta[] =
-    Reflect.getOwnMetadata(TLV_FIELDS_KEY, dto) || [];
+    Reflect.getMetadata(TLV_FIELDS_KEY, dto) || [];
 
   if (fieldMetas.length === 0) {
     throw new Error(

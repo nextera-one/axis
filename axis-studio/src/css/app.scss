@@ -1,0 +1,25 @@
+/* AXIS Studio — Global Styles (Quasar pure, no external CSS libs) */
+
+body {
+  font-family:
+    'Roboto', '-apple-system', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Monospace for binary/hex data */
+.font-mono {
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* Subtle glow on focused inputs */
+.q-field--focused .q-field__control {
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25);
+}
+
+/* Response viewer */
+.response-hex {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
