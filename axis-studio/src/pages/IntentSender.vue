@@ -1,164 +1,304 @@
 <template>
-  <q-page padding>
+  <q-page class="ax-page q-pa-md">
     <div class="row q-col-gutter-md">
-      <!-- Left: Request builder -->
-      <div class="col-12 col-md-6">
-        <q-card flat bordered class="bg-dark">
-          <q-card-section>
-            <div class="text-h6 text-primary q-mb-sm">Intent Sender</div>
 
-            <!-- Intent selector with autocomplete -->
-            <q-input
-              v-model="intent"
-              label="Intent"
-              dense
-              outlined
-              dark
-              placeholder="e.g. catalog.list"
-              class="q-mb-sm"
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+      <!-- ══════ REQUEST PANEL ════════════════════════════════ -->
+      <div class="col-12 col-lg-5">
+        <div class="ax-panel q-mb-md">
+          <div class="ax-panel-header row items-center">
+            <q-icon name="send" color="primary" size="15px" class="q-mr-xs" />
+            <span class="ax-panel-title">Request</span>
+            <q-space />
+            <q-btn
+              flat dense round size="xs"
+              icon="backspace"
+              title="Clear form"
+              @click="clearForm"
+            />
+          </div>
+
+          <div class="q-pa-md">
+            <!-- Intent selector -->
+            <div class="q-mb-sm">
+              <q-select
+                v-model="intent"
+                :options="filteredOpts"
+                use-input
+                fill-input
+                hide-selected
+                input-debounce="80"
+                label="Intent"
+                outlined
+                dense
+                new-value-mode="add-unique"
+                @filter="filterIntents"
+              >
+                <template #prepend>
+                  <q-icon name="chevron_right" color="primary" />
+                </template>
+                <template #selected-item="{ opt }">
+                  <span class="font-mono">{{ opt }}</span>
+                </template>
+                <template #option="{ itemProps, opt }">
+                  <q-item v-bind="itemProps" dense>
+                    <q-item-section>
+                      <q-item-label class="font-mono text-caption">{{ opt }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+                <template #no-option>
+                  <q-item dense>
+                    <q-item-section class="text-grey-5 text-caption">
+                      Type an intent name and press Enter
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
 
             <!-- Quick picks -->
             <div class="q-mb-md">
               <q-chip
-                v-for="q in quickIntents"
+                v-for="q in quickPicks"
                 :key="q"
                 dense
                 clickable
-                color="grey-9"
-                text-color="grey-3"
                 size="sm"
+                :color="$q.dark.isActive ? 'grey-9' : 'grey-3'"
+                :text-color="$q.dark.isActive ? 'grey-4' : 'grey-8'"
+                class="q-mr-xs q-mb-xs font-mono"
                 @click="intent = q"
               >
                 {{ q }}
               </q-chip>
             </div>
 
-            <!-- Body editor -->
-            <q-input
+            <!-- Body JSON editor -->
+            <div
+              class="text-caption q-mb-xs q-ml-xs"
+              :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
+            >
+              Body (JSON)
+            </div>
+            <JsonEditor
               v-model="bodyText"
-              label="Body (JSON)"
-              type="textarea"
-              dense
-              outlined
-              dark
-              autogrow
-              :input-style="{ fontFamily: 'monospace', minHeight: '120px' }"
-              class="q-mb-sm"
+              min-height="160px"
+              class="q-mb-md"
+              :show-line-numbers="true"
             />
 
-            <!-- Send -->
+            <!-- Context row -->
+            <div class="row items-center q-gutter-xs q-mb-md">
+              <q-chip
+                dense
+                icon="person"
+                size="sm"
+                :color="$q.dark.isActive ? 'grey-9' : 'grey-3'"
+                :text-color="$q.dark.isActive ? 'grey-4' : 'grey-7'"
+              >
+                {{ auth.actorId || 'anonymous' }}
+              </q-chip>
+              <q-chip
+                v-if="auth.capsuleId"
+                dense
+                icon="inventory_2"
+                size="sm"
+                :color="$q.dark.isActive ? 'grey-9' : 'grey-3'"
+                :text-color="$q.dark.isActive ? 'grey-4' : 'grey-7'"
+              >
+                {{ auth.capsuleId }}
+              </q-chip>
+            </div>
+
+            <!-- Send button -->
             <q-btn
+              unelevated
               color="primary"
               icon="send"
               label="Send Intent"
               :loading="sending"
               :disable="!intent"
-              @click="send"
               class="full-width"
+              @click="send"
             />
-          </q-card-section>
-        </q-card>
+          </div>
+        </div>
       </div>
 
-      <!-- Right: Response viewer -->
-      <div class="col-12 col-md-6">
-        <q-card flat bordered class="bg-dark">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <div class="text-h6 text-primary">Response</div>
-              <q-space />
+      <!-- ══════ RESPONSE PANEL ═══════════════════════════════ -->
+      <div class="col-12 col-lg-7">
+        <div class="ax-panel">
+          <div class="ax-panel-header row items-center no-wrap">
+            <q-icon name="inbox" color="primary" size="15px" class="q-mr-xs" />
+            <span class="ax-panel-title q-mr-auto">Response</span>
+
+            <template v-if="lastResult">
               <q-badge
-                v-if="lastResult"
                 :color="lastResult.ok ? 'positive' : 'negative'"
+                class="q-mr-xs"
               >
-                {{ lastResult.status }} · {{ lastResult.durationMs }}ms
+                {{ lastResult.status }}
               </q-badge>
-            </div>
+              <q-badge color="blue-grey-7" class="q-mr-xs font-mono">
+                {{ lastResult.durationMs }}ms
+              </q-badge>
+              <q-badge
+                v-if="lastResult.effect"
+                color="accent"
+                class="font-mono"
+              >
+                {{ lastResult.effect }}
+              </q-badge>
+            </template>
+          </div>
 
-            <!-- Tabs for JSON / Raw -->
-            <q-tabs
-              v-model="viewTab"
-              dense
-              align="left"
-              class="q-mb-sm text-grey-5"
-            >
-              <q-tab name="json" label="JSON" />
-              <q-tab name="raw" label="Raw" />
-            </q-tabs>
+          <!-- Tabs: JSON Tree | Raw -->
+          <q-tabs
+            v-model="viewTab"
+            dense
+            align="left"
+            class="q-px-sm"
+            :active-color="$q.dark.isActive ? 'cyan-3' : 'primary'"
+            indicator-color="primary"
+          >
+            <q-tab name="tree" icon="account_tree" label="JSON Tree" />
+            <q-tab name="raw"  icon="code"         label="Raw" />
+          </q-tabs>
 
-            <q-tab-panels v-model="viewTab" animated class="bg-dark">
-              <q-tab-panel name="json" class="q-pa-none">
-                <pre
-                  class="response-hex q-pa-sm"
-                  style="max-height: 400px; overflow: auto"
-                  >{{ formattedJson }}</pre
+          <q-separator />
+
+          <q-tab-panels
+            v-model="viewTab"
+            animated
+            class="transparent-panels"
+          >
+            <!-- JSON Tree -->
+            <q-tab-panel name="tree" class="q-pa-none">
+              <JsonTree
+                :value="lastResult?.response"
+                max-height="520px"
+                :empty-text="sending ? 'Waiting for response…' : 'Send an intent to see the response'"
+              />
+            </q-tab-panel>
+
+            <!-- Raw -->
+            <q-tab-panel name="raw" class="q-pa-none">
+              <div v-if="lastResult" class="ax-raw-viewer">{{ lastResult.raw }}</div>
+              <div v-else class="column items-center justify-center q-pa-xl">
+                <q-icon
+                  name="code"
+                  size="32px"
+                  :color="$q.dark.isActive ? 'grey-7' : 'grey-5'"
+                  class="q-mb-sm"
+                />
+                <div
+                  class="text-caption"
+                  :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
                 >
-              </q-tab-panel>
-              <q-tab-panel name="raw" class="q-pa-none">
-                <pre
-                  class="response-hex q-pa-sm"
-                  style="max-height: 400px; overflow: auto"
-                  >{{ lastResult?.raw || 'No response yet' }}</pre
-                >
-              </q-tab-panel>
-            </q-tab-panels>
-          </q-card-section>
-        </q-card>
+                  No raw data yet
+                </div>
+              </div>
+            </q-tab-panel>
+          </q-tab-panels>
+        </div>
       </div>
+
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { sendIntent, type SendResult } from 'src/services/axis-client';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useQuasar } from 'quasar';
+import JsonEditor from 'src/components/JsonEditor.vue';
+import JsonTree   from 'src/components/JsonTree.vue';
+import { sendIntent, fetchCatalog, type SendResult } from 'src/services/axis-client';
+import { useAuthStore } from 'stores/auth';
 
-const intent = ref('catalog.list');
-const bodyText = ref('{}');
-const sending = ref(false);
+const $q   = useQuasar();
+const route = useRoute();
+const auth  = useAuthStore();
+
+const intent   = ref<string>('catalog.list');
+const bodyText = ref('{\n  \n}');
+const sending  = ref(false);
 const lastResult = ref<SendResult | null>(null);
-const viewTab = ref('json');
+const viewTab  = ref<'tree' | 'raw'>('tree');
 
-const quickIntents = [
+const quickPicks = [
   'catalog.list',
-  'catalog.search',
   'catalog.describe',
-  'capsule.list',
+  'catalog.search',
   'axis.sessions.list',
   'axis.identities.list',
+  'axis.capsules.list',
 ];
 
-const formattedJson = computed(() => {
-  if (!lastResult.value) return 'No response yet';
+/* ── Autocomplete ──────────────────────────────────────── */
+const allOpts      = ref<string[]>([...quickPicks]);
+const filteredOpts = ref<string[]>([...quickPicks]);
+
+function filterIntents(
+  val: string,
+  update: (fn: () => void) => void,
+) {
+  update(() => {
+    const q = val.toLowerCase();
+    filteredOpts.value = q
+      ? allOpts.value.filter((i) => i.toLowerCase().includes(q)).slice(0, 60)
+      : allOpts.value.slice(0, 60);
+  });
+}
+
+onMounted(async () => {
+  // Pre-load catalog for autocomplete
   try {
-    return JSON.stringify(lastResult.value.response, null, 2);
+    const catalog = await fetchCatalog();
+    allOpts.value = catalog.map((i) => i.intent);
+    filteredOpts.value = allOpts.value.slice(0, 60);
   } catch {
-    return String(lastResult.value.response);
+    // fallback to quickPicks
   }
+
+  // Honor ?intent= query param
+  const qi = route.query.intent as string | undefined;
+  if (qi) intent.value = qi;
 });
 
+/* ── Actions ───────────────────────────────────────────── */
+function clearForm() {
+  intent.value   = '';
+  bodyText.value = '{\n  \n}';
+  lastResult.value = null;
+}
+
 async function send() {
+  if (!intent.value) return;
   sending.value = true;
   try {
     let body: Record<string, unknown> = {};
-    if (bodyText.value.trim()) {
-      body = JSON.parse(bodyText.value);
+    const trimmed = bodyText.value.trim();
+    if (trimmed && trimmed !== '{}') {
+      body = JSON.parse(trimmed);
     }
     lastResult.value = await sendIntent(intent.value, body);
+    viewTab.value    = 'tree';
   } catch (e: any) {
     lastResult.value = {
       ok: false,
       status: 0,
       durationMs: 0,
-      response: { error: 'Invalid JSON body: ' + e.message },
+      response: { error: e.message },
       raw: e.message,
       effect: 'PARSE_ERROR',
     };
+    $q.notify({
+      message: e.message,
+      color: 'negative',
+      icon: 'error',
+      timeout: 3000,
+    });
   } finally {
     sending.value = false;
   }

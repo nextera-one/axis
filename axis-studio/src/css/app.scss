@@ -1,25 +1,378 @@
-/* AXIS Studio — Global Styles (Quasar pure, no external CSS libs) */
+/* ═══════════════════════════════════════════════════════════
+   AXIS Studio — Design System
+   Quasar dark plugin — NO hardcoded dark/light CSS hacks
+   ═══════════════════════════════════════════════════════════ */
 
+/* ── Design tokens (dark-first, Quasar adds body--light) ─── */
+:root {
+  --ax-surface: #161627;
+  --ax-surface-raised: #1e1e38;
+  --ax-surface-input: #0f0f23;
+  --ax-border: rgba(100, 100, 200, 0.14);
+  --ax-border-strong: rgba(100, 100, 200, 0.28);
+  --ax-page-bg: #0a0a14;
+  --ax-text: #ddddf0;
+  --ax-text-muted: #8080a8;
+  --ax-text-dim: #4a4a70;
+  --ax-primary: #00bcd4;
+  --ax-accent: #7c4dff;
+  --ax-radius: 8px;
+  --ax-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+
+  /* JSON tree token colors (dark) */
+  --jtn-str: #4dd07a;
+  --jtn-num: #56c8e8;
+  --jtn-bool-t: #ffb454;
+  --jtn-bool-f: #ff6b6b;
+  --jtn-null: #7070a0;
+  --jtn-key: #b09bff;
+  --jtn-idx: #6888b0;
+  --jtn-brkt: #6868a0;
+  --jtn-punt: #5a5a80;
+  --jtn-hint: #4a4a70;
+  --jtn-hover: rgba(100, 100, 255, 0.06);
+}
+
+body.body--light {
+  --ax-surface: #ffffff;
+  --ax-surface-raised: #f4f5fb;
+  --ax-surface-input: #f0f1f8;
+  --ax-border: rgba(0, 0, 60, 0.1);
+  --ax-border-strong: rgba(0, 0, 60, 0.2);
+  --ax-page-bg: #eef0f8;
+  --ax-text: #1a1a2e;
+  --ax-text-muted: #5a5a80;
+  --ax-text-dim: #9090b0;
+
+  /* JSON tree token colors (light) */
+  --jtn-str: #2e7d32;
+  --jtn-num: #0077a8;
+  --jtn-bool-t: #c25b00;
+  --jtn-bool-f: #b00020;
+  --jtn-null: #9e9eb8;
+  --jtn-key: #5533bb;
+  --jtn-idx: #446688;
+  --jtn-brkt: #666688;
+  --jtn-punt: #8888aa;
+  --jtn-hint: #9090b0;
+  --jtn-hover: rgba(0, 0, 180, 0.04);
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
 body {
   font-family:
     'Roboto', '-apple-system', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* Monospace for binary/hex data */
 .font-mono {
   font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
 }
 
-/* Subtle glow on focused inputs */
-.q-field--focused .q-field__control {
-  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25);
+.ax-page {
+  background: var(--ax-page-bg);
+  min-height: 100vh;
 }
 
-/* Response viewer */
+/* ── Layout header / drawer ────────────────────────────────── */
+.ax-header--dark {
+  background: #13131f !important;
+  color: #e0e0f0;
+}
+.ax-header--light {
+  background: #ffffff !important;
+  color: #1a1a2e;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+.ax-drawer--dark {
+  background: #111120 !important;
+  border-right: 1px solid var(--ax-border);
+}
+.ax-drawer--light {
+  background: #ffffff !important;
+  border-right: 1px solid var(--ax-border);
+}
+
+.brand-link {
+  text-decoration: none;
+}
+
+/* ── Navigation ────────────────────────────────────────────── */
+.nav-item {
+  transition: background 0.15s ease;
+  border-radius: var(--ax-radius) !important;
+  margin: 0 !important;
+}
+.nav-item .q-item__section--avatar {
+  min-width: 36px;
+}
+.nav-active {
+  background: rgba(0, 188, 212, 0.12) !important;
+  color: #00bcd4 !important;
+  .q-icon {
+    color: #00bcd4 !important;
+  }
+}
+body.body--light .nav-active {
+  background: rgba(0, 151, 167, 0.1) !important;
+  color: #0097a7 !important;
+  .q-icon {
+    color: #0097a7 !important;
+  }
+}
+
+/* ── Page panels ───────────────────────────────────────────── */
+.ax-panel {
+  background: var(--ax-surface);
+  border: 1px solid var(--ax-border);
+  border-radius: var(--ax-radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ax-panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ax-border);
+  background: var(--ax-surface-raised);
+}
+
+.ax-panel-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ax-text-muted);
+}
+
+/* ── Inputs adapt to tokens ────────────────────────────────── */
+.q-field--outlined .q-field__control {
+  background: var(--ax-surface-input) !important;
+  border-radius: var(--ax-radius) !important;
+}
+.q-field--focused .q-field__control {
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.28);
+}
+
+/* ── Page fade transition ──────────────────────────────────── */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* ── JsonEditor ────────────────────────────────────────────── */
+.json-editor {
+  border-radius: var(--ax-radius);
+  border: 1px solid var(--ax-border);
+  overflow: hidden;
+  transition: border-color 0.15s;
+
+  &--error {
+    border-color: rgba(244, 67, 54, 0.5);
+  }
+  &--dark {
+    background: #0d0d1e;
+  }
+  &--light {
+    background: #f8f9fc;
+  }
+  &--readonly {
+    cursor: default;
+  }
+}
+
+.jed-toolbar {
+  border-bottom: 1px solid var(--ax-border);
+  min-height: 30px;
+  background: var(--ax-surface-raised);
+}
+
+.jed-fade-enter-active,
+.jed-fade-leave-active {
+  transition: opacity 0.2s;
+}
+.jed-fade-enter-from,
+.jed-fade-leave-to {
+  opacity: 0;
+}
+
+/* CodeMirror light-mode text colors */
+body.body--light {
+  .cm-editor .cm-string {
+    color: #2e7d32;
+  }
+  .cm-editor .cm-number {
+    color: #0077a8;
+  }
+  .cm-editor .cm-bool {
+    color: #c25b00;
+  }
+  .cm-editor .cm-null {
+    color: #9e9eb8;
+  }
+  .cm-editor .cm-keyword {
+    color: #5533bb;
+  }
+}
+
+/* ── JsonTree ──────────────────────────────────────────────── */
+.json-tree {
+  border-radius: var(--ax-radius);
+  border: 1px solid var(--ax-border);
+  overflow: hidden;
+
+  &--dark {
+    background: #0d0d1e;
+  }
+  &--light {
+    background: #f8f9fc;
+  }
+}
+
+.jt-header {
+  min-height: 30px;
+  border-bottom: 1px solid var(--ax-border);
+  background: var(--ax-surface-raised);
+}
+
+.jt-type-label {
+  color: var(--ax-text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.jt-empty {
+  color: var(--ax-text-dim);
+  min-height: 100px;
+}
+
+.jt-empty-icon {
+  color: var(--ax-text-dim);
+}
+
+.jt-scroll {
+  overflow-y: auto;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+/* ── JsonNode ──────────────────────────────────────────────── */
+.jtn-node {
+  display: block;
+}
+
+.jtn-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background 0.1s;
+}
+
+.jtn-clickable {
+  cursor: pointer;
+  &:hover {
+    background: var(--jtn-hover);
+  }
+  &:focus {
+    outline: 1px solid rgba(0, 188, 212, 0.4);
+  }
+}
+
+/* toggle icon / spacer — 1em wide to align content */
+.jtn-icon,
+.jtn-sp {
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+.jtn-icon {
+  font-size: 0.6em;
+  color: var(--ax-text-dim);
+  vertical-align: middle;
+  padding-top: 2px;
+}
+
+.jtn-children {
+  padding-left: 1.5em;
+}
+
+/* value type colors */
+.jtn-str {
+  color: var(--jtn-str);
+  word-break: break-all;
+}
+.jtn-num {
+  color: var(--jtn-num);
+}
+.jtn-bool-t {
+  color: var(--jtn-bool-t);
+}
+.jtn-bool-f {
+  color: var(--jtn-bool-f);
+}
+.jtn-null {
+  color: var(--jtn-null);
+  font-style: italic;
+}
+.jtn-key {
+  color: var(--jtn-key);
+}
+.jtn-idx {
+  color: var(--jtn-idx);
+}
+.jtn-brkt {
+  color: var(--jtn-brkt);
+}
+.jtn-p {
+  color: var(--jtn-punt);
+}
+.jtn-hint {
+  color: var(--jtn-hint);
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+/* ── Raw viewer ────────────────────────────────────────────── */
+.ax-raw-viewer {
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.81rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 12px;
+  color: var(--ax-text-muted);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* ── Legacy compat ─────────────────────────────────────────── */
 .response-hex {
   font-family: 'Fira Code', monospace;
   font-size: 0.82rem;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
+  background: var(--ax-surface-input);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+/* transparent panels for q-tab-panels */
+.transparent-panels {
+  background: transparent !important;
+  .q-tab-panel {
+    background: transparent !important;
+  }
 }

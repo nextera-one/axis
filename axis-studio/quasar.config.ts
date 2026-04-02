@@ -6,7 +6,7 @@ export default configure(() => {
 
     css: ['app.scss'],
 
-    extras: ['material-icons'],
+    extras: ['roboto-font', 'material-icons'],
 
     build: {
       target: { browser: ['es2022', 'chrome100', 'firefox100', 'safari15'] },

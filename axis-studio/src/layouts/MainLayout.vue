@@ -1,111 +1,233 @@
 <template>
-  <q-layout view="lLp Lpr lFf">
-    <!-- Header -->
-    <q-header class="bg-dark">
-      <q-toolbar>
-        <q-btn flat dense round icon="menu" @click="drawer = !drawer" />
-        <q-toolbar-title class="text-weight-bold">
-          <span class="text-primary">AXIS</span> Studio
-        </q-toolbar-title>
+  <q-layout view="lHh LpR lFf">
 
-        <!-- Connection indicator -->
+    <!-- ═══════ TOP BAR ════════════════════════════════════════ -->
+    <q-header elevated :class="headerBg">
+      <q-toolbar>
+        <q-btn
+          flat dense round
+          aria-label="Toggle menu"
+          icon="menu"
+          @click="drawer = !drawer"
+          class="q-mr-sm"
+        />
+
+        <!-- Brand mark -->
+        <div class="brand-link row items-center no-wrap q-mr-md">
+          <q-icon name="hexagon" color="primary" size="20px" />
+          <span
+            class="text-weight-bold text-primary q-ml-xs"
+            style="font-size: 1.05rem; letter-spacing: 0.03em"
+          >AXIS</span>
+          <span
+            class="q-ml-xs text-weight-regular"
+            :class="$q.dark.isActive ? 'text-grey-5' : 'text-grey-7'"
+            style="font-size: 0.88rem"
+          >Studio</span>
+        </div>
+
+        <!-- Page title (md+) -->
+        <span
+          class="gt-sm text-caption text-weight-medium"
+          :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
+        >
+          {{ currentTitle }}
+        </span>
+
+        <q-space />
+
+        <!-- Connection chip -->
         <q-chip
-          :color="conn.connected ? 'positive' : 'negative'"
+          dense clickable
+          :color="conn.connected ? 'positive' : conn.lastError ? 'negative' : 'grey-7'"
           text-color="white"
-          dense
           size="sm"
-          clickable
-          @click="showConnection = true"
+          class="q-mr-xs"
+          @click="showConn = true"
         >
           <q-icon
-            :name="conn.connected ? 'cloud_done' : 'cloud_off'"
+            :name="conn.connected ? 'link' : 'link_off'"
+            size="14px"
             class="q-mr-xs"
           />
-          {{ conn.connected ? conn.latencyMs + 'ms' : 'Offline' }}
+          <span class="gt-xs font-mono" style="font-size: 0.75rem">
+            {{ conn.connected ? conn.latencyMs + ' ms' : 'Offline' }}
+          </span>
         </q-chip>
+
+        <!-- Dark / light toggle -->
+        <q-btn
+          flat dense round
+          :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+          :title="$q.dark.isActive ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggleDark"
+        />
       </q-toolbar>
     </q-header>
 
-    <!-- Sidebar -->
-    <q-drawer v-model="drawer" :width="220" bordered class="bg-dark">
-      <q-list>
-        <q-item-label header class="text-grey-5 q-mt-sm"
-          >Navigation</q-item-label
+    <!-- ═══════ LEFT DRAWER ════════════════════════════════════ -->
+    <q-drawer
+      v-model="drawer"
+      :width="228"
+      :breakpoint="700"
+      bordered
+      :class="drawerBg"
+    >
+      <div class="q-pa-md q-pb-xs">
+        <div
+          class="text-overline"
+          style="font-size: 0.62rem; letter-spacing: 0.12em; font-weight: 700"
+          :class="$q.dark.isActive ? 'text-grey-7' : 'text-grey-6'"
         >
+          TOOLS
+        </div>
+      </div>
 
+      <q-list dense class="q-px-sm">
         <q-item
           v-for="nav in navItems"
           :key="nav.to"
           :to="nav.to"
           clickable
           v-ripple
-          active-class="text-primary bg-grey-10"
+          active-class="nav-active"
+          class="nav-item q-mb-xs rounded-borders"
         >
-          <q-item-section avatar>
-            <q-icon :name="nav.icon" />
+          <q-item-section avatar style="min-width: 34px">
+            <q-icon :name="nav.icon" size="18px" />
           </q-item-section>
-          <q-item-section>{{ nav.label }}</q-item-section>
+          <q-item-section>
+            <q-item-label class="text-weight-medium" style="font-size: 0.87rem">
+              {{ nav.label }}
+            </q-item-label>
+          </q-item-section>
         </q-item>
       </q-list>
+
+      <!-- Drawer footer -->
+      <div class="absolute-bottom q-pa-sm">
+        <q-separator class="q-mb-sm" />
+        <div
+          class="text-caption text-center"
+          :class="$q.dark.isActive ? 'text-grey-7' : 'text-grey-6'"
+        >
+          axis-studio · v1.0.0
+        </div>
+      </div>
     </q-drawer>
 
-    <!-- Page content -->
-    <q-page-container>
-      <router-view />
+    <!-- ═══════ PAGE CONTENT ═══════════════════════════════════ -->
+    <q-page-container :class="$q.dark.isActive ? '' : 'bg-grey-2'">
+      <router-view v-slot="{ Component, route }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </transition>
+      </router-view>
     </q-page-container>
 
-    <!-- Connection dialog -->
-    <q-dialog v-model="showConnection">
-      <q-card style="min-width: 380px" class="bg-dark">
-        <q-card-section>
-          <div class="text-h6">Node Connection</div>
+    <!-- ═══════ CONNECTION DIALOG ══════════════════════════════ -->
+    <q-dialog v-model="showConn">
+      <q-card style="min-width: 380px; max-width: 96vw">
+        <q-card-section class="row items-center q-pb-none">
+          <q-icon name="dns" color="primary" size="20px" class="q-mr-sm" />
+          <span class="text-h6">Node Connection</span>
+          <q-space />
+          <q-btn flat round dense icon="close" v-close-popup />
         </q-card-section>
-        <q-card-section>
+
+        <q-card-section class="q-pt-sm">
           <q-input
             v-model="tempUrl"
             label="AXIS Node URL"
-            dense
             outlined
-            dark
-            class="q-mb-md"
-            @keyup.enter="applyUrl"
-          />
-          <div class="text-caption text-grey-5">
-            Status: {{ conn.statusLabel }}
+            dense
+            placeholder="http://localhost:4747"
+            class="q-mb-sm"
+            @keyup.enter="applyConn"
+          >
+            <template #prepend>
+              <q-icon name="api" />
+            </template>
+          </q-input>
+
+          <div class="row items-center q-gutter-xs">
+            <q-icon
+              :name="conn.connected ? 'check_circle' : conn.lastError ? 'cancel' : 'help_outline'"
+              :color="conn.connected ? 'positive' : conn.lastError ? 'negative' : 'grey-5'"
+              size="14px"
+            />
+            <span class="text-caption" :class="$q.dark.isActive ? 'text-grey-5' : 'text-grey-6'">
+              {{ conn.statusLabel }}
+            </span>
+            <q-spinner v-if="conn.pinging" size="14px" color="primary" />
           </div>
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Test" color="info" @click="conn.ping()" />
-          <q-btn flat label="Save" color="primary" @click="applyUrl" />
+
+        <q-card-actions align="right" class="q-px-md q-pb-md q-pt-none">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            flat
+            color="info"
+            icon="wifi_tethering"
+            label="Test"
+            :loading="conn.pinging"
+            @click="conn.ping()"
+          />
+          <q-btn
+            unelevated
+            color="primary"
+            icon="save"
+            label="Save"
+            @click="applyConn"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
+
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { useQuasar } from 'quasar';
 import { useConnectionStore } from 'stores/connection';
 
-const conn = useConnectionStore();
-const drawer = ref(true);
-const showConnection = ref(false);
-const tempUrl = ref(conn.nodeUrl);
+const $q   = useQuasar();
+const route = useRoute();
+const conn  = useConnectionStore();
+
+const drawer   = ref(window.innerWidth > 700);
+const showConn = ref(false);
+const tempUrl  = ref(conn.nodeUrl);
 
 const navItems = [
-  { label: 'Intent Sender', icon: 'send', to: '/sender' },
-  { label: 'Registry', icon: 'menu_book', to: '/registry' },
-  { label: 'Auth Manager', icon: 'vpn_key', to: '/auth' },
-  { label: 'History', icon: 'history', to: '/history' },
+  { label: 'Intent Sender',  icon: 'send',      to: '/sender'   },
+  { label: 'Registry',       icon: 'menu_book', to: '/registry' },
+  { label: 'Auth Manager',   icon: 'vpn_key',   to: '/auth'     },
+  { label: 'History',        icon: 'history',   to: '/history'  },
 ];
 
-function applyUrl() {
-  conn.setNodeUrl(tempUrl.value);
-  conn.ping();
-  showConnection.value = false;
+const currentTitle = computed(() => String(route.meta?.title ?? ''));
+
+function toggleDark() {
+  $q.dark.toggle();
+  localStorage.setItem('axis_dark_mode', String($q.dark.isActive));
 }
 
-onMounted(() => {
+const headerBg = computed(() =>
+  $q.dark.isActive ? 'ax-header--dark' : 'ax-header--light',
+);
+const drawerBg = computed(() =>
+  $q.dark.isActive ? 'ax-drawer--dark' : 'ax-drawer--light',
+);
+
+function applyConn() {
+  conn.setNodeUrl(tempUrl.value);
   conn.ping();
-});
+  showConn.value = false;
+}
+
+conn.ping();
 </script>
+
