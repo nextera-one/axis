@@ -218,7 +218,7 @@ async function copyPub() {
   border-left: 3px solid transparent;
 }
 .key-item--active {
-  background: var(--ax-primary-soft) !important;
+  background: var(--ax-primary-dim) !important;
   border-left-color: var(--ax-primary) !important;
 }
 </style>

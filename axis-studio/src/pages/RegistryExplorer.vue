@@ -267,7 +267,7 @@ loadCatalog();
   border-left: 3px solid transparent;
 }
 .registry-item--active {
-  background: var(--ax-primary-soft) !important;
+  background: var(--ax-primary-dim) !important;
   border-left-color: var(--ax-primary) !important;
   color: var(--ax-primary) !important;
 }

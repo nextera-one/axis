@@ -1,79 +1,112 @@
 <template>
   <q-layout view="lHh LpR lFf">
-
-    <!-- ═══════ TOP BAR — Frosted glass ═══════════════════════════════════ -->
-    <q-header elevated class="ax-header">
-      <q-toolbar style="min-height: 52px">
+    <!-- ═══════ TOP BAR ════════════════════════════════════════ -->
+    <q-header :class="headerBg" style="height: 44px">
+      <q-toolbar style="min-height: 44px; padding: 0 10px">
         <q-btn
-          flat dense round
-          aria-label="Toggle menu"
+          flat
+          dense
+          round
           icon="menu"
+          aria-label="Toggle menu"
           @click="drawer = !drawer"
+          style="color: var(--ax-text-muted)"
           class="q-mr-sm"
         />
 
-        <!-- Brand mark with gradient text -->
-        <div class="row items-center no-wrap q-mr-md" style="gap: 6px; cursor: default">
-          <div class="ax-logo-icon">
-            <q-icon name="hexagon" size="22px" />
-          </div>
-          <span class="ax-brand-text">AXIS</span>
-          <span class="text-weight-regular" style="font-size: 0.85rem; color: var(--ax-text-dim)">
-            Studio
-          </span>
+        <!-- Brand -->
+        <div
+          class="row items-center no-wrap q-mr-lg"
+          style="gap: 8px; text-decoration: none"
+        >
+          <img
+            :src="
+              $q.dark.isActive ? 'images/logo-mini.svg' : 'images/logo-mini.svg'
+            "
+            width="22"
+            height="17"
+            alt="NestFlow"
+            style="display: block; flex-shrink: 0"
+          />
+          <span
+            class="ax-brand-gradient"
+            style="
+              font-weight: 700;
+              font-size: 0.92rem;
+              letter-spacing: 0.06em;
+              font-family: 'Inter', sans-serif;
+            "
+            >AXIS</span
+          >
+          <span
+            style="
+              font-size: 0.76rem;
+              color: var(--ax-text-dim);
+              font-weight: 400;
+            "
+            >Studio</span
+          >
         </div>
 
-        <!-- Page title (md+) -->
-        <div class="gt-sm row items-center no-wrap" style="gap: 8px">
-          <div style="width: 1px; height: 16px; background: var(--ax-border)" />
-          <span style="font-size: 0.78rem; font-weight: 500; color: var(--ax-text-muted)">
-            {{ currentTitle }}
-          </span>
-        </div>
+        <!-- Current page breadcrumb -->
+        <span
+          class="gt-sm"
+          style="font-size: 0.76rem; color: var(--ax-text-dim)"
+        >
+          {{ currentTitle }}
+        </span>
 
         <q-space />
 
         <!-- Connection status pill -->
         <div
-          class="ax-conn-chip"
-          :class="conn.connected ? 'ax-conn-chip--connected' : 'ax-conn-chip--disconnected'"
+          class="ax-conn-status"
+          :class="
+            conn.connected
+              ? 'ax-conn-status--connected'
+              : conn.lastError
+                ? 'ax-conn-status--error'
+                : ''
+          "
           @click="showConn = true"
+          :title="`Node: ${conn.nodeUrl}`"
         >
-          <span class="ax-dot" :class="{ 'ax-dot--pulse': conn.connected }" />
-          <span class="gt-xs font-mono">
-            {{ conn.connected ? conn.latencyMs + 'ms' : 'Offline' }}
-          </span>
+          <span class="ax-conn-dot" />
+          <span>{{ conn.connected ? conn.latencyMs + ' ms' : 'Offline' }}</span>
+          <q-spinner v-if="conn.pinging" size="10px" color="primary" />
         </div>
 
         <!-- Dark / light toggle -->
         <q-btn
-          flat dense round
-          class="q-ml-sm"
+          flat
+          dense
+          round
           :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-          :title="$q.dark.isActive ? 'Switch to light mode' : 'Switch to dark mode'"
+          :title="$q.dark.isActive ? 'Light mode' : 'Dark mode'"
           @click="toggleDark"
+          style="color: var(--ax-text-muted); margin-left: 6px"
         />
       </q-toolbar>
     </q-header>
 
-    <!-- ═══════ LEFT DRAWER — Glass nav ═══════════════════════════════════ -->
-    <q-drawer
-      v-model="drawer"
-      :width="236"
-      :breakpoint="700"
-      bordered
-      class="ax-drawer"
-    >
-      <div class="q-pa-md q-pb-xs">
-        <div
-          style="font-size: 0.6rem; letter-spacing: 0.14em; font-weight: 700; text-transform: uppercase"
-          :style="{ color: 'var(--ax-text-dim)' }"
+    <!-- ═══════ LEFT DRAWER ════════════════════════════════════ -->
+    <q-drawer v-model="drawer" :width="216" :breakpoint="700" :class="drawerBg">
+      <!-- Section label -->
+      <div style="padding: 14px 16px 4px">
+        <span
+          style="
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ax-text-dim);
+          "
+          >Navigator</span
         >
-          Navigation
-        </div>
       </div>
 
-      <q-list dense class="q-px-sm q-mt-xs">
+      <!-- Nav items -->
+      <q-list dense style="padding: 0 6px">
         <q-item
           v-for="nav in navItems"
           :key="nav.to"
@@ -81,115 +114,227 @@
           clickable
           v-ripple
           active-class="nav-active"
-          class="nav-item q-mb-xs"
+          class="nav-item"
         >
-          <q-item-section avatar style="min-width: 36px">
-            <q-icon :name="nav.icon" size="18px" />
+          <q-item-section avatar style="min-width: 28px">
+            <q-icon :name="nav.icon" size="15px" />
           </q-item-section>
           <q-item-section>
-            <q-item-label style="font-size: 0.84rem; font-weight: 500">
+            <q-item-label
+              style="
+                font-size: 0.82rem;
+                font-weight: 500;
+                color: var(--ax-text);
+              "
+            >
               {{ nav.label }}
             </q-item-label>
             <q-item-label
-              v-if="nav.subtitle"
               caption
-              style="font-size: 0.65rem; color: var(--ax-text-dim)"
+              style="
+                font-size: 0.68rem;
+                color: var(--ax-text-dim);
+                margin-top: 1px;
+              "
             >
-              {{ nav.subtitle }}
+              {{ nav.sub }}
             </q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
 
-      <!-- Drawer footer -->
-      <div class="absolute-bottom q-pa-sm">
-        <q-separator style="opacity: 0.3" class="q-mb-sm" />
+      <!-- Divider + server info -->
+      <div
+        style="
+          padding: 8px 14px;
+          margin-top: 8px;
+          border-top: 1px solid var(--ax-border);
+        "
+      >
         <div
-          class="text-center font-mono"
-          style="font-size: 0.62rem; color: var(--ax-text-dim); letter-spacing: 0.04em"
+          style="
+            font-size: 0.68rem;
+            color: var(--ax-text-dim);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+          "
         >
-          axis-studio · v1.0.0
+          Node
+        </div>
+        <div
+          class="font-mono"
+          style="
+            font-size: 0.68rem;
+            color: var(--ax-text-muted);
+            word-break: break-all;
+            line-height: 1.4;
+          "
+        >
+          {{ conn.nodeUrl }}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div
+        class="absolute-bottom"
+        style="padding: 6px 12px; border-top: 1px solid var(--ax-border-subtle)"
+      >
+        <!-- Nestflow branding footer -->
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+          "
+        >
+          <img
+            src="images/logo-horz.svg"
+            width="88"
+            height="13"
+            alt="NestFlow"
+            style="opacity: 0.25; display: block"
+          />
+          <div style="font-size: 0.62rem; color: var(--ax-text-dim)">
+            axis-studio · v1.0.0
+          </div>
         </div>
       </div>
     </q-drawer>
 
-    <!-- ═══════ PAGE CONTENT ═════════════════════════════════════════════ -->
-    <q-page-container style="background: var(--ax-page-bg)">
-      <router-view v-slot="{ Component, route: r }">
+    <!-- ═══════ PAGE CONTENT ═══════════════════════════════════ -->
+    <q-page-container style="background: var(--ax-bg)">
+      <router-view v-slot="{ Component, route }">
         <transition name="page-fade" mode="out-in">
-          <component :is="Component" :key="r.path" />
+          <component :is="Component" :key="route.path" />
         </transition>
       </router-view>
     </q-page-container>
 
-    <!-- ═══════ CONNECTION DIALOG — Glass card ════════════════════════════ -->
+    <!-- ═══════ CONNECTION DIALOG ══════════════════════════════ -->
     <q-dialog v-model="showConn">
       <q-card
-        class="ax-dialog-card"
-        style="min-width: 400px; max-width: 96vw"
+        style="
+          min-width: 360px;
+          max-width: 96vw;
+          background: var(--ax-surface);
+          border: 1px solid var(--ax-border);
+          border-radius: 8px;
+        "
       >
-        <!-- Gradient accent bar -->
-        <div style="height: 3px; background: var(--ax-gradient-1)" />
-
-        <q-card-section class="row items-center q-pb-none">
-          <q-icon name="dns" size="20px" style="color: var(--ax-primary)" class="q-mr-sm" />
-          <span style="font-size: 1rem; font-weight: 600">Node Connection</span>
+        <!-- Header -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid var(--ax-border);
+          "
+        >
+          <q-icon name="dns" style="color: var(--ax-primary)" size="17px" />
+          <span
+            style="font-size: 0.9rem; font-weight: 600; color: var(--ax-text)"
+            >Node Connection</span
+          >
           <q-space />
-          <q-btn flat round dense icon="close" v-close-popup />
-        </q-card-section>
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            v-close-popup
+            size="xs"
+            style="color: var(--ax-text-muted)"
+          />
+        </div>
 
-        <q-card-section class="q-pt-sm">
+        <!-- Body -->
+        <div style="padding: 14px 16px">
           <q-input
             v-model="tempUrl"
             label="AXIS Node URL"
             outlined
             dense
-            placeholder="http://localhost:4747"
-            class="q-mb-sm"
+            placeholder="http://localhost:4747/axis"
             @keyup.enter="applyConn"
           >
             <template #prepend>
-              <q-icon name="api" />
+              <q-icon name="api" size="15px" />
             </template>
           </q-input>
 
-          <div class="row items-center" style="gap: 6px">
-            <span
-              class="ax-dot"
-              :class="{ 'ax-dot--pulse': conn.connected }"
+          <!-- Status row -->
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              margin-top: 10px;
+            "
+          >
+            <q-icon
+              :name="
+                conn.connected
+                  ? 'check_circle'
+                  : conn.lastError
+                    ? 'cancel'
+                    : 'help_outline'
+              "
               :style="{
-                background: conn.connected ? 'var(--ax-positive)' : conn.lastError ? 'var(--ax-negative)' : 'var(--ax-text-dim)',
-                color: conn.connected ? 'var(--ax-positive)' : conn.lastError ? 'var(--ax-negative)' : 'var(--ax-text-dim)'
+                color: conn.connected
+                  ? 'var(--ax-ok)'
+                  : conn.lastError
+                    ? 'var(--ax-error)'
+                    : 'var(--ax-text-dim)',
               }"
+              size="14px"
             />
-            <span style="font-size: 0.78rem; color: var(--ax-text-muted)">
-              {{ conn.statusLabel }}
-            </span>
-            <q-spinner v-if="conn.pinging" size="14px" color="primary" />
+            <span style="font-size: 0.76rem; color: var(--ax-text-muted)">{{
+              conn.statusLabel
+            }}</span>
+            <q-spinner v-if="conn.pinging" size="12px" color="primary" />
           </div>
-        </q-card-section>
+        </div>
 
-        <q-card-actions align="right" class="q-px-md q-pb-md q-pt-none">
-          <q-btn flat label="Cancel" v-close-popup />
+        <!-- Actions -->
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            padding: 8px 14px 14px;
+          "
+        >
           <q-btn
             flat
+            label="Cancel"
+            v-close-popup
+            size="sm"
+            style="color: var(--ax-text-muted)"
+          />
+          <q-btn
+            flat
+            color="info"
             icon="wifi_tethering"
             label="Test"
             :loading="conn.pinging"
             @click="conn.ping()"
-            style="color: var(--ax-info)"
+            size="sm"
           />
           <q-btn
             unelevated
-            label="Save"
+            color="primary"
             icon="save"
-            class="ax-btn-primary"
+            label="Save"
             @click="applyConn"
+            size="sm"
           />
-        </q-card-actions>
+        </div>
       </q-card>
     </q-dialog>
-
   </q-layout>
 </template>
 
@@ -199,19 +344,24 @@ import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useConnectionStore } from 'stores/connection';
 
-const $q    = useQuasar();
+const $q = useQuasar();
 const route = useRoute();
-const conn  = useConnectionStore();
+const conn = useConnectionStore();
 
-const drawer   = ref(window.innerWidth > 700);
+const drawer = ref(window.innerWidth > 700);
 const showConn = ref(false);
-const tempUrl  = ref(conn.nodeUrl);
+const tempUrl = ref(conn.nodeUrl);
 
 const navItems = [
-  { label: 'Intent Sender', subtitle: 'Send & test', icon: 'send',      to: '/sender'   },
-  { label: 'Registry',      subtitle: 'Browse intents', icon: 'menu_book', to: '/registry' },
-  { label: 'Auth Manager',  subtitle: 'Keys & identity', icon: 'vpn_key',   to: '/auth'     },
-  { label: 'History',       subtitle: 'Past requests', icon: 'history',   to: '/history'  },
+  { label: 'Sender', sub: 'Send intents', icon: 'send', to: '/sender' },
+  {
+    label: 'Registry',
+    sub: 'Browse catalog',
+    icon: 'menu_book',
+    to: '/registry',
+  },
+  { label: 'Auth', sub: 'Keys & identity', icon: 'vpn_key', to: '/auth' },
+  { label: 'History', sub: 'Past requests', icon: 'history', to: '/history' },
 ];
 
 const currentTitle = computed(() => String(route.meta?.title ?? ''));
@@ -221,6 +371,13 @@ function toggleDark() {
   localStorage.setItem('axis_dark_mode', String($q.dark.isActive));
 }
 
+const headerBg = computed(() =>
+  $q.dark.isActive ? 'ax-header--dark' : 'ax-header--light',
+);
+const drawerBg = computed(() =>
+  $q.dark.isActive ? 'ax-drawer--dark' : 'ax-drawer--light',
+);
+
 function applyConn() {
   conn.setNodeUrl(tempUrl.value);
   conn.ping();
@@ -229,34 +386,3 @@ function applyConn() {
 
 conn.ping();
 </script>
-
-<style scoped>
-.ax-logo-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--ax-primary-soft);
-  color: var(--ax-primary);
-}
-
-.ax-brand-text {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  background: var(--ax-gradient-1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.ax-dialog-card {
-  background: var(--ax-surface) !important;
-  backdrop-filter: var(--ax-blur);
-  border: 1px solid var(--ax-glass-border);
-  border-radius: var(--ax-radius-lg) !important;
-  box-shadow: var(--ax-shadow-lg);
-}
-</style>

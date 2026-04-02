@@ -1,21 +1,28 @@
 <template>
   <q-page class="ax-page q-pa-md">
     <div class="ax-panel">
-
       <!-- Header -->
       <div class="ax-panel-header row items-center">
-        <q-icon name="history" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
+        <q-icon name="history" color="primary" size="15px" class="q-mr-xs" />
         <span class="ax-panel-title q-mr-auto">History</span>
-        <span class="ax-badge ax-badge--neutral font-mono" style="font-size: 0.65rem">
+        <q-chip
+          dense
+          size="sm"
+          :color="$q.dark.isActive ? 'grey-9' : 'grey-3'"
+          :text-color="$q.dark.isActive ? 'grey-4' : 'grey-7'"
+        >
           {{ history.filtered.length }} entries
-        </span>
+        </q-chip>
         <q-btn
           v-if="history.entries.length"
-          flat dense round size="xs"
+          flat
+          dense
+          round
+          size="xs"
           icon="delete_sweep"
+          color="negative"
           title="Clear all history"
           class="q-ml-sm"
-          style="color: var(--ax-negative)"
           @click="confirmClear"
         />
       </div>
@@ -25,7 +32,9 @@
         <q-input
           v-model="history.filterQuery"
           placeholder="Filter by intent or effect…"
-          outlined dense clearable
+          outlined
+          dense
+          clearable
         >
           <template #prepend>
             <q-icon name="filter_list" size="16px" />
@@ -34,10 +43,25 @@
       </div>
 
       <!-- Empty state -->
-      <div v-if="!history.filtered.length" class="ax-empty">
-        <q-icon name="history" class="ax-empty-icon" />
-        <div class="ax-empty-text">
-          {{ history.entries.length ? 'No entries match the filter' : 'No history yet — send some intents!' }}
+      <div
+        v-if="!history.filtered.length"
+        class="column items-center justify-center q-pa-xl"
+      >
+        <q-icon
+          name="history"
+          size="48px"
+          :color="$q.dark.isActive ? 'grey-8' : 'grey-4'"
+          class="q-mb-md"
+        />
+        <div
+          class="text-body2"
+          :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
+        >
+          {{
+            history.entries.length
+              ? 'No entries match the filter'
+              : 'No history yet — send some intents!'
+          }}
         </div>
       </div>
 
@@ -54,31 +78,38 @@
           ]"
         >
           <template #header>
+            <!-- Status icon -->
             <q-item-section avatar style="min-width: 28px">
               <q-icon
                 :name="entry.status === 'ok' ? 'check_circle' : 'error'"
+                :color="entry.status === 'ok' ? 'positive' : 'negative'"
                 size="16px"
-                :style="{ color: entry.status === 'ok' ? 'var(--ax-positive)' : 'var(--ax-negative)' }"
               />
             </q-item-section>
 
+            <!-- Intent + meta -->
             <q-item-section>
-              <q-item-label class="font-mono" style="font-size: 0.78rem; font-weight: 500">
+              <q-item-label class="font-mono text-caption text-weight-medium">
                 {{ entry.intent }}
               </q-item-label>
-              <q-item-label caption style="font-size: 0.68rem; color: var(--ax-text-dim)">
+              <q-item-label caption>
                 {{ new Date(entry.ts).toLocaleTimeString() }}
                 · {{ entry.durationMs }}ms
-                <span v-if="entry.responseEffect"> · {{ entry.responseEffect }}</span>
+                <span v-if="entry.responseEffect">
+                  · {{ entry.responseEffect }}</span
+                >
               </q-item-label>
             </q-item-section>
 
+            <!-- Delete -->
             <q-item-section side>
               <q-btn
-                flat dense round
+                flat
+                dense
+                round
                 icon="close"
                 size="xs"
-                style="color: var(--ax-text-dim)"
+                :color="$q.dark.isActive ? 'grey-6' : 'grey-5'"
                 @click.stop="history.remove(entry.id)"
               />
             </q-item-section>
@@ -88,36 +119,46 @@
           <div class="q-pa-md" style="background: var(--ax-surface-raised)">
             <q-tabs
               v-model="detailTabs[entry.id]"
-              dense align="left"
-              class="ax-tabs q-mb-sm"
-              :active-color="$q.dark.isActive ? 'cyan-3' : 'primary'"
+              dense
+              align="left"
+              active-color="primary"
               indicator-color="primary"
+              class="ins-tabs q-mb-sm"
             >
-              <q-tab name="response" icon="inbox"  label="Response" />
-              <q-tab name="request"  icon="send"   label="Request" />
+              <q-tab name="response" icon="inbox" label="Response" />
+              <q-tab name="request" icon="send" label="Request" />
             </q-tabs>
 
             <q-tab-panels
               :model-value="detailTabs[entry.id] ?? 'response'"
               animated
               class="transparent-panels"
-              @update:model-value="(v: string) => (detailTabs[entry.id] = v)"
+              @update:model-value="(v) => (detailTabs[entry.id] = v)"
             >
               <q-tab-panel name="response" class="q-pa-none">
-                <JsonTree :value="parseSafe(entry.responseBody)" max-height="320px" />
+                <JsonTree
+                  :value="parseSafe(entry.responseBody)"
+                  max-height="320px"
+                />
               </q-tab-panel>
               <q-tab-panel name="request" class="q-pa-none">
-                <JsonTree :value="parseSafe(entry.requestBody)" max-height="320px" />
+                <JsonTree
+                  :value="parseSafe(entry.requestBody)"
+                  max-height="320px"
+                />
               </q-tab-panel>
             </q-tab-panels>
 
-            <div style="font-size: 0.68rem; color: var(--ax-text-dim); margin-top: 8px" class="font-mono">
+            <!-- Footer meta -->
+            <div
+              class="text-caption q-mt-sm font-mono"
+              style="font-size: 0.68rem; color: var(--ax-text-dim)"
+            >
               Node: {{ entry.nodeUrl }} · ID: {{ entry.id.slice(0, 12) }}…
             </div>
           </div>
         </q-expansion-item>
       </q-list>
-
     </div>
   </q-page>
 </template>
@@ -128,14 +169,18 @@ import { useQuasar } from 'quasar';
 import JsonTree from 'src/components/JsonTree.vue';
 import { useHistoryStore } from 'stores/history';
 
-const $q      = useQuasar();
+const $q = useQuasar();
 const history = useHistoryStore();
 
+// Per-entry active tab state
 const detailTabs = reactive<Record<string, string>>({});
 
 function parseSafe(raw: string): unknown {
-  try { return JSON.parse(raw); }
-  catch { return raw; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 function confirmClear() {
