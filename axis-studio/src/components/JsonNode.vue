@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 
-// Allows self-reference in template as <JsonNode>
 defineOptions({ name: 'JsonNode' });
 
 const props = withDefaults(
   defineProps<{
     value: unknown;
-    label?: string; // key name (for object entries)
-    isArrayItem?: boolean; // true when label is a numeric index
+    label?: string;
+    isArrayItem?: boolean;
     depth?: number;
     maxDepth?: number;
     trailingComma?: boolean;
@@ -23,17 +22,11 @@ const props = withDefaults(
 
 const open = ref(props.depth < props.maxDepth);
 
-const isNull = computed(
-  () => props.value === null || props.value === undefined,
-);
+const isNull = computed(() => props.value === null || props.value === undefined);
 const isArr = computed(() => Array.isArray(props.value));
-const isObj = computed(
-  () => typeof props.value === 'object' && props.value !== null && !isArr.value,
-);
+const isObj = computed(() => typeof props.value === 'object' && props.value !== null && !isArr.value);
 const isExpandable = computed(() => isArr.value || isObj.value);
-const isEmpty = computed(
-  () => isExpandable.value && childKeys.value.length === 0,
-);
+const isEmpty = computed(() => isExpandable.value && childKeys.value.length === 0);
 
 const childKeys = computed((): string[] => {
   if (isArr.value) return [...(props.value as unknown[]).keys()].map(String);
@@ -46,9 +39,7 @@ const closeBr = computed(() => (isArr.value ? ']' : '}'));
 
 const sizeHint = computed(() => {
   const n = childKeys.value.length;
-  return isArr.value
-    ? `${n} item${n !== 1 ? 's' : ''}`
-    : `${n} key${n !== 1 ? 's' : ''}`;
+  return isArr.value ? `${n} item${n !== 1 ? 's' : ''}` : `${n} key${n !== 1 ? 's' : ''}`;
 });
 
 function childValue(k: string): unknown {
@@ -68,14 +59,10 @@ const valDisplay = computed((): string => {
 const valClass = computed(() => {
   if (isNull.value) return 'jtn-null';
   switch (typeof props.value) {
-    case 'string':
-      return 'jtn-str';
-    case 'number':
-      return 'jtn-num';
-    case 'boolean':
-      return props.value ? 'jtn-bool-t' : 'jtn-bool-f';
-    default:
-      return 'jtn-null';
+    case 'string':  return 'jtn-str';
+    case 'number':  return 'jtn-num';
+    case 'boolean': return props.value ? 'jtn-bool-t' : 'jtn-bool-f';
+    default:        return 'jtn-null';
   }
 });
 </script>

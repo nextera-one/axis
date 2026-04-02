@@ -2,11 +2,11 @@
   <q-page class="ax-page q-pa-md">
     <div class="row q-col-gutter-md">
 
-      <!-- ══════ INTENT LIST ═════════════════════════════════ -->
+      <!-- ══════ INTENT LIST ═════════════════════════════════════════════ -->
       <div class="col-12 col-md-4">
         <div class="ax-panel">
           <div class="ax-panel-header row items-center">
-            <q-icon name="menu_book" color="primary" size="15px" class="q-mr-xs" />
+            <q-icon name="menu_book" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
             <span class="ax-panel-title">Registry</span>
             <q-space />
             <q-btn
@@ -22,9 +22,7 @@
             <q-input
               v-model="search"
               placeholder="Search intents…"
-              outlined
-              dense
-              clearable
+              outlined dense clearable
             >
               <template #prepend>
                 <q-icon name="search" size="16px" />
@@ -37,22 +35,13 @@
             class="row items-center q-px-md q-py-xs"
             style="border-bottom: 1px solid var(--ax-border)"
           >
-            <span
-              class="text-caption"
-              :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-            >
+            <span style="font-size: 0.72rem; color: var(--ax-text-dim)">
               {{ filteredIntents.length }} / {{ intents.length }} intents
             </span>
             <q-space />
-            <q-chip
-              v-if="loading"
-              dense
-              size="xs"
-              color="primary"
-              text-color="white"
-            >
-              <q-spinner size="10px" class="q-mr-xs" /> Loading
-            </q-chip>
+            <span v-if="loading" class="ax-badge ax-badge--info" style="font-size: 0.6rem">
+              <q-spinner size="10px" /> Loading
+            </span>
           </div>
 
           <!-- Intent list -->
@@ -69,46 +58,35 @@
                 @click="selected = item"
               >
                 <q-item-section>
-                  <q-item-label class="font-mono text-caption text-weight-medium">
+                  <q-item-label class="font-mono" style="font-size: 0.76rem; font-weight: 500">
                     {{ item.intent }}
                   </q-item-label>
                   <q-item-label
                     v-if="item.description"
                     caption
                     class="ellipsis"
-                    style="max-width: 200px"
+                    style="max-width: 200px; font-size: 0.68rem"
                   >
                     {{ item.description }}
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-badge
-                    :color="sensitivityColor(item.sensitivity)"
-                    style="font-size: 0.6rem"
+                  <span
+                    class="ax-badge font-mono"
+                    :class="'ax-badge--' + sensitivityVariant(item.sensitivity)"
+                    style="font-size: 0.58rem"
                   >
                     {{ item.sensitivity }}
-                  </q-badge>
+                  </span>
                 </q-item-section>
               </q-item>
 
               <!-- Empty state -->
               <q-item v-if="!filteredIntents.length && !loading">
-                <q-item-section class="text-center q-pa-lg">
-                  <q-icon
-                    name="search_off"
-                    size="28px"
-                    :color="$q.dark.isActive ? 'grey-7' : 'grey-5'"
-                    class="q-mb-xs"
-                  />
-                  <div
-                    class="text-caption"
-                    :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-                  >
-                    {{
-                      intents.length
-                        ? 'No matches'
-                        : 'Click refresh to load catalog'
-                    }}
+                <q-item-section class="ax-empty" style="padding: 32px 16px">
+                  <q-icon name="search_off" class="ax-empty-icon" style="font-size: 28px" />
+                  <div class="ax-empty-text">
+                    {{ intents.length ? 'No matches' : 'Click refresh to load catalog' }}
                   </div>
                 </q-item-section>
               </q-item>
@@ -117,42 +95,28 @@
         </div>
       </div>
 
-      <!-- ══════ DETAIL PANEL ════════════════════════════════ -->
+      <!-- ══════ DETAIL PANEL ════════════════════════════════════════════ -->
       <div class="col-12 col-md-8">
 
         <!-- No selection -->
-        <div
-          v-if="!selected"
-          class="ax-panel column items-center justify-center"
-          style="min-height: 300px"
-        >
-          <q-icon
-            name="menu_book"
-            size="52px"
-            :color="$q.dark.isActive ? 'grey-8' : 'grey-4'"
-            class="q-mb-md"
-          />
-          <div
-            class="text-body2"
-            :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-          >
-            Select an intent to see its details
-          </div>
+        <div v-if="!selected" class="ax-panel ax-empty" style="min-height: 300px">
+          <q-icon name="menu_book" class="ax-empty-icon" style="font-size: 52px" />
+          <div class="ax-empty-text">Select an intent to see its details</div>
         </div>
 
         <!-- Selected intent detail -->
-        <div v-else class="ax-panel">
+        <div v-else class="ax-panel ax-panel-accent" style="position: relative">
           <div class="ax-panel-header row items-center no-wrap">
-            <q-icon name="info" color="primary" size="15px" class="q-mr-xs" />
+            <q-icon name="info" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
             <span class="ax-panel-title font-mono q-mr-auto ellipsis">
               {{ selected.intent }}
             </span>
             <q-btn
               flat dense
-              color="primary"
               icon="send"
               label="Open in Sender"
               size="sm"
+              style="color: var(--ax-primary)"
               @click="openInSender(selected.intent)"
             />
           </div>
@@ -161,48 +125,36 @@
             <!-- Description -->
             <div
               v-if="selected.description"
-              class="text-body2 q-mb-md"
-              :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-7'"
+              class="q-mb-md"
+              style="font-size: 0.85rem; color: var(--ax-text-muted); line-height: 1.5"
             >
               {{ selected.description }}
             </div>
 
             <!-- Meta badges -->
-            <div class="row q-gutter-sm q-mb-md">
-              <q-badge :color="sensitivityColor(selected.sensitivity)" class="q-pa-xs">
-                <q-icon name="security" size="12px" class="q-mr-xs" />
+            <div class="q-mb-md" style="display: flex; flex-wrap: wrap; gap: 6px">
+              <span class="ax-badge" :class="'ax-badge--' + sensitivityVariant(selected.sensitivity)">
+                <q-icon name="security" size="12px" />
                 {{ selected.sensitivity }}
-              </q-badge>
-              <q-badge
+              </span>
+              <span
                 v-for="p in selected.requiredProof || []"
                 :key="p"
-                color="purple-8"
-                class="q-pa-xs"
+                class="ax-badge ax-badge--accent"
               >
-                <q-icon name="shield" size="12px" class="q-mr-xs" />
+                <q-icon name="shield" size="12px" />
                 {{ p }}
-              </q-badge>
-              <q-badge
-                v-if="selected.deprecated"
-                color="warning"
-                text-color="dark"
-                class="q-pa-xs"
-              >
-                <q-icon name="warning" size="12px" class="q-mr-xs" />
+              </span>
+              <span v-if="selected.deprecated" class="ax-badge ax-badge--warning">
+                <q-icon name="warning" size="12px" />
                 Deprecated
-              </q-badge>
+              </span>
             </div>
 
             <!-- Contract / limits -->
-            <div
-              v-if="selected.contract"
-              class="row q-col-gutter-sm q-mb-md"
-            >
+            <div v-if="selected.contract" class="row q-col-gutter-sm q-mb-md">
               <div class="col-6 col-sm-3">
-                <div
-                  class="ax-stat-card"
-                  :class="$q.dark.isActive ? 'ax-stat-card--dark' : 'ax-stat-card--light'"
-                >
+                <div class="ax-stat-card">
                   <div class="ax-stat-label">Max DB writes</div>
                   <div class="ax-stat-value font-mono">
                     {{ selected.contract.maxDbWrites ?? '—' }}
@@ -210,10 +162,7 @@
                 </div>
               </div>
               <div class="col-6 col-sm-3">
-                <div
-                  class="ax-stat-card"
-                  :class="$q.dark.isActive ? 'ax-stat-card--dark' : 'ax-stat-card--light'"
-                >
+                <div class="ax-stat-card">
                   <div class="ax-stat-label">Max time</div>
                   <div class="ax-stat-value font-mono">
                     {{ selected.contract.maxTimeMs != null ? selected.contract.maxTimeMs + ' ms' : '—' }}
@@ -224,10 +173,7 @@
 
             <!-- JSON Schema viewer -->
             <div v-if="hasSchema">
-              <div
-                class="text-caption q-mb-xs q-ml-xs"
-                :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-              >
+              <div style="font-size: 0.72rem; font-weight: 500; color: var(--ax-text-dim); margin-bottom: 6px; margin-left: 2px">
                 Schema
               </div>
               <JsonTree
@@ -239,17 +185,13 @@
 
             <!-- Examples -->
             <div v-if="selected.examples?.length" class="q-mt-md">
-              <div
-                class="text-caption q-mb-xs q-ml-xs"
-                :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-              >
+              <div style="font-size: 0.72rem; font-weight: 500; color: var(--ax-text-dim); margin-bottom: 6px; margin-left: 2px">
                 Examples
               </div>
-              <div class="response-hex">{{ selected.examples.join('\n') }}</div>
+              <div class="response-hex font-mono">{{ selected.examples.join('\n') }}</div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </q-page>
@@ -293,13 +235,13 @@ const hasSchema = computed(
   () => selected.value?.schema || selected.value?.inputSchema,
 );
 
-function sensitivityColor(s: string) {
+function sensitivityVariant(s: string): string {
   switch (s) {
-    case 'LOW':      return 'positive';
+    case 'LOW':      return 'success';
     case 'MEDIUM':   return 'info';
     case 'HIGH':     return 'warning';
-    case 'CRITICAL': return 'negative';
-    default:         return 'grey-7';
+    case 'CRITICAL': return 'error';
+    default:         return 'neutral';
   }
 }
 
@@ -316,28 +258,17 @@ function openInSender(intent: string) {
   router.push({ path: '/sender', query: { intent } });
 }
 
-// Auto-load on mount
 loadCatalog();
 </script>
 
 <style scoped>
-.registry-item { transition: background 0.1s; }
+.registry-item {
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+}
 .registry-item--active {
-  background: rgba(0, 188, 212, 0.1) !important;
-  color: #00bcd4 !important;
+  background: var(--ax-primary-soft) !important;
+  border-left-color: var(--ax-primary) !important;
+  color: var(--ax-primary) !important;
 }
-.ax-stat-card {
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-.ax-stat-card--dark  { background: #1a1a30; }
-.ax-stat-card--light { background: #f0f1f8; }
-.ax-stat-label {
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ax-text-dim);
-  margin-bottom: 2px;
-}
-.ax-stat-value { font-size: 1rem; font-weight: 600; }
 </style>

@@ -1,9 +1,9 @@
 <template>
   <q-layout view="lHh LpR lFf">
 
-    <!-- ═══════ TOP BAR ════════════════════════════════════════ -->
-    <q-header elevated :class="headerBg">
-      <q-toolbar>
+    <!-- ═══════ TOP BAR — Frosted glass ═══════════════════════════════════ -->
+    <q-header elevated class="ax-header">
+      <q-toolbar style="min-height: 52px">
         <q-btn
           flat dense round
           aria-label="Toggle menu"
@@ -12,52 +12,43 @@
           class="q-mr-sm"
         />
 
-        <!-- Brand mark -->
-        <div class="brand-link row items-center no-wrap q-mr-md">
-          <q-icon name="hexagon" color="primary" size="20px" />
-          <span
-            class="text-weight-bold text-primary q-ml-xs"
-            style="font-size: 1.05rem; letter-spacing: 0.03em"
-          >AXIS</span>
-          <span
-            class="q-ml-xs text-weight-regular"
-            :class="$q.dark.isActive ? 'text-grey-5' : 'text-grey-7'"
-            style="font-size: 0.88rem"
-          >Studio</span>
+        <!-- Brand mark with gradient text -->
+        <div class="row items-center no-wrap q-mr-md" style="gap: 6px; cursor: default">
+          <div class="ax-logo-icon">
+            <q-icon name="hexagon" size="22px" />
+          </div>
+          <span class="ax-brand-text">AXIS</span>
+          <span class="text-weight-regular" style="font-size: 0.85rem; color: var(--ax-text-dim)">
+            Studio
+          </span>
         </div>
 
         <!-- Page title (md+) -->
-        <span
-          class="gt-sm text-caption text-weight-medium"
-          :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-        >
-          {{ currentTitle }}
-        </span>
+        <div class="gt-sm row items-center no-wrap" style="gap: 8px">
+          <div style="width: 1px; height: 16px; background: var(--ax-border)" />
+          <span style="font-size: 0.78rem; font-weight: 500; color: var(--ax-text-muted)">
+            {{ currentTitle }}
+          </span>
+        </div>
 
         <q-space />
 
-        <!-- Connection chip -->
-        <q-chip
-          dense clickable
-          :color="conn.connected ? 'positive' : conn.lastError ? 'negative' : 'grey-7'"
-          text-color="white"
-          size="sm"
-          class="q-mr-xs"
+        <!-- Connection status pill -->
+        <div
+          class="ax-conn-chip"
+          :class="conn.connected ? 'ax-conn-chip--connected' : 'ax-conn-chip--disconnected'"
           @click="showConn = true"
         >
-          <q-icon
-            :name="conn.connected ? 'link' : 'link_off'"
-            size="14px"
-            class="q-mr-xs"
-          />
-          <span class="gt-xs font-mono" style="font-size: 0.75rem">
-            {{ conn.connected ? conn.latencyMs + ' ms' : 'Offline' }}
+          <span class="ax-dot" :class="{ 'ax-dot--pulse': conn.connected }" />
+          <span class="gt-xs font-mono">
+            {{ conn.connected ? conn.latencyMs + 'ms' : 'Offline' }}
           </span>
-        </q-chip>
+        </div>
 
         <!-- Dark / light toggle -->
         <q-btn
           flat dense round
+          class="q-ml-sm"
           :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
           :title="$q.dark.isActive ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="toggleDark"
@@ -65,25 +56,24 @@
       </q-toolbar>
     </q-header>
 
-    <!-- ═══════ LEFT DRAWER ════════════════════════════════════ -->
+    <!-- ═══════ LEFT DRAWER — Glass nav ═══════════════════════════════════ -->
     <q-drawer
       v-model="drawer"
-      :width="228"
+      :width="236"
       :breakpoint="700"
       bordered
-      :class="drawerBg"
+      class="ax-drawer"
     >
       <div class="q-pa-md q-pb-xs">
         <div
-          class="text-overline"
-          style="font-size: 0.62rem; letter-spacing: 0.12em; font-weight: 700"
-          :class="$q.dark.isActive ? 'text-grey-7' : 'text-grey-6'"
+          style="font-size: 0.6rem; letter-spacing: 0.14em; font-weight: 700; text-transform: uppercase"
+          :style="{ color: 'var(--ax-text-dim)' }"
         >
-          TOOLS
+          Navigation
         </div>
       </div>
 
-      <q-list dense class="q-px-sm">
+      <q-list dense class="q-px-sm q-mt-xs">
         <q-item
           v-for="nav in navItems"
           :key="nav.to"
@@ -91,14 +81,21 @@
           clickable
           v-ripple
           active-class="nav-active"
-          class="nav-item q-mb-xs rounded-borders"
+          class="nav-item q-mb-xs"
         >
-          <q-item-section avatar style="min-width: 34px">
+          <q-item-section avatar style="min-width: 36px">
             <q-icon :name="nav.icon" size="18px" />
           </q-item-section>
           <q-item-section>
-            <q-item-label class="text-weight-medium" style="font-size: 0.87rem">
+            <q-item-label style="font-size: 0.84rem; font-weight: 500">
               {{ nav.label }}
+            </q-item-label>
+            <q-item-label
+              v-if="nav.subtitle"
+              caption
+              style="font-size: 0.65rem; color: var(--ax-text-dim)"
+            >
+              {{ nav.subtitle }}
             </q-item-label>
           </q-item-section>
         </q-item>
@@ -106,31 +103,37 @@
 
       <!-- Drawer footer -->
       <div class="absolute-bottom q-pa-sm">
-        <q-separator class="q-mb-sm" />
+        <q-separator style="opacity: 0.3" class="q-mb-sm" />
         <div
-          class="text-caption text-center"
-          :class="$q.dark.isActive ? 'text-grey-7' : 'text-grey-6'"
+          class="text-center font-mono"
+          style="font-size: 0.62rem; color: var(--ax-text-dim); letter-spacing: 0.04em"
         >
           axis-studio · v1.0.0
         </div>
       </div>
     </q-drawer>
 
-    <!-- ═══════ PAGE CONTENT ═══════════════════════════════════ -->
-    <q-page-container :class="$q.dark.isActive ? '' : 'bg-grey-2'">
-      <router-view v-slot="{ Component, route }">
+    <!-- ═══════ PAGE CONTENT ═════════════════════════════════════════════ -->
+    <q-page-container style="background: var(--ax-page-bg)">
+      <router-view v-slot="{ Component, route: r }">
         <transition name="page-fade" mode="out-in">
-          <component :is="Component" :key="route.path" />
+          <component :is="Component" :key="r.path" />
         </transition>
       </router-view>
     </q-page-container>
 
-    <!-- ═══════ CONNECTION DIALOG ══════════════════════════════ -->
+    <!-- ═══════ CONNECTION DIALOG — Glass card ════════════════════════════ -->
     <q-dialog v-model="showConn">
-      <q-card style="min-width: 380px; max-width: 96vw">
+      <q-card
+        class="ax-dialog-card"
+        style="min-width: 400px; max-width: 96vw"
+      >
+        <!-- Gradient accent bar -->
+        <div style="height: 3px; background: var(--ax-gradient-1)" />
+
         <q-card-section class="row items-center q-pb-none">
-          <q-icon name="dns" color="primary" size="20px" class="q-mr-sm" />
-          <span class="text-h6">Node Connection</span>
+          <q-icon name="dns" size="20px" style="color: var(--ax-primary)" class="q-mr-sm" />
+          <span style="font-size: 1rem; font-weight: 600">Node Connection</span>
           <q-space />
           <q-btn flat round dense icon="close" v-close-popup />
         </q-card-section>
@@ -150,13 +153,16 @@
             </template>
           </q-input>
 
-          <div class="row items-center q-gutter-xs">
-            <q-icon
-              :name="conn.connected ? 'check_circle' : conn.lastError ? 'cancel' : 'help_outline'"
-              :color="conn.connected ? 'positive' : conn.lastError ? 'negative' : 'grey-5'"
-              size="14px"
+          <div class="row items-center" style="gap: 6px">
+            <span
+              class="ax-dot"
+              :class="{ 'ax-dot--pulse': conn.connected }"
+              :style="{
+                background: conn.connected ? 'var(--ax-positive)' : conn.lastError ? 'var(--ax-negative)' : 'var(--ax-text-dim)',
+                color: conn.connected ? 'var(--ax-positive)' : conn.lastError ? 'var(--ax-negative)' : 'var(--ax-text-dim)'
+              }"
             />
-            <span class="text-caption" :class="$q.dark.isActive ? 'text-grey-5' : 'text-grey-6'">
+            <span style="font-size: 0.78rem; color: var(--ax-text-muted)">
               {{ conn.statusLabel }}
             </span>
             <q-spinner v-if="conn.pinging" size="14px" color="primary" />
@@ -167,17 +173,17 @@
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn
             flat
-            color="info"
             icon="wifi_tethering"
             label="Test"
             :loading="conn.pinging"
             @click="conn.ping()"
+            style="color: var(--ax-info)"
           />
           <q-btn
             unelevated
-            color="primary"
-            icon="save"
             label="Save"
+            icon="save"
+            class="ax-btn-primary"
             @click="applyConn"
           />
         </q-card-actions>
@@ -193,7 +199,7 @@ import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useConnectionStore } from 'stores/connection';
 
-const $q   = useQuasar();
+const $q    = useQuasar();
 const route = useRoute();
 const conn  = useConnectionStore();
 
@@ -202,10 +208,10 @@ const showConn = ref(false);
 const tempUrl  = ref(conn.nodeUrl);
 
 const navItems = [
-  { label: 'Intent Sender',  icon: 'send',      to: '/sender'   },
-  { label: 'Registry',       icon: 'menu_book', to: '/registry' },
-  { label: 'Auth Manager',   icon: 'vpn_key',   to: '/auth'     },
-  { label: 'History',        icon: 'history',   to: '/history'  },
+  { label: 'Intent Sender', subtitle: 'Send & test', icon: 'send',      to: '/sender'   },
+  { label: 'Registry',      subtitle: 'Browse intents', icon: 'menu_book', to: '/registry' },
+  { label: 'Auth Manager',  subtitle: 'Keys & identity', icon: 'vpn_key',   to: '/auth'     },
+  { label: 'History',       subtitle: 'Past requests', icon: 'history',   to: '/history'  },
 ];
 
 const currentTitle = computed(() => String(route.meta?.title ?? ''));
@@ -214,13 +220,6 @@ function toggleDark() {
   $q.dark.toggle();
   localStorage.setItem('axis_dark_mode', String($q.dark.isActive));
 }
-
-const headerBg = computed(() =>
-  $q.dark.isActive ? 'ax-header--dark' : 'ax-header--light',
-);
-const drawerBg = computed(() =>
-  $q.dark.isActive ? 'ax-drawer--dark' : 'ax-drawer--light',
-);
 
 function applyConn() {
   conn.setNodeUrl(tempUrl.value);
@@ -231,3 +230,33 @@ function applyConn() {
 conn.ping();
 </script>
 
+<style scoped>
+.ax-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--ax-primary-soft);
+  color: var(--ax-primary);
+}
+
+.ax-brand-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: var(--ax-gradient-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ax-dialog-card {
+  background: var(--ax-surface) !important;
+  backdrop-filter: var(--ax-blur);
+  border: 1px solid var(--ax-glass-border);
+  border-radius: var(--ax-radius-lg) !important;
+  box-shadow: var(--ax-shadow-lg);
+}
+</style>

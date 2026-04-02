@@ -2,19 +2,18 @@
   <q-page class="ax-page q-pa-md">
     <div class="row q-col-gutter-md">
 
-      <!-- ══════ IDENTITY ════════════════════════════════════ -->
+      <!-- ══════ IDENTITY ════════════════════════════════════════════════ -->
       <div class="col-12 col-md-6">
-        <div class="ax-panel">
+        <div class="ax-panel ax-panel-accent" style="position: relative">
           <div class="ax-panel-header row items-center">
-            <q-icon name="badge" color="primary" size="15px" class="q-mr-xs" />
+            <q-icon name="badge" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
             <span class="ax-panel-title">Identity</span>
           </div>
           <div class="q-pa-md">
             <q-input
               :model-value="auth.actorId"
               label="Actor ID"
-              outlined
-              dense
+              outlined dense
               placeholder="actor:user_abc123"
               class="q-mb-sm"
               @update:model-value="(v) => auth.setActorId(String(v ?? ''))"
@@ -22,16 +21,11 @@
             <q-input
               :model-value="auth.capsuleId"
               label="Capsule ID"
-              outlined
-              dense
+              outlined dense
               placeholder="(optional)"
               @update:model-value="(v) => auth.setCapsuleId(String(v ?? ''))"
             />
-
-            <div
-              class="text-caption q-mt-sm"
-              :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-            >
+            <div style="font-size: 0.72rem; color: var(--ax-text-dim); margin-top: 8px">
               The Actor ID is attached to every intent frame. Leave empty to
               send as <span class="font-mono">studio:anonymous</span>.
             </div>
@@ -39,23 +33,22 @@
         </div>
       </div>
 
-      <!-- ══════ SIGNING KEYS ════════════════════════════════ -->
+      <!-- ══════ SIGNING KEYS ════════════════════════════════════════════ -->
       <div class="col-12 col-md-6">
         <div class="ax-panel">
           <div class="ax-panel-header row items-center">
-            <q-icon name="key" color="primary" size="15px" class="q-mr-xs" />
+            <q-icon name="key" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
             <span class="ax-panel-title q-mr-auto">Signing Keys</span>
             <q-btn
               flat dense round size="xs"
               icon="add"
-              color="primary"
               title="Generate new key pair"
               :loading="generating"
+              style="color: var(--ax-primary)"
               @click="generateKey"
             />
           </div>
 
-          <!-- Key list -->
           <q-list dense separator>
             <q-item
               v-for="k in auth.keys"
@@ -69,18 +62,14 @@
             >
               <q-item-section avatar style="min-width: 32px">
                 <q-icon
-                  :name="
-                    auth.activeKeyId === k.id
-                      ? 'radio_button_checked'
-                      : 'radio_button_unchecked'
-                  "
-                  :color="auth.activeKeyId === k.id ? 'primary' : 'grey-6'"
+                  :name="auth.activeKeyId === k.id ? 'radio_button_checked' : 'radio_button_unchecked'"
                   size="16px"
+                  :style="{ color: auth.activeKeyId === k.id ? 'var(--ax-primary)' : 'var(--ax-text-dim)' }"
                 />
               </q-item-section>
               <q-item-section>
-                <q-item-label class="text-weight-medium">{{ k.label }}</q-item-label>
-                <q-item-label caption class="font-mono">
+                <q-item-label style="font-weight: 500">{{ k.label }}</q-item-label>
+                <q-item-label caption class="font-mono" style="font-size: 0.68rem; color: var(--ax-text-dim)">
                   {{ k.publicKeyHex.slice(0, 20) }}…
                 </q-item-label>
               </q-item-section>
@@ -89,46 +78,35 @@
                   flat dense round
                   icon="delete"
                   size="xs"
-                  color="negative"
+                  style="color: var(--ax-negative)"
                   @click.stop="auth.removeKey(k.id)"
                 />
               </q-item-section>
             </q-item>
 
             <q-item v-if="!auth.keys.length">
-              <q-item-section class="text-center q-pa-lg">
-                <q-icon
-                  name="vpn_key"
-                  size="32px"
-                  :color="$q.dark.isActive ? 'grey-7' : 'grey-4'"
-                  class="q-mb-xs"
-                />
-                <div
-                  class="text-caption"
-                  :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-                >
-                  No keys yet — click + to generate
-                </div>
+              <q-item-section class="ax-empty" style="padding: 24px 16px">
+                <q-icon name="vpn_key" class="ax-empty-icon" style="font-size: 32px" />
+                <div class="ax-empty-text">No keys yet — click + to generate</div>
               </q-item-section>
             </q-item>
           </q-list>
         </div>
       </div>
 
-      <!-- ══════ ACTIVE KEY DETAIL ════════════════════════════ -->
+      <!-- ══════ ACTIVE KEY DETAIL ═══════════════════════════════════════ -->
       <div v-if="activeKey" class="col-12">
         <div class="ax-panel">
           <div class="ax-panel-header row items-center">
-            <q-icon name="fingerprint" color="primary" size="15px" class="q-mr-xs" />
+            <q-icon name="fingerprint" size="15px" style="color: var(--ax-primary)" class="q-mr-xs" />
             <span class="ax-panel-title">
               Active Key — {{ activeKey.label }}
             </span>
             <q-space />
             <q-btn
-              flat dense
-              size="xs"
+              flat dense size="xs"
               icon="content_copy"
-              :label="'Copy public key'"
+              label="Copy public key"
               @click="copyPub"
             />
           </div>
@@ -138,51 +116,42 @@
 
               <!-- Public key -->
               <div class="col-12 col-md-6">
-                <div
-                  class="text-caption q-mb-xs q-ml-xs"
-                  :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-                >
+                <div style="font-size: 0.72rem; font-weight: 500; color: var(--ax-text-dim); margin-bottom: 6px; margin-left: 2px">
                   Public Key (hex)
                 </div>
-                <div class="ax-key-box font-mono text-caption">
+                <div class="ax-key-box font-mono" style="font-size: 0.72rem">
                   {{ activeKey.publicKeyHex }}
                 </div>
               </div>
 
               <!-- Private key (hidden by default) -->
               <div class="col-12 col-md-6">
-                <div class="row items-center q-mb-xs">
-                  <div
-                    class="text-caption q-ml-xs q-mr-auto"
-                    :class="$q.dark.isActive ? 'text-grey-6' : 'text-grey-6'"
-                  >
+                <div class="row items-center" style="margin-bottom: 6px">
+                  <div style="font-size: 0.72rem; font-weight: 500; color: var(--ax-text-dim); margin-left: 2px" class="q-mr-auto">
                     Private Key (hex)
                   </div>
                   <q-btn
                     flat dense round size="xs"
                     :icon="showPrivate ? 'visibility_off' : 'visibility'"
-                    :color="showPrivate ? 'warning' : 'grey-6'"
-                    :title="showPrivate ? 'Hide private key' : 'Reveal private key'"
+                    :style="{ color: showPrivate ? 'var(--ax-warning)' : 'var(--ax-text-dim)' }"
+                    :title="showPrivate ? 'Hide' : 'Reveal'"
                     @click="showPrivate = !showPrivate"
                   />
                 </div>
                 <div
                   v-if="showPrivate"
-                  class="ax-key-box font-mono text-caption"
+                  class="ax-key-box font-mono"
+                  style="font-size: 0.72rem"
                 >
                   {{ activeKey.privateKeyHex }}
                 </div>
-                <div v-else class="ax-key-box font-mono text-caption ax-key-box--redacted">
+                <div v-else class="ax-key-box ax-key-box--redacted font-mono" style="font-size: 0.72rem">
                   {{ '●'.repeat(24) }} (click eye to reveal)
                 </div>
               </div>
             </div>
 
-            <!-- Created at -->
-            <div
-              class="text-caption q-mt-sm"
-              :class="$q.dark.isActive ? 'text-grey-7' : 'text-grey-6'"
-            >
+            <div style="font-size: 0.68rem; color: var(--ax-text-dim); margin-top: 10px" class="font-mono">
               Created: {{ new Date(activeKey.createdAt).toLocaleString() }}
             </div>
           </div>
@@ -198,10 +167,10 @@ import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'stores/auth';
 
-const $q  = useQuasar();
+const $q   = useQuasar();
 const auth = useAuthStore();
 
-const generating = ref(false);
+const generating  = ref(false);
 const showPrivate = ref(false);
 
 const activeKey = computed(() => auth.getActiveKey());
@@ -220,18 +189,13 @@ async function generateKey() {
 
     auth.addKey({
       id:            crypto.randomUUID(),
-      label:         `Key-${auth.keys.length + 1}`,
+      label:         'Key-' + (auth.keys.length + 1),
       privateKeyHex: toHex(privRaw),
       publicKeyHex:  toHex(pubRaw),
       createdAt:     Date.now(),
     });
 
-    $q.notify({
-      message: 'New key pair generated',
-      icon: 'key',
-      color: 'positive',
-      timeout: 2000,
-    });
+    $q.notify({ message: 'New key pair generated', icon: 'key', color: 'positive', timeout: 2000 });
   } finally {
     generating.value = false;
   }
@@ -241,12 +205,7 @@ async function copyPub() {
   if (!activeKey.value) return;
   try {
     await navigator.clipboard.writeText(activeKey.value.publicKeyHex);
-    $q.notify({
-      message: 'Public key copied',
-      icon: 'check',
-      color: 'positive',
-      timeout: 1200,
-    });
+    $q.notify({ message: 'Public key copied', icon: 'check', color: 'positive', timeout: 1200 });
   } catch {
     $q.notify({ message: 'Copy failed', color: 'negative', timeout: 1200 });
   }
@@ -254,20 +213,12 @@ async function copyPub() {
 </script>
 
 <style scoped>
-.key-item { transition: background 0.1s; }
+.key-item {
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+}
 .key-item--active {
-  background: rgba(0, 188, 212, 0.1) !important;
-}
-.ax-key-box {
-  background: var(--ax-surface-input);
-  border: 1px solid var(--ax-border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  word-break: break-all;
-  line-height: 1.6;
-}
-.ax-key-box--redacted {
-  color: var(--ax-text-dim);
-  font-style: italic;
+  background: var(--ax-primary-soft) !important;
+  border-left-color: var(--ax-primary) !important;
 }
 </style>

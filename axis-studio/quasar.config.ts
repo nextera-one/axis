@@ -6,7 +6,7 @@ export default configure(() => {
 
     css: ['app.scss'],
 
-    extras: ['roboto-font', 'material-icons'],
+    extras: ['material-icons'],
 
     build: {
       target: { browser: ['es2022', 'chrome100', 'firefox100', 'safari15'] },
@@ -24,15 +24,15 @@ export default configure(() => {
       config: {
         dark: true,
         brand: {
-          primary: '#00bcd4',
-          secondary: '#1a1a2e',
-          accent: '#7c4dff',
-          dark: '#0f0f23',
-          'dark-page': '#0a0a1a',
-          positive: '#4caf50',
-          negative: '#f44336',
-          info: '#2196f3',
-          warning: '#ff9800',
+          primary: '#00e5ff',
+          secondary: '#1a1b2e',
+          accent: '#a855f7',
+          dark: '#0e0e1e',
+          'dark-page': '#080812',
+          positive: '#22c55e',
+          negative: '#ef4444',
+          info: '#3b82f6',
+          warning: '#f59e0b',
         },
       },
       plugins: [
