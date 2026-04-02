@@ -1,27 +1,20 @@
 <template>
   <q-page class="ax-page--ide">
 
-    <!-- ══════════════════════════════════════════════════════════
-         URL BAR — Insomnia-style intent bar
-         ══════════════════════════════════════════════════════════ -->
+    <!-- ══════ URL BAR ═══════════════════════════════════════ -->
     <div style="
       padding: 10px 14px 8px;
       border-bottom: 1px solid var(--ax-border);
       background: var(--ax-surface);
       flex-shrink: 0;
     ">
-
-      <!-- URL bar row -->
       <div style="display: flex; align-items: center; gap: 8px">
-
-        <!-- Method / type badge -->
         <div class="ins-url-bar" style="flex: 1">
           <div class="ins-url-method">
             <span class="ax-method ax-method--axis">AXIS</span>
-            <q-icon name="arrow_drop_down" size="14px" style="color: var(--ax-text-dim)" />
+            <q-icon name="arrow_drop_down" size="14px" style="color: var(--ax-outline)" />
           </div>
 
-          <!-- Intent autocomplete -->
           <q-select
             v-model="intent"
             :options="filteredOpts"
@@ -45,45 +38,39 @@
             <template #option="{ itemProps, opt }">
               <q-item v-bind="itemProps" dense style="min-height: 30px">
                 <q-item-section>
-                  <q-item-label
-                    class="font-mono"
-                    style="font-size: 0.77rem; color: var(--ax-text)"
-                  >{{ opt }}</q-item-label>
+                  <q-item-label class="font-mono" style="font-size: 0.77rem; color: var(--ax-on-surface)">{{ opt }}</q-item-label>
                 </q-item-section>
               </q-item>
             </template>
             <template #no-option>
               <q-item dense>
-                <q-item-section style="font-size: 0.75rem; color: var(--ax-text-dim)">
+                <q-item-section style="font-size: 0.75rem; color: var(--ax-outline)">
                   Type intent name and press Enter
                 </q-item-section>
               </q-item>
             </template>
           </q-select>
 
-          <!-- Send button -->
           <button
             class="ins-send-btn font-mono"
             :disabled="!intent || sending"
             @click="send"
           >
             <q-spinner v-if="sending" size="13px" color="white" />
-            <q-icon v-else name="send" size="13px" />
-            {{ sending ? 'Sending…' : 'Send' }}
+            <span v-else class="material-symbols-outlined" style="font-size: 14px">send</span>
+            {{ sending ? 'SENDING…' : 'SEND FRAME' }}
           </button>
         </div>
 
-        <!-- Clear button -->
         <q-btn
           flat dense round size="sm"
           icon="backspace"
           title="Clear"
-          style="color: var(--ax-text-dim)"
+          style="color: var(--ax-outline)"
           @click="clearForm"
         />
       </div>
 
-      <!-- Quick picks -->
       <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px">
         <span
           v-for="q in quickPicks"
@@ -92,15 +79,12 @@
           @click="intent = q"
         >{{ q }}</span>
       </div>
-
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-         MAIN SPLIT — request (left) + response (right)
-         ══════════════════════════════════════════════════════════ -->
+    <!-- ══════ MAIN SPLIT ════════════════════════════════════ -->
     <div style="display: flex; flex: 1; overflow: hidden; min-height: 0">
 
-      <!-- ── REQUEST PANE ──────────────────────────────────────── -->
+      <!-- REQUEST PANE -->
       <div style="
         width: 44%;
         min-width: 280px;
@@ -109,19 +93,17 @@
         border-right: 1px solid var(--ax-border);
         overflow: hidden;
       ">
-
-        <!-- Tabs -->
         <q-tabs
           v-model="reqTab"
           dense
           align="left"
           class="ins-tabs"
-          :active-color="$q.dark.isActive ? 'white' : 'primary'"
           indicator-color="primary"
           style="flex-shrink: 0"
         >
-          <q-tab name="body"    label="Body"    no-caps />
+          <q-tab name="body" label="Body" no-caps />
           <q-tab name="context" label="Context" no-caps />
+          <q-tab name="headers" label="Headers" no-caps />
         </q-tabs>
 
         <q-tab-panels
@@ -130,7 +112,6 @@
           class="transparent-panels"
           style="flex: 1; overflow: hidden; min-height: 0; display: flex; flex-direction: column"
         >
-          <!-- Body tab -->
           <q-tab-panel name="body" class="q-pa-none" style="display: flex; flex-direction: column; height: 100%">
             <JsonEditor
               v-model="bodyText"
@@ -144,52 +125,60 @@
             </div>
           </q-tab-panel>
 
-          <!-- Context tab -->
           <q-tab-panel name="context" class="q-pa-sm" style="overflow-y: auto">
             <div class="q-mb-sm">
               <div style="
-                font-size: 0.67rem;
+                font-family: var(--ax-font-mono);
+                font-size: 10px;
                 font-weight: 700;
-                color: var(--ax-text-dim);
+                color: var(--ax-outline);
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
-                margin-bottom: 5px;
+                letter-spacing: 0.1em;
+                margin-bottom: 6px;
               ">Actor Identity</div>
-              <div class="ax-key-box">{{ auth.actorId || 'anonymous' }}</div>
+              <div class="ax-key-box">{{ auth.actorId || 'studio:anonymous' }}</div>
             </div>
 
             <div v-if="auth.capsuleId" class="q-mb-sm">
               <div style="
-                font-size: 0.67rem;
+                font-family: var(--ax-font-mono);
+                font-size: 10px;
                 font-weight: 700;
-                color: var(--ax-text-dim);
+                color: var(--ax-outline);
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
-                margin-bottom: 5px;
+                letter-spacing: 0.1em;
+                margin-bottom: 6px;
               ">Capsule ID</div>
               <div class="ax-key-box">{{ auth.capsuleId }}</div>
             </div>
 
             <q-btn
               flat dense no-caps size="sm"
-              icon="vpn_key"
               label="Manage Keys"
               to="/auth"
-              color="primary"
-              style="font-size: 0.76rem; margin-top: 4px"
+              style="color: var(--ax-primary); font-family: var(--ax-font-mono); font-size: 10px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em"
             />
+          </q-tab-panel>
+
+          <q-tab-panel name="headers" class="q-pa-sm" style="overflow-y: auto">
+            <div style="
+              font-family: var(--ax-font-mono);
+              font-size: 10px;
+              color: var(--ax-outline);
+              padding: 16px;
+            ">
+              Headers are automatically computed from the AXIS frame protocol.
+            </div>
           </q-tab-panel>
         </q-tab-panels>
       </div>
 
-      <!-- ── RESPONSE PANE ─────────────────────────────────────── -->
+      <!-- RESPONSE PANE -->
       <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0">
-
-        <!-- Response header row: tabs + status badges -->
         <div style="
           display: flex;
           align-items: center;
-          background: var(--ax-surface-raised);
+          background: var(--ax-surface-low);
           border-bottom: 1px solid var(--ax-border);
           flex-shrink: 0;
           min-height: 34px;
@@ -199,15 +188,13 @@
             dense
             align="left"
             class="ins-tabs"
-            :active-color="$q.dark.isActive ? 'white' : 'primary'"
             indicator-color="primary"
             style="flex: 1; background: transparent"
           >
             <q-tab name="tree" label="Preview" no-caps />
-            <q-tab name="raw"  label="Raw"     no-caps />
+            <q-tab name="raw" label="Raw" no-caps />
           </q-tabs>
 
-          <!-- Status badges -->
           <div
             v-if="lastResult"
             style="display: flex; align-items: center; gap: 8px; padding: 0 12px; flex-shrink: 0"
@@ -226,33 +213,29 @@
           </div>
         </div>
 
-        <!-- Tab panels -->
         <q-tab-panels
           v-model="viewTab"
           animated
           class="transparent-panels"
           style="flex: 1; overflow: hidden; min-height: 0"
         >
-          <!-- Preview (JSON tree) -->
           <q-tab-panel name="tree" class="q-pa-none" style="height: 100%; overflow: hidden">
             <JsonTree
               :value="lastResult?.response ?? null"
               max-height="100%"
-              style="height: 100%; border: none; border-radius: 0; border-left: none; border-right: none; border-bottom: none"
+              style="height: 100%; border: none"
               :empty-text="sending ? 'Waiting for response…' : 'Send an intent to see the response here'"
             />
           </q-tab-panel>
 
-          <!-- Raw -->
           <q-tab-panel name="raw" class="q-pa-none" style="height: 100%; overflow: auto">
             <div v-if="lastResult" class="ax-raw-viewer">{{ lastResult.raw }}</div>
             <div v-else class="ax-empty">
-              <q-icon name="code" class="ax-empty-icon" />
+              <span class="material-symbols-outlined ax-empty-icon">code</span>
               <div class="ax-empty-text">No raw data yet</div>
             </div>
           </q-tab-panel>
         </q-tab-panels>
-
       </div>
     </div>
 
@@ -277,7 +260,7 @@ const bodyText   = ref('{\n  \n}');
 const sending    = ref(false);
 const lastResult = ref<SendResult | null>(null);
 const viewTab    = ref<'tree' | 'raw'>('tree');
-const reqTab     = ref<'body' | 'context'>('body');
+const reqTab     = ref<'body' | 'context' | 'headers'>('body');
 
 const quickPicks = [
   'catalog.list',
@@ -288,7 +271,6 @@ const quickPicks = [
   'axis.capsules.list',
 ];
 
-/* ── Autocomplete ─────────────────────────────────────── */
 const allOpts      = ref<string[]>([...quickPicks]);
 const filteredOpts = ref<string[]>([...quickPicks]);
 
@@ -312,13 +294,11 @@ onMounted(async () => {
   if (qi) intent.value = qi;
 });
 
-/* ── Computed ─────────────────────────────────────────── */
 const bodyByteSize = computed(() => {
   const bytes = new TextEncoder().encode(bodyText.value).length;
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`;
 });
 
-/* ── Actions ──────────────────────────────────────────── */
 function clearForm() {
   intent.value     = '';
   bodyText.value   = '{\n  \n}';
