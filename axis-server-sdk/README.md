@@ -13,7 +13,26 @@ npm install @nextera.one/axis-server-sdk
 Peer dependencies:
 
 - `@nestjs/common`
+- `@nestjs/config`
 - `reflect-metadata`
+
+## Release Surface
+
+The `1.3.0` release folds the backend server runtime namespaces that previously lived in temporary internal package shells into this published package.
+
+Added grouped runtime namespaces:
+
+- `core`
+- `crypto`
+- `decorators`
+- `engine`
+- `loom`
+- `schemas`
+- `security`
+- `sensors`
+- `utils`
+
+It also exposes the `axis-generate-keys` CLI through the package `bin` entry for local key generation workflows.
 
 ## What It Exposes
 
@@ -21,6 +40,12 @@ Root exports are split into two groups:
 
 - Server runtime helpers: `@Handler`, `@Intent`, `IntentRouter`, handler interfaces, sensor interfaces.
 - Shared protocol primitives: binary frame codecs, TLV/varint/constants, binary signature helpers, codec utilities, packet types.
+
+You can also import the grouped namespaces directly from the package root:
+
+```ts
+import { core, crypto, engine, sensors } from '@nextera.one/axis-server-sdk';
+```
 
 ## Shared Core API
 

@@ -14,7 +14,7 @@ Official TypeScript/JavaScript client SDK for the **AXIS Protocol v1**.
 - 🔄 **Retry Logic** - Automatic retry with exponential backoff
 - 📤 **File Upload** - Chunked upload with resume support
 - 🎭 **Multiple Proof Types** - Capsule, JWT, mTLS, Loom, Witness signatures
-- ⚡ **Zero Dependencies** - Minimal external dependencies (only @noble/ed25519, axios)
+- ⚡ **Slim Runtime** - Signing, transport, and DTO helpers in one package
 
 ## Installation
 
@@ -25,6 +25,16 @@ yarn add @nextera.one/axis-client-sdk
 # or
 pnpm add @nextera.one/axis-client-sdk
 ```
+
+## Contract Surfaces
+
+The `2.1.0` release folds the backend-authored client contract surface into this package so consumers no longer need temporary local wrapper packages.
+
+- TLV DTO helpers: `AxisTlvDto`, `TlvField`, `TlvEnum`, `TlvMinLen`, `TlvRange`, `TlvUtf8Pattern`, `TlvValidate`
+- Auth and payment contracts: QR login request builders, QR login intent constants, payment DTOs, and catalog helpers
+- AXIS DTO and enum exports under `./axis` for actor keys, anomaly state, blocklist, capsules, identities, intent policy, intent schemas, intents registry, issuer keys, metrics, node identities, packet denylist, receipts, root certificates, sensor logs, stream events, stream subscriptions, traces, and upload sessions
+
+The package also initializes `reflect-metadata` on import so decorator-backed DTO metadata is ready when these contracts are consumed.
 
 ## Quick Start
 

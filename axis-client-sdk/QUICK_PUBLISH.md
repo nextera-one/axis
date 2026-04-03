@@ -1,109 +1,98 @@
-# @axis/client-sdk Publishing Quick Reference
+# @nextera.one/axis-client-sdk Publishing Quick Reference
 
 ## One-Time Setup
 
 ```bash
 npm login
-# Prompts for username, password, email, 2FA code
 npm whoami
-# Verify: should show your npm username
 ```
+
+The logged-in account must be able to publish to the `@nextera.one` scope.
 
 ## Publish New Version
 
 ```bash
 # 1. Update version in package.json
-nano client-sdk/package.json
-# Change "version": "1.0.0" to "1.0.1"
+nano axis-client-sdk/package.json
+# Change "version": "2.1.0" to the next release
 
-# 2. Update CHANGELOG
-nano client-sdk/CHANGELOG.md
-# Add changes under new version header
+# 2. Update changelog if used
+nano axis-client-sdk/CHANGELOG.md
 
-# 3. Build and publish
-cd client-sdk
+# 3. Build and verify
+cd axis-client-sdk
 npm run build
+bash scripts/pre-publish-check.sh
+
+# 4. Publish
 npm publish --access public
 
-# 4. Verify
-npm view @axis/client-sdk version
-# Or visit: https://www.npmjs.com/package/@axis/client-sdk
+# 5. Verify
+npm view @nextera.one/axis-client-sdk version
+# Or visit: https://www.npmjs.com/package/@nextera.one/axis-client-sdk
 
-# 5. Tag in git (optional)
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-## Verify Before Publishing
-
-```bash
-cd client-sdk
-bash scripts/pre-publish-check.sh
-# Shows: npm auth, version check, build, dist, defs, README, LICENSE, no secrets
+# 6. Tag in git (optional)
+git tag axis-client-sdk-v2.1.1
+git push origin axis-client-sdk-v2.1.1
 ```
 
 ## Package Info
 
 | Property | Value |
 |----------|-------|
-| Name | @axis/client-sdk |
-| Scope | @axis |
-| Current Version | 1.0.0 |
+| Name | @nextera.one/axis-client-sdk |
+| Scope | @nextera.one |
+| Current Version | 2.1.0 |
 | License | Apache-2.0 |
 | Main (CJS) | dist/index.js |
 | Module (ESM) | dist/index.mjs |
 | Types (dts) | dist/index.d.ts |
-| Homepage | https://github.com/your-org/axis |
+| Homepage | https://github.com/digital-pages-co/axis |
 | Registry | https://registry.npmjs.org |
 
 ## Semantic Versioning
 
-```
-1.0.0 → 1.0.1  (patch: bug fixes)
-1.0.0 → 1.1.0  (minor: features)
-1.0.0 → 2.0.0  (major: breaking)
+```text
+2.1.0 -> 2.1.1  (patch: bug fixes)
+2.1.0 -> 2.2.0  (minor: features)
+2.1.0 -> 3.0.0  (major: breaking)
 ```
 
-## What's Published
+## Published Contents
 
-```
-✅ dist/                (built JS, ESM, types)
-✅ README.md            (docs and examples)
-✅ LICENSE              (Apache 2.0)
-❌ src/                 (excluded)
-❌ scripts/             (excluded)
-❌ node_modules/        (excluded)
-❌ *.test.ts            (excluded)
+```text
+dist/                 built JS, ESM, and types
+README.md             package documentation
+LICENSE               Apache 2.0 license
 ```
 
 ## Common Issues
 
 | Issue | Solution |
 |-------|----------|
-| 401 Unauthorized | Run `npm login` |
-| 403 Forbidden | Check @axis org permissions |
-| Version already exists | Update version in package.json |
-| 2FA error | Add `--otp 123456` flag |
-| Secrets found | Remove from code before publish |
+| 401 Unauthorized | Run `npm login` again |
+| 403 Forbidden | Check `@nextera.one` publish permissions |
+| Version already exists | Bump version in package.json |
+| 2FA error | Add `--otp 123456` |
+| Bad package contents | Run `npm pack --dry-run` before publish |
 
 ## Links
 
-- **npm package:** https://www.npmjs.com/package/@axis/client-sdk
-- **npm org:** https://www.npmjs.com/org/axis
-- **docs:** See [PUBLISH.md](client-sdk/PUBLISH.md)
-- **guide:** See [NPM_PUBLISHING_GUIDE.md](NPM_PUBLISHING_GUIDE.md)
-- **summary:** See [PUBLICATION_READY.md](PUBLICATION_READY.md)
+- npm package: https://www.npmjs.com/package/@nextera.one/axis-client-sdk
+- docs: [PUBLISH.md](PUBLISH.md)
 
-## Install (After Publishing)
+## Install After Publishing
 
 ```bash
-npm install @axis/client-sdk
-# or
-npm install @axis/client-sdk@latest
-# or
-npm install @axis/client-sdk@1.0.0
+npm install @nextera.one/axis-client-sdk
+npm install @nextera.one/axis-client-sdk@latest
+npm install @nextera.one/axis-client-sdk@2.1.0
 ```
 
 ---
 
-**Ready? Run: `npm publish --access public`** 🚀
+Ready command:
+
+```bash
+npm publish --access public
+```
