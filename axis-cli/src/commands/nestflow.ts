@@ -1,4 +1,3 @@
-// @ts-nocheck — QR auth helpers removed in client-sdk v2.0.0, pending re-implementation
 import {
   AxisClient,
   AxisQrAuthIntents,

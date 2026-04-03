@@ -9,6 +9,14 @@ export {
   IntentTlvField,
   IntentKind,
 } from './decorators/intent.decorator';
+export {
+  IntentBody,
+  INTENT_BODY_KEY,
+} from './decorators/intent-body.decorator';
+export {
+  IntentSensors,
+  INTENT_SENSORS_KEY,
+} from './decorators/intent-sensors.decorator';
 
 // TLV Field Decorators
 export {
@@ -63,7 +71,7 @@ export {
   encodeFrame,
   getSignTarget,
 } from './core/axis-bin';
-export type { AxisBinaryFrame } from './core/axis-bin';
+export type { AxisFrame, AxisBinaryFrame } from './core/axis-bin';
 
 // Codec
 export * from './codec/ats1.constants';
@@ -78,6 +86,7 @@ export * from './crypto/b64url';
 export * from './crypto/canonical-json';
 export type {
   AxisAlg,
+  AxisCapsule,
   CapsuleMode,
   KeyStatus,
   AxisSig,

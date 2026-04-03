@@ -21,30 +21,13 @@ export const useConnectionStore = defineStore('connection', () => {
   async function ping() {
     if (pinging.value) return;
     pinging.value = true;
-    const start = performance.now();
     try {
-      const frame = {
-        v: 1,
-        pid: crypto.randomUUID(),
-        nonce: btoa(
-          String.fromCharCode(...crypto.getRandomValues(new Uint8Array(12))),
-        ),
-        ts: Date.now(),
-        actorId: 'studio:anonymous',
-        aud: 'axis-core',
-        opcode: 'system.ping',
-        body: {},
-      };
-      const res = await fetch(nodeUrl.value, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(frame),
-        signal: AbortSignal.timeout(5000),
-      });
-      const data = await res.json().catch(() => ({}));
-      latencyMs.value = Math.round(performance.now() - start);
-      connected.value = res.ok && data?.ok === true;
-      lastError.value = connected.value ? null : `HTTP ${res.status}`;
+      const { sendIntent } = await import('src/services/axis-client');
+      const result = await sendIntent('system.ping', {});
+      
+      latencyMs.value = result.durationMs;
+      connected.value = result.ok && (result.response?.ok === true || result.response?.status === 'OK');
+      lastError.value = connected.value ? null : `Status: ${result.status}`;
     } catch (e: any) {
       latencyMs.value = null;
       connected.value = false;

@@ -1,20 +1,14 @@
 <template>
-  <q-page class="ax-page--ide">
-
-    <!-- ══════ URL BAR ═══════════════════════════════════════ -->
-    <div style="
-      padding: 10px 14px 8px;
-      border-bottom: 1px solid var(--ax-border);
-      background: var(--ax-surface);
-      flex-shrink: 0;
-    ">
-      <div style="display: flex; align-items: center; gap: 8px">
-        <div class="ins-url-bar" style="flex: 1">
-          <div class="ins-url-method">
-            <span class="ax-method ax-method--axis">AXIS</span>
-            <q-icon name="arrow_drop_down" size="14px" style="color: var(--ax-outline)" />
+  <div class="h-full flex flex-col bg-background font-body">
+    <!-- ══════ INTERFACE HEADER / INTENT SELECTOR ════════════ -->
+    <div class="p-6 border-b border-white/5 bg-[#111318]/50 backdrop-blur-sm">
+      <div class="flex items-center gap-4">
+        <div class="flex-1 flex items-center bg-[#1A1C20] border border-white/10 px-4 py-2 hover:border-[#00F5FF]/30 transition-all group">
+          <div class="flex items-center gap-2 pr-4 border-r border-white/5 mr-4">
+            <span class="font-mono text-[10px] text-[#00F5FF] font-bold tracking-widest">AXIS</span>
+            <span class="material-symbols-outlined text-on-surface-variant/40 scale-75">expand_more</span>
           </div>
-
+          
           <q-select
             v-model="intent"
             :options="filteredOpts"
@@ -26,225 +20,183 @@
             borderless
             dense
             hide-bottom-space
-            class="ins-select"
-            input-class="font-mono"
-            popup-content-class="ins-popup"
-            placeholder="intent.name"
+            class="flex-1"
+            input-class="font-mono text-sm text-[#00F5FF] placeholder:text-on-surface-variant/20"
+            popup-content-class="bg-[#1A1C20] border border-white/10 text-on-surface font-mono text-sm shadow-2xl"
+            placeholder="OPERATIONAL_INTENT_IDENTIFIER..."
             @filter="filterIntents"
           >
             <template #selected-item="{ opt }">
-              <span class="font-mono" style="font-size: 0.83rem; color: var(--ax-primary)">{{ opt }}</span>
+              <span class="font-mono text-sm text-[#00F5FF] truncate">{{ opt }}</span>
             </template>
             <template #option="{ itemProps, opt }">
-              <q-item v-bind="itemProps" dense style="min-height: 30px">
+              <q-item v-bind="itemProps" dense class="hover:bg-[#00F5FF]/5 transition-colors">
                 <q-item-section>
-                  <q-item-label class="font-mono" style="font-size: 0.77rem; color: var(--ax-on-surface)">{{ opt }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </template>
-            <template #no-option>
-              <q-item dense>
-                <q-item-section style="font-size: 0.75rem; color: var(--ax-outline)">
-                  Type intent name and press Enter
+                  <q-item-label class="font-mono text-xs">{{ opt }}</q-item-label>
                 </q-item-section>
               </q-item>
             </template>
           </q-select>
 
           <button
-            class="ins-send-btn font-mono"
+            class="ml-4 px-6 py-2 bg-primary-container text-on-primary-fixed font-headline font-black text-[11px] uppercase tracking-[0.2em] hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 group-hover:shadow-[0_0_15px_rgba(0,245,255,0.2)] disabled:opacity-50 disabled:pointer-events-none"
             :disabled="!intent || sending"
             @click="send"
           >
-            <q-spinner v-if="sending" size="13px" color="white" />
-            <span v-else class="material-symbols-outlined" style="font-size: 14px">send</span>
-            {{ sending ? 'SENDING…' : 'SEND FRAME' }}
+            <q-spinner v-if="sending" size="14px" />
+            <span v-else class="material-symbols-outlined text-sm">bolt</span>
+            {{ sending ? 'EXECUTING…' : 'EXECUTE' }}
           </button>
         </div>
 
-        <q-btn
-          flat dense round size="sm"
-          icon="backspace"
-          title="Clear"
-          style="color: var(--ax-outline)"
+        <button 
+          class="w-10 h-10 flex items-center justify-center text-on-surface-variant/40 hover:text-on-surface transition-colors"
           @click="clearForm"
-        />
+          title="Reset Buffer"
+        >
+          <span class="material-symbols-outlined">restart_alt</span>
+        </button>
       </div>
 
-      <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px">
-        <span
+      <!-- Quick Picks -->
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button
           v-for="q in quickPicks"
           :key="q"
-          class="ax-chip font-mono"
+          class="px-2 py-1 bg-surface-container-low border border-white/5 text-[9px] font-mono text-on-surface-variant/60 hover:text-[#00F5FF] hover:border-[#00F5FF]/20 transition-all uppercase tracking-tighter"
           @click="intent = q"
-        >{{ q }}</span>
+        >
+          {{ q }}
+        </button>
       </div>
     </div>
 
-    <!-- ══════ MAIN SPLIT ════════════════════════════════════ -->
-    <div style="display: flex; flex: 1; overflow: hidden; min-height: 0">
-
-      <!-- REQUEST PANE -->
-      <div style="
-        width: 44%;
-        min-width: 280px;
-        display: flex;
-        flex-direction: column;
-        border-right: 1px solid var(--ax-border);
-        overflow: hidden;
-      ">
-        <q-tabs
-          v-model="reqTab"
-          dense
-          align="left"
-          class="ins-tabs"
-          indicator-color="primary"
-          style="flex-shrink: 0"
-        >
-          <q-tab name="body" label="Body" no-caps />
-          <q-tab name="context" label="Context" no-caps />
-          <q-tab name="headers" label="Headers" no-caps />
-        </q-tabs>
-
-        <q-tab-panels
-          v-model="reqTab"
-          animated
-          class="transparent-panels"
-          style="flex: 1; overflow: hidden; min-height: 0; display: flex; flex-direction: column"
-        >
-          <q-tab-panel name="body" class="q-pa-none" style="display: flex; flex-direction: column; height: 100%">
-            <JsonEditor
-              v-model="bodyText"
-              style="flex: 1; min-height: 0"
-              :show-line-numbers="true"
-            />
-            <div class="ins-status-bar">
-              <span class="ins-status-meta">Ctrl+Enter to send</span>
-              <span class="ins-status-sep">·</span>
-              <span class="ins-status-meta">{{ bodyByteSize }}</span>
-            </div>
-          </q-tab-panel>
-
-          <q-tab-panel name="context" class="q-pa-sm" style="overflow-y: auto">
-            <div class="q-mb-sm">
-              <div style="
-                font-family: var(--ax-font-mono);
-                font-size: 10px;
-                font-weight: 700;
-                color: var(--ax-outline);
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                margin-bottom: 6px;
-              ">Actor Identity</div>
-              <div class="ax-key-box">{{ auth.actorId || 'studio:anonymous' }}</div>
-            </div>
-
-            <div v-if="auth.capsuleId" class="q-mb-sm">
-              <div style="
-                font-family: var(--ax-font-mono);
-                font-size: 10px;
-                font-weight: 700;
-                color: var(--ax-outline);
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                margin-bottom: 6px;
-              ">Capsule ID</div>
-              <div class="ax-key-box">{{ auth.capsuleId }}</div>
-            </div>
-
-            <q-btn
-              flat dense no-caps size="sm"
-              label="Manage Keys"
-              to="/auth"
-              style="color: var(--ax-primary); font-family: var(--ax-font-mono); font-size: 10px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em"
-            />
-          </q-tab-panel>
-
-          <q-tab-panel name="headers" class="q-pa-sm" style="overflow-y: auto">
-            <div style="
-              font-family: var(--ax-font-mono);
-              font-size: 10px;
-              color: var(--ax-outline);
-              padding: 16px;
-            ">
-              Headers are automatically computed from the AXIS frame protocol.
-            </div>
-          </q-tab-panel>
-        </q-tab-panels>
-      </div>
-
-      <!-- RESPONSE PANE -->
-      <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0">
-        <div style="
-          display: flex;
-          align-items: center;
-          background: var(--ax-surface-low);
-          border-bottom: 1px solid var(--ax-border);
-          flex-shrink: 0;
-          min-height: 34px;
-        ">
-          <q-tabs
-            v-model="viewTab"
-            dense
-            align="left"
-            class="ins-tabs"
-            indicator-color="primary"
-            style="flex: 1; background: transparent"
-          >
-            <q-tab name="tree" label="Preview" no-caps />
-            <q-tab name="raw" label="Raw" no-caps />
-          </q-tabs>
-
-          <div
-            v-if="lastResult"
-            style="display: flex; align-items: center; gap: 8px; padding: 0 12px; flex-shrink: 0"
-          >
-            <span
-              class="ax-badge font-mono"
-              :class="lastResult.ok ? 'ax-badge--ok' : 'ax-badge--error'"
+    <!-- ══════ MAIN WORKSPACE SPLIT ══════════════════════════ -->
+    <div class="flex-1 flex overflow-hidden min-h-0 divide-x divide-white/5">
+      
+      <!-- LEFT PANE: INTENT COMPOSER -->
+      <div class="w-[45%] flex flex-col min-w-[320px] bg-background">
+        <div class="h-10 flex items-center px-4 bg-[#111318]/30 border-b border-white/5">
+          <div class="flex items-center gap-6">
+            <button 
+              v-for="tab in (['body', 'context', 'auth'] as const)" 
+              :key="tab"
+              class="text-[10px] font-mono uppercase tracking-[0.15em] transition-all relative py-2"
+              :class="reqTab === tab ? 'text-[#00F5FF] font-bold' : 'text-on-surface-variant/40 hover:text-on-surface'"
+              @click="reqTab = tab"
             >
-              {{ lastResult.ok ? '200 OK' : (lastResult.status || 'ERR') }}
-            </span>
-            <span class="ins-status-meta font-mono">{{ lastResult.durationMs }} ms</span>
-            <span
-              v-if="lastResult.effect"
-              class="ax-badge ax-badge--primary font-mono"
-            >{{ lastResult.effect }}</span>
+              {{ tab }}
+              <div v-if="reqTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#00F5FF] shadow-[0_0_8px_#00F5FF]"></div>
+            </button>
           </div>
         </div>
 
-        <q-tab-panels
-          v-model="viewTab"
-          animated
-          class="transparent-panels"
-          style="flex: 1; overflow: hidden; min-height: 0"
-        >
-          <q-tab-panel name="tree" class="q-pa-none" style="height: 100%; overflow: hidden">
-            <JsonTree
-              :value="lastResult?.response ?? null"
-              max-height="100%"
-              style="height: 100%; border: none"
-              :empty-text="sending ? 'Waiting for response…' : 'Send an intent to see the response here'"
+        <div class="flex-1 relative overflow-hidden flex flex-col">
+          <div v-show="reqTab === 'body'" class="flex-1 flex flex-col overflow-hidden">
+            <JsonEditor
+              v-model="bodyText"
+              class="flex-1"
+              :show-line-numbers="true"
             />
-          </q-tab-panel>
-
-          <q-tab-panel name="raw" class="q-pa-none" style="height: 100%; overflow: auto">
-            <div v-if="lastResult" class="ax-raw-viewer">{{ lastResult.raw }}</div>
-            <div v-else class="ax-empty">
-              <span class="material-symbols-outlined ax-empty-icon">code</span>
-              <div class="ax-empty-text">No raw data yet</div>
+            <div class="h-6 px-4 bg-[#111318] flex items-center justify-between border-t border-white/5 font-mono text-[9px] text-on-surface-variant/30 uppercase">
+              <span>CTRL+ENTER TO DISPATCH</span>
+              <span>SIZE: {{ bodyByteSize }}</span>
             </div>
-          </q-tab-panel>
-        </q-tab-panels>
+          </div>
+
+          <div v-show="reqTab === 'context'" class="p-6 space-y-6 overflow-y-auto">
+            <div v-for="(val, label) in { 'Actor ID': auth.actorId || 'studio:anonymous', 'Capsule ID': auth.capsuleId || 'None' }" :key="label" class="space-y-2">
+              <label class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-widest">{{ label }}</label>
+              <div class="p-3 bg-[#1A1C20] border border-white/5 font-mono text-xs text-on-surface break-all select-all">
+                {{ val }}
+              </div>
+            </div>
+            <router-link to="/auth" class="inline-block text-[10px] font-mono text-primary-container hover:text-[#00F5FF] uppercase underline underline-offset-4">Modify Chain Context →</router-link>
+          </div>
+
+          <div v-show="reqTab === 'auth'" class="p-6 space-y-6">
+             <div class="space-y-2">
+              <label class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-widest">Active Proof Type</label>
+              <div class="p-3 bg-[#1A1C20] border border-white/5 font-mono text-xs text-[#00F5FF]">
+                CAPSULE_BINDING_V1
+              </div>
+            </div>
+            <p class="text-[10px] text-on-surface-variant/40 font-mono italic leading-relaxed">
+              All frames are automatically signed using the active identity provider. Proof of execution is embedded in the frame header.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANE: FEEDBACK / RESPONSE -->
+      <div class="flex-1 flex flex-col bg-[#0A0C10]">
+        <div class="h-10 flex items-center justify-between px-4 bg-[#111318]/30 border-b border-white/5">
+          <div class="flex items-center gap-6">
+            <button 
+              v-for="tab in (['tree', 'raw'] as const)" 
+              :key="tab"
+              class="text-[10px] font-mono uppercase tracking-[0.15em] transition-all relative py-2"
+              :class="viewTab === tab ? 'text-[#00F5FF] font-bold' : 'text-on-surface-variant/40 hover:text-on-surface'"
+              @click="viewTab = tab"
+            >
+              {{ tab === 'tree' ? 'Preview' : 'Raw' }}
+              <div v-if="viewTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#00F5FF] shadow-[0_0_8px_#00F5FF]"></div>
+            </button>
+          </div>
+
+          <div v-if="lastResult" class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full" :class="lastResult.ok ? 'bg-primary-container' : 'bg-error'"></span>
+              <span class="font-mono text-[10px] uppercase font-bold" :class="lastResult.ok ? 'text-primary-container' : 'text-error'">
+                {{ lastResult.ok ? '200 OK' : 'ERR ' + lastResult.status }}
+              </span>
+            </div>
+            <span class="font-mono text-[10px] text-on-surface-variant/40 uppercase">{{ lastResult.durationMs }}ms</span>
+          </div>
+        </div>
+
+        <div class="flex-1 relative overflow-hidden bg-background/20">
+          <div v-show="viewTab === 'tree'" class="h-full overflow-hidden">
+            <JsonTree
+              v-if="lastResult?.response"
+              :value="lastResult.response"
+              class="h-full border-none"
+            />
+            <div v-else class="h-full flex flex-col items-center justify-center opacity-20 group">
+              <span class="material-symbols-outlined text-6xl mb-4 group-hover:scale-110 transition-transform duration-500">terminal</span>
+              <p class="font-mono text-xs uppercase tracking-[0.3em]">{{ sending ? 'Intercepting Frame...' : 'Idle - Awaiting Intent' }}</p>
+            </div>
+          </div>
+
+          <div v-show="viewTab === 'raw'" class="p-6 font-mono text-xs text-on-surface-variant/80 selection:bg-[#00F5FF]/30 overflow-auto h-full leading-relaxed custom-scrollbar">
+            <pre v-if="lastResult">{{ lastResult.raw }}</pre>
+            <div v-else class="h-full flex flex-col items-center justify-center opacity-10">
+               <span class="material-symbols-outlined text-6xl mb-4">analytics</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Result Bar (Effect) -->
+        <div v-if="lastResult?.effect" class="h-10 bg-surface-container-low border-t border-white/5 px-6 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+             <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase tracking-widest">Protocol Effect:</span>
+             <span class="px-2 py-0.5 bg-primary-container/10 border border-primary-container/20 text-[#00F5FF] font-mono font-bold text-[10px] tracking-wider uppercase">
+               {{ lastResult.effect }}
+             </span>
+          </div>
+          <button
+            class="text-[9px] font-mono text-on-surface-variant/40 hover:text-on-surface uppercase tracking-tighter"
+            @click="router.push({ path: '/history', query: { intent: intent } })"
+          >View Receipt Chain ↘</button>
+        </div>
       </div>
     </div>
-
-  </q-page>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import JsonEditor from 'src/components/JsonEditor.vue';
 import JsonTree   from 'src/components/JsonTree.vue';
@@ -252,15 +204,16 @@ import { sendIntent, fetchCatalog, type SendResult } from 'src/services/axis-cli
 import { useAuthStore } from 'stores/auth';
 
 const $q    = useQuasar();
-const route = useRoute();
-const auth  = useAuthStore();
+const route  = useRoute();
+const router = useRouter();
+const auth   = useAuthStore();
 
 const intent     = ref<string>('catalog.list');
 const bodyText   = ref('{\n  \n}');
 const sending    = ref(false);
 const lastResult = ref<SendResult | null>(null);
 const viewTab    = ref<'tree' | 'raw'>('tree');
-const reqTab     = ref<'body' | 'context' | 'headers'>('body');
+const reqTab     = ref<'body' | 'context' | 'auth'>('body');
 
 const quickPicks = [
   'catalog.list',
@@ -331,3 +284,18 @@ async function send() {
   }
 }
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.2);
+}
+</style>

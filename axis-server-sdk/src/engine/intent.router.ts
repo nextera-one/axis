@@ -1,7 +1,42 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+
 import { AxisFrame } from '../core/axis-bin';
 import { HANDLER_METADATA_KEY } from '../decorators/handler.decorator';
-import { INTENT_ROUTES_KEY, IntentRoute } from '../decorators/intent.decorator';
+import {
+  INTENT_METADATA_KEY,
+  INTENT_ROUTES_KEY,
+  IntentKind,
+  IntentRoute,
+  IntentTlvField,
+} from '../decorators/intent.decorator';
+import { INTENT_BODY_KEY } from '../decorators/intent-body.decorator';
+import { INTENT_SENSORS_KEY } from '../decorators/intent-sensors.decorator';
+import {
+  buildDtoDecoder,
+  extractDtoSchema,
+} from '../decorators/dto-schema.util';
+import type { TlvValidatorFn } from '../decorators/tlv-field.decorator';
+import {
+  AxisSensor,
+  SensorInput,
+  normalizeSensorDecision,
+} from '../sensor/axis-sensor';
+
+export interface IntentSchema {
+  intent: string;
+  version: number;
+  bodyProfile: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+  fields: Array<{
+    name: string;
+    tlv: number;
+    kind: IntentTlvField['kind'];
+    required?: boolean;
+    maxLen?: number;
+    max?: string;
+    scope?: 'header' | 'body';
+  }>;
+}
 
 /**
  * Represents the outcome of an AXIS intent execution.
@@ -37,8 +72,72 @@ export interface AxisEffect {
  */
 @Injectable()
 export class IntentRouter {
+  private readonly logger = new Logger(IntentRouter.name);
+
+  /** Intents handled inline in route() — not in `handlers` map */
+  private static readonly BUILTIN_INTENTS = new Set([
+    'system.ping',
+    'public.ping',
+    'system.time',
+    'system.echo',
+    'INTENT.EXEC',
+    'axis.intent.exec',
+  ]);
+
   /** Internal registry of dynamic intent handlers */
   private handlers = new Map<string, any>();
+
+  /** Per-intent sensor classes (resolved at call time) */
+  private intentSensors = new Map<string, Function[]>();
+
+  /** Per-intent body decoders */
+  private intentDecoders = new Map<string, (buf: Buffer) => any>();
+
+  /** Per-intent TLV schemas */
+  private intentSchemas = new Map<string, IntentSchema>();
+
+  /** Per-intent custom validators */
+  private intentValidators = new Map<string, Map<number, TlvValidatorFn[]>>();
+
+  /** Per-intent operation kind */
+  private intentKinds = new Map<string, IntentKind>();
+
+  constructor(@Optional() private readonly moduleRef?: ModuleRef) {}
+
+  getSchema(intent: string): IntentSchema | undefined {
+    return this.intentSchemas.get(intent);
+  }
+
+  getValidators(intent: string): Map<number, TlvValidatorFn[]> | undefined {
+    return this.intentValidators.get(intent);
+  }
+
+  has(intent: string): boolean {
+    return (
+      this.handlers.has(intent) || IntentRouter.BUILTIN_INTENTS.has(intent)
+    );
+  }
+
+  getRegisteredIntents(): string[] {
+    return [...IntentRouter.BUILTIN_INTENTS, ...this.handlers.keys()];
+  }
+
+  getIntentEntry(intent: string): {
+    schema?: IntentSchema;
+    validators?: Map<number, TlvValidatorFn[]>;
+    hasSensors: boolean;
+    builtin: boolean;
+    kind?: IntentKind;
+  } | null {
+    if (!this.has(intent)) return null;
+    return {
+      schema: this.intentSchemas.get(intent),
+      validators: this.intentValidators.get(intent),
+      hasSensors: this.intentSensors.has(intent),
+      builtin: IntentRouter.BUILTIN_INTENTS.has(intent),
+      kind: this.intentKinds.get(intent),
+    };
+  }
 
   /**
    * Registers a handler for a specific intent.
@@ -81,6 +180,20 @@ export class IntentRouter {
       } else {
         this.register(intentName, fn);
       }
+
+      this.registerIntentMeta(intentName, Object.getPrototypeOf(instance), String(route.methodName));
+    }
+
+    const proto = Object.getPrototypeOf(instance);
+    for (const key of Object.getOwnPropertyNames(proto)) {
+      const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, key);
+      if (!meta?.intent) continue;
+
+      if (!this.handlers.has(meta.intent)) {
+        this.register(meta.intent, (instance as any)[key].bind(instance));
+      }
+
+      this.registerIntentMeta(meta.intent, proto, key);
     }
   }
 
@@ -109,6 +222,7 @@ export class IntentRouter {
       let effect: AxisEffect;
 
       if (intent === 'system.ping' || intent === 'public.ping') {
+        this.logger.debug('PING received');
         effect = {
           ok: true,
           effect: 'pong',
@@ -152,6 +266,8 @@ export class IntentRouter {
             throw new Error('INTENT.EXEC missing inner intent');
           }
 
+          this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
+
           const innerFrame: AxisFrame = {
             ...frame,
             headers: new Map(frame.headers),
@@ -169,8 +285,27 @@ export class IntentRouter {
           throw new Error(`Intent not found: ${intent}`);
         }
 
+        const sensorClasses = this.intentSensors.get(intent);
+        if (sensorClasses && sensorClasses.length > 0) {
+          await this.runIntentSensors(sensorClasses, intent, frame);
+        }
+
+        const decoder = this.intentDecoders.get(intent);
+        let decodedBody: any = frame.body;
+        if (decoder) {
+          try {
+            decodedBody = decoder(Buffer.from(frame.body));
+          } catch (decodeErr: any) {
+            throw new Error(
+              `IntentBody decode failed for ${intent}: ${decodeErr.message}`,
+            );
+          }
+        }
+
         if (typeof handler === 'function') {
-          const resultBody = await handler(frame.body, frame.headers);
+          const resultBody = decoder
+            ? await handler(decodedBody, frame.headers)
+            : await handler(frame.body, frame.headers);
           effect = {
             ok: true,
             effect: 'complete',
@@ -180,10 +315,9 @@ export class IntentRouter {
           if (typeof (handler as any).handle === 'function') {
             effect = await (handler as any).handle(frame);
           } else if (typeof (handler as any).execute === 'function') {
-            const bodyRes = await (handler as any).execute(
-              frame.body,
-              frame.headers,
-            );
+            const bodyRes = decoder
+              ? await (handler as any).execute(decodedBody, frame.headers)
+              : await (handler as any).execute(frame.body, frame.headers);
             effect = {
               ok: true,
               effect: 'complete',
@@ -197,17 +331,148 @@ export class IntentRouter {
         }
       }
 
-      this.recordLatency(intent, start);
+      this.logIntent(intent, start, true);
       return effect;
     } catch (e: any) {
-      console.error(`Error routing intent ${intent}:`, e.message);
+      this.logIntent(intent, start, false, e.message);
       throw e;
     }
   }
 
-  private recordLatency(intent: string, start: [number, number]) {
+  private logIntent(
+    intent: string,
+    start: [number, number],
+    ok: boolean,
+    error?: string,
+  ) {
     const diff = process.hrtime(start);
-    // Available for subclass telemetry hooks or future logging
-    void diff;
+    const ms = (diff[0] * 1e3 + diff[1] / 1e6).toFixed(2);
+    if (ok) {
+      this.logger.debug(`${intent} completed in ${ms}ms`);
+    } else {
+      this.logger.warn(`${intent} failed in ${ms}ms - ${error}`);
+    }
+  }
+
+  registerIntentMeta(intent: string, proto: object, methodName: string): void {
+    const decoder = Reflect.getMetadata(INTENT_BODY_KEY, proto, methodName);
+    if (decoder) {
+      this.intentDecoders.set(intent, decoder);
+    }
+
+    const sensors = Reflect.getMetadata(INTENT_SENSORS_KEY, proto, methodName);
+    if (sensors && Array.isArray(sensors) && sensors.length > 0) {
+      this.intentSensors.set(intent, sensors);
+    }
+
+    const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
+    if (meta) {
+      this.storeSchema(meta);
+      if (meta.kind) {
+        this.intentKinds.set(intent, meta.kind);
+      }
+    }
+  }
+
+  private async runIntentSensors(
+    sensorClasses: Function[],
+    intent: string,
+    frame: AxisFrame,
+  ): Promise<void> {
+    if (!this.moduleRef) return;
+
+    for (const SensorClass of sensorClasses) {
+      let sensor: AxisSensor;
+      try {
+        sensor = this.moduleRef.get(SensorClass as any, { strict: false });
+      } catch {
+        this.logger.warn(
+          `@IntentSensors: could not resolve ${SensorClass.name} for ${intent}`,
+        );
+        continue;
+      }
+
+      const sensorInput: SensorInput = {
+        rawBytes: frame.body,
+        intent,
+        body: frame.body,
+        headerTLVs: frame.headers as any,
+        metadata: { phase: 'intent', intent },
+      };
+
+      if (sensor.supports && !sensor.supports(sensorInput)) continue;
+
+      const decision = normalizeSensorDecision(await sensor.run(sensorInput));
+      if (!decision.allow) {
+        const reason = decision.reasons[0] || `${sensor.name}:DENIED`;
+        this.logger.warn(
+          `Intent sensor ${sensor.name} denied ${intent}: ${reason}`,
+        );
+        throw new Error(`SENSOR_DENY:${reason}`);
+      }
+    }
+  }
+
+  private storeSchema(meta: {
+    intent: string;
+    tlv?: IntentTlvField[];
+    dto?: Function;
+    bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+    kind?: IntentKind;
+  }): void {
+    if (meta.dto) {
+      if (meta.tlv && meta.tlv.length > 0) {
+        this.logger.warn(
+          `${meta.intent}: both 'dto' and 'tlv' specified - using dto, ignoring tlv`,
+        );
+      }
+
+      const extracted = extractDtoSchema(meta.dto);
+      const schema: IntentSchema = {
+        intent: meta.intent,
+        version: 1,
+        bodyProfile: meta.bodyProfile || 'TLV_MAP',
+        fields: extracted.fields.map((f) => ({
+          name: f.name,
+          tlv: f.tag,
+          kind: f.kind,
+          required: f.required,
+          maxLen: f.maxLen,
+          max: f.max,
+          scope: f.scope,
+        })),
+      };
+
+      this.intentSchemas.set(meta.intent, schema);
+
+      if (extracted.validators.size > 0) {
+        this.intentValidators.set(meta.intent, extracted.validators);
+      }
+
+      if (!this.intentDecoders.has(meta.intent)) {
+        this.intentDecoders.set(meta.intent, buildDtoDecoder(meta.dto));
+      }
+
+      return;
+    }
+
+    if (!meta.tlv || meta.tlv.length === 0) return;
+
+    const schema: IntentSchema = {
+      intent: meta.intent,
+      version: 1,
+      bodyProfile: meta.bodyProfile || 'TLV_MAP',
+      fields: meta.tlv.map((f) => ({
+        name: f.name,
+        tlv: f.tag,
+        kind: f.kind,
+        required: f.required,
+        maxLen: f.maxLen,
+        max: f.max,
+        scope: f.scope,
+      })),
+    };
+
+    this.intentSchemas.set(meta.intent, schema);
   }
 }

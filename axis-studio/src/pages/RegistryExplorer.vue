@@ -1,281 +1,168 @@
 <template>
-  <div class="ax-page" style="padding: 20px 24px; overflow-y: auto; height: 100%">
-
-    <!-- ══════ HERO ══════════════════════════════════ -->
-    <div style="margin-bottom: 20px">
-      <h1 style="
-        font-family: var(--ax-font-headline);
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: var(--ax-on-surface);
-        margin: 0 0 4px;
-        letter-spacing: -0.02em;
-      ">Intent Explorer</h1>
-      <p style="
-        font-family: var(--ax-font-mono);
-        font-size: 0.7rem;
-        color: var(--ax-outline);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin: 0;
-      ">
-        {{ intents.length }} registered intents · {{ domainCount }} domains
-      </p>
-    </div>
-
-    <!-- ══════ TOP BAR ═══════════════════════════════ -->
-    <div style="
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-    ">
-      <q-input
-        v-model="search"
-        placeholder="Search intents…"
-        outlined dense clearable
-        style="flex: 1; max-width: 400px"
-      >
-        <template #prepend>
-          <span class="material-symbols-outlined" style="font-size: 18px; color: var(--ax-outline)">search</span>
-        </template>
-      </q-input>
-
-      <q-btn
-        flat dense no-caps
-        label="Refresh"
-        icon="refresh"
-        :loading="loading"
-        style="color: var(--ax-primary); font-family: var(--ax-font-mono); font-size: 0.72rem; letter-spacing: 0.04em"
-        @click="loadCatalog"
-      />
-
-      <q-space />
-
-      <span
-        class="ax-badge ax-badge--ok font-mono"
-        style="font-size: 0.65rem"
-      >
-        <span class="ax-pulse-dot" style="width: 6px; height: 6px" />
-        REGISTRY ONLINE
-      </span>
-    </div>
-
-    <!-- ══════ MAIN GRID ═════════════════════════════ -->
-    <div style="display: flex; gap: 16px; min-height: 0">
-
-      <!-- DOMAIN CLUSTERS SIDEBAR -->
-      <div style="
-        width: 220px;
-        flex-shrink: 0;
-        background: var(--ax-surface);
-        border-radius: 4px;
-        border: 1px solid var(--ax-border);
-        overflow-y: auto;
-        max-height: calc(100vh - 240px);
-      ">
-        <div style="
-          padding: 10px 12px 8px;
-          font-family: var(--ax-font-mono);
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: var(--ax-outline);
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          border-bottom: 1px solid var(--ax-border);
-        ">Domain Clusters</div>
-
-        <div style="padding: 6px">
-          <div
-            v-for="d in domains"
-            :key="d"
-            class="ax-domain-item"
-            :class="{ 'ax-domain-item--active': selectedDomain === d }"
-            @click="selectedDomain = selectedDomain === d ? '' : d"
-          >
-            <span class="material-symbols-outlined" style="font-size: 15px">folder</span>
-            <span>{{ d }}</span>
-            <span style="
-              margin-left: auto;
-              font-size: 0.6rem;
-              color: var(--ax-outline);
-              font-family: var(--ax-font-mono);
-            ">{{ domainCounts[d] || 0 }}</span>
-          </div>
+  <div class="p-8">
+    <!-- Hero Section / Asymmetric Header -->
+    <div class="grid grid-cols-12 gap-8 py-12 items-end">
+      <div class="col-span-8">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-1 h-1 bg-primary-container shadow-[0_0_8px_#00F5FF]"></div>
+          <span class="font-mono text-[10px] text-primary-container tracking-widest uppercase">Registry Service v4.0</span>
+        </div>
+        <h1 class="font-headline text-5xl font-black text-on-surface tracking-tighter leading-none mb-4 uppercase">
+          Intent Explorer
+        </h1>
+        <p class="text-on-surface-variant text-sm max-w-xl leading-relaxed opacity-70">
+          Access the decentralized catalog of cryptographic intents. Navigate through verified domains, audit schema requirements, and execute protocol-grade operations with deterministic precision.
+        </p>
+      </div>
+      <div class="col-span-4 flex justify-end gap-12">
+        <div class="text-right">
+          <div class="font-mono text-2xl font-bold text-on-surface">{{ intents.length }}</div>
+          <div class="font-mono text-[9px] uppercase tracking-tighter text-on-surface-variant/40">Registered Intents</div>
+        </div>
+        <div class="text-right">
+          <div class="font-mono text-2xl font-bold text-primary-container">{{ latencyLabel }}</div>
+          <div class="font-mono text-[9px] uppercase tracking-tighter text-on-surface-variant/40">Query Latency</div>
         </div>
       </div>
+    </div>
 
-      <!-- INTENT CARDS GRID -->
-      <div style="flex: 1; min-width: 0">
-        <div v-if="filteredIntents.length" class="ax-intent-grid">
-          <div
-            v-for="item in filteredIntents"
-            :key="item.intent"
-            class="ax-bento-card"
-            :class="{ 'ax-bento-card--selected': selected?.intent === item.intent }"
-            @click="selected = item"
-          >
-            <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px">
-              <span class="font-mono" style="
-                font-size: 0.78rem;
-                font-weight: 600;
-                color: var(--ax-on-surface);
-                flex: 1;
-                word-break: break-all;
-              ">{{ item.intent }}</span>
-              <span
-                class="ax-badge font-mono"
-                :class="'ax-badge--' + sensitivityVariant(item.sensitivity)"
-                style="font-size: 0.55rem; flex-shrink: 0"
-              >{{ item.sensitivity }}</span>
-            </div>
+    <div class="grid grid-cols-12 gap-8">
+      <!-- Sidebar Filters -->
+      <aside class="col-span-3 space-y-8">
+        <section>
+          <h3 class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="w-4 h-px bg-on-surface-variant/20"></span> Search
+          </h3>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant/40 scale-75">search</span>
+            <input
+              v-model="search"
+              class="w-full bg-surface-container-low border border-white/5 pl-8 pr-3 py-2 text-xs font-mono text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary-container/30 focus:outline-none"
+              placeholder="Filter intents..."
+              type="text"
+            />
+          </div>
+        </section>
 
-            <p v-if="item.description" style="
-              font-size: 0.72rem;
-              color: var(--ax-on-surface-variant);
-              margin: 0 0 10px;
-              line-height: 1.4;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              overflow: hidden;
-            ">{{ item.description }}</p>
+        <section>
+          <h3 class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="w-4 h-px bg-on-surface-variant/20"></span> Domain Clusters
+          </h3>
+          <ul class="space-y-1">
+            <li v-for="d in domains" :key="d">
+              <button 
+                class="w-full text-left px-3 py-2 text-xs font-mono transition-colors flex justify-between items-center group"
+                :class="selectedDomain === d 
+                  ? 'bg-surface-container-low text-primary-container border-l border-primary-container' 
+                  : 'text-on-surface-variant/60 hover:bg-surface-container/50 hover:text-on-surface'"
+                @click="selectedDomain = selectedDomain === d ? '' : d"
+              >
+                <span>{{ d }}</span>
+                <span class="text-[9px] opacity-40">{{ domainCounts[d] || 0 }}</span>
+              </button>
+            </li>
+          </ul>
+        </section>
 
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: auto">
-              <span
-                v-for="p in (item.requiredProof || []).slice(0, 2)"
-                :key="p"
-                class="ax-chip font-mono"
-                style="font-size: 0.58rem"
-              >{{ p }}</span>
-              <q-space />
-              <q-btn
-                flat dense no-caps size="xs"
-                label="Open in Sender"
-                style="color: var(--ax-primary); font-family: var(--ax-font-mono); font-size: 0.6rem"
-                @click.stop="openInSender(item.intent)"
-              />
+        <div class="p-4 bg-surface-container-low/50 border border-white/5 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase">System Integrity</span>
+            <div class="flex gap-1">
+              <div class="w-1 h-3 bg-primary-container/20"></div>
+              <div class="w-1 h-3 bg-primary-container/40"></div>
+              <div class="w-1 h-3 bg-primary-container/60"></div>
+              <div class="w-1 h-3 bg-primary-container"></div>
             </div>
           </div>
+          <p class="text-[10px] text-on-surface-variant/60 font-mono leading-tight">
+            All registry entries are cryptographically signed by authorized AXIS nodes.
+          </p>
+        </div>
+      </aside>
+
+      <!-- Grid of Intent Cards -->
+      <div class="col-span-9">
+        <div class="grid grid-cols-2 gap-4">
+          <article 
+            v-for="item in filteredIntents" 
+            :key="item.intent"
+            class="bg-surface-container p-6 relative overflow-hidden group transition-all hover:bg-surface-container-high border-l-2 border-primary-container/20 hover:border-primary-container"
+          >
+            <div class="absolute top-0 right-0 w-32 h-32 bg-primary-container/5 -rotate-45 translate-x-16 -translate-y-16"></div>
+            
+            <div class="flex justify-between items-start mb-6 relative z-10">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                  <span class="font-mono text-[9px] bg-primary-container/10 text-primary-container px-2 py-0.5">{{ item.intent.split('.').pop() }}</span>
+                  <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase">{{ item.sensitivity }}</span>
+                  <span v-if="item.deprecated" class="font-mono text-[9px] bg-error-container/20 text-error px-2 py-0.5">DEPRECATED</span>
+                </div>
+                <h3 class="font-headline text-lg font-bold tracking-tight text-on-surface leading-tight break-all">
+                  {{ item.intent }}
+                </h3>
+              </div>
+              <span 
+                class="material-symbols-outlined text-on-surface-variant/40 scale-75 cursor-pointer hover:text-primary-container transition-colors"
+                @click="openInSender(item.intent)"
+              >launch</span>
+            </div>
+
+            <p class="text-on-surface-variant text-xs mb-6 opacity-80 line-clamp-2 min-h-[32px]">
+              {{ item.description || 'No description provided.' }}
+            </p>
+
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2 relative z-10 border-t border-white/5 pt-4">
+              <div class="space-y-1">
+                <div class="font-mono text-[8px] uppercase text-on-surface-variant/40">Proofs</div>
+                <div class="text-[10px] font-mono text-on-surface truncate">
+                  {{ (item.requiredProof || []).join(' / ') || 'None' }}
+                </div>
+              </div>
+              <div class="space-y-1">
+                <div class="font-mono text-[8px] uppercase text-on-surface-variant/40">Schema</div>
+                <div class="text-[10px] font-mono text-on-surface truncate">
+                  {{ item.schema ? 'Present' : 'N/A' }}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center relative z-10">
+              <div class="flex gap-2">
+                <span v-for="tag in getTags(item)" :key="tag" class="text-[9px] font-mono px-2 py-0.5 bg-surface-container-low text-on-surface-variant/60 uppercase">
+                  {{ tag }}
+                </span>
+              </div>
+              <button 
+                class="bg-primary-container text-on-primary-fixed px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
+                @click="openInSender(item.intent)"
+              >
+                Open in Sender
+              </button>
+            </div>
+          </article>
         </div>
 
         <!-- Empty state -->
-        <div v-else class="ax-empty" style="padding: 60px 20px">
-          <span class="material-symbols-outlined ax-empty-icon" style="font-size: 36px">search_off</span>
-          <div class="ax-empty-text">
-            {{ intents.length ? 'No intents match your search' : 'Click Refresh to load the catalog' }}
-          </div>
-        </div>
-      </div>
-
-      <!-- DETAIL SIDE PANEL -->
-      <div
-        v-if="selected"
-        style="
-          width: 340px;
-          flex-shrink: 0;
-          background: var(--ax-surface);
-          border-radius: 4px;
-          border: 1px solid var(--ax-border);
-          overflow-y: auto;
-          max-height: calc(100vh - 240px);
-        "
-      >
-        <div style="
-          padding: 12px 14px 10px;
-          border-bottom: 1px solid var(--ax-border);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        ">
-          <span class="material-symbols-outlined" style="font-size: 16px; color: var(--ax-primary)">info</span>
-          <span class="font-mono" style="
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--ax-on-surface);
-            flex: 1;
-            word-break: break-all;
-          ">{{ selected.intent }}</span>
-          <q-btn
-            flat dense round size="xs"
-            icon="close"
-            style="color: var(--ax-outline)"
-            @click="selected = null"
-          />
-        </div>
-
-        <div style="padding: 14px">
-          <!-- Description -->
-          <div
-            v-if="selected.description"
-            style="font-size: 0.8rem; color: var(--ax-on-surface-variant); line-height: 1.5; margin-bottom: 14px"
-          >{{ selected.description }}</div>
-
-          <!-- Meta badges -->
-          <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px">
-            <span class="ax-badge font-mono" :class="'ax-badge--' + sensitivityVariant(selected.sensitivity)">
-              <span class="material-symbols-outlined" style="font-size: 12px">security</span>
-              {{ selected.sensitivity }}
-            </span>
-            <span
-              v-for="p in selected.requiredProof || []"
-              :key="p"
-              class="ax-badge ax-badge--accent font-mono"
-            >{{ p }}</span>
-            <span v-if="selected.deprecated" class="ax-badge ax-badge--warning font-mono">Deprecated</span>
-          </div>
-
-          <!-- Contract stats -->
-          <div v-if="selected.contract" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px">
-            <div class="ax-stat-card">
-              <div class="ax-stat-label">Max DB writes</div>
-              <div class="ax-stat-value font-mono">{{ selected.contract.maxDbWrites ?? '—' }}</div>
-            </div>
-            <div class="ax-stat-card">
-              <div class="ax-stat-label">Max time</div>
-              <div class="ax-stat-value font-mono">{{ selected.contract.maxTimeMs != null ? selected.contract.maxTimeMs + ' ms' : '—' }}</div>
-            </div>
-          </div>
-
-          <!-- Schema viewer -->
-          <div v-if="hasSchema">
-            <div style="
-              font-family: var(--ax-font-mono);
-              font-size: 0.65rem;
-              font-weight: 700;
-              color: var(--ax-outline);
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              margin-bottom: 6px;
-            ">Schema</div>
-            <JsonTree
-              :value="selected.schema || selected.inputSchema || null"
-              max-height="220px"
-              :max-depth="2"
-            />
-          </div>
-
-          <!-- Open in Sender button -->
-          <button
-            class="ins-send-btn font-mono"
-            style="width: 100%; margin-top: 16px"
-            @click="openInSender(selected.intent)"
+        <div v-if="!filteredIntents.length" class="py-20 text-center border border-white/5 bg-surface-container-low/30">
+          <span class="material-symbols-outlined text-4xl text-on-surface-variant/20 mb-4">search_off</span>
+          <p class="font-mono text-sm text-on-surface-variant/50">NO INTENTS MATCH YOUR FILTERS</p>
+          <button 
+            class="mt-4 px-6 py-2 bg-surface-container-high text-xs font-mono hover:text-primary-container transition-colors"
+            @click="resetFilters"
           >
-            <span class="material-symbols-outlined" style="font-size: 14px">send</span>
-            OPEN IN SENDER
+            RESET ALL FILTERS
           </button>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import JsonTree from 'src/components/JsonTree.vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { fetchCatalog } from 'src/services/axis-client';
+import { useConnectionStore } from 'stores/connection';
 
 interface IntentDef {
   intent: string;
@@ -289,12 +176,17 @@ interface IntentDef {
   deprecated?: boolean;
 }
 
-const router   = useRouter();
-const intents  = ref<IntentDef[]>([]);
-const selected = ref<IntentDef | null>(null);
-const search   = ref('');
-const loading  = ref(false);
+const route = useRoute();
+const router = useRouter();
+const conn = useConnectionStore();
+const intents = ref<IntentDef[]>([]);
+const search = ref('');
+const loading = ref(false);
 const selectedDomain = ref('');
+
+const latencyLabel = computed(() => {
+  return conn.latencyMs != null ? `${conn.latencyMs}ms` : '—';
+});
 
 const filteredIntents = computed(() => {
   let list = intents.value;
@@ -309,10 +201,6 @@ const filteredIntents = computed(() => {
   }
   return list;
 });
-
-const hasSchema = computed(
-  () => selected.value?.schema || selected.value?.inputSchema,
-);
 
 function getDomain(intent: string): string {
   const parts = intent.split('.');
@@ -334,16 +222,12 @@ const domainCounts = computed(() => {
   return counts;
 });
 
-const domainCount = computed(() => domains.value.length);
-
-function sensitivityVariant(s: string): string {
-  switch (s) {
-    case 'LOW':      return 'success';
-    case 'MEDIUM':   return 'info';
-    case 'HIGH':     return 'warning';
-    case 'CRITICAL': return 'error';
-    default:         return 'neutral';
-  }
+function getTags(item: IntentDef): string[] {
+  const tags: string[] = [];
+  const domain = getDomain(item.intent).split('.').pop();
+  if (domain) tags.push(domain);
+  if (item.requiredProof?.length) tags.push(item.requiredProof[0]);
+  return tags.slice(0, 2);
 }
 
 async function loadCatalog() {
@@ -355,36 +239,24 @@ async function loadCatalog() {
   }
 }
 
+function resetFilters() {
+  selectedDomain.value = '';
+  search.value = '';
+}
+
 function openInSender(intent: string) {
   router.push({ path: '/sender', query: { intent } });
 }
+
+onMounted(() => {
+  const q = route.query.q;
+  if (typeof q === 'string' && q.trim()) {
+    search.value = q.trim();
+  }
+  loadCatalog();
+});
 </script>
 
 <style scoped>
-.ax-intent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
-}
-
-.ax-domain-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 3px;
-  font-family: var(--ax-font-mono);
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--ax-on-surface-variant);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.ax-domain-item:hover {
-  background: var(--ax-surface-low);
-}
-.ax-domain-item--active {
-  background: var(--ax-surface-low);
-  color: var(--ax-primary);
-}
+/* Any additional specific styles for this page */
 </style>

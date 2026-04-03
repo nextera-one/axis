@@ -38,6 +38,9 @@ export type {
   Signer,
 } from "./signer";
 
+// QR auth compatibility helpers
+export * from "./qr-auth";
+
 // Encoding utilities
 export {
   canonicalJson,
