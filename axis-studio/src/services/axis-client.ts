@@ -13,8 +13,6 @@ import {
   uuidToBytes,
   ProofType,
   decodeVarint,
-  decodeTLVs,
-  TLVType
 } from '@nextera.one/axis-client-sdk/browser';
 import * as ed from '@noble/ed25519';
 
@@ -37,13 +35,43 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.trim().replace(/^0x/i, '');
+  if (!clean || clean.length % 2 !== 0) {
+    throw new Error('Invalid hex key');
+  }
+  const bytes = new Uint8Array(
+    clean.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)),
+  );
+
+  // Preferred format: 32-byte Ed25519 secret key.
+  // Backward-compat: older studio versions stored PKCS#8 blobs.
+  if (bytes.length === 32) return bytes;
+  if (bytes.length > 32) return bytes.slice(-32);
+  throw new Error('Unsupported private key length');
+}
+
+function safeUuidToBytes(input: string | null | undefined): Uint8Array {
+  if (!input) return new Uint8Array(16);
+  try {
+    return uuidToBytes(input);
+  } catch {
+    return new Uint8Array(16);
+  }
+}
+
+function encodeIntentBody(body: unknown): Uint8Array {
+  if (body instanceof Uint8Array) return body;
+  if (typeof body === 'string') return new TextEncoder().encode(body);
+  if (body === null || body === undefined) return new Uint8Array();
+  return new TextEncoder().encode(JSON.stringify(body));
+}
+
 /**
  * Partial decode of AXIS1 frame response
  * We only care about the body for now
  */
 function decodeAxisResponse(buffer: Uint8Array): { body: any, flags: number } {
-  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-  
   // Check Magic "AXIS1"
   const magic = new TextDecoder().decode(buffer.slice(0, 5));
   if (magic !== 'AXIS1') throw new Error('Invalid protocol magic');
@@ -77,11 +105,47 @@ function decodeAxisResponse(buffer: Uint8Array): { body: any, flags: number } {
   return { body, flags };
 }
 
+function decodePlainResponse(buffer: Uint8Array): { body: any; raw: string } {
+  const text = new TextDecoder().decode(buffer);
+  try {
+    return { body: JSON.parse(text), raw: text };
+  } catch {
+    return { body: text, raw: text };
+  }
+}
+
+function decodeResponseBuffer(buffer: Uint8Array): {
+  body: any;
+  raw: string;
+  effect: string;
+} {
+  if (buffer.length >= 5) {
+    const magic = new TextDecoder().decode(buffer.slice(0, 5));
+    if (magic === 'AXIS1') {
+      const { body } = decodeAxisResponse(buffer);
+      const effect =
+        body?.effect ||
+        body?.result?.effect ||
+        (body?.ok === true ? 'OK' : 'COMPLETE');
+      return { body, raw: '[BINARY AXIS FRAME]', effect };
+    }
+  }
+
+  const plain = decodePlainResponse(buffer);
+  const effect =
+    plain.body?.effect ||
+    plain.body?.result?.effect ||
+    (plain.body?.ok === true ? 'OK' : 'COMPLETE');
+  return { body: plain.body, raw: plain.raw, effect };
+}
+
 /* ── main send ───────────────────────────────────────────── */
 
 export async function sendIntent(
   intent: string,
-  body: Record<string, unknown> = {},
+  body: unknown = {},
+  nodeUrlOverride?: string,
+  options?: { recordHistory?: boolean },
 ): Promise<SendResult> {
   const conn = useConnectionStore();
   const auth = useAuthStore();
@@ -89,8 +153,9 @@ export async function sendIntent(
 
   const pid = generatePid();
   const nonce = generateNonce(32);
-  const actorId = auth.actorId ? uuidToBytes(auth.actorId) : new Uint8Array(16);
-  const capsuleId = auth.capsuleId ? uuidToBytes(auth.capsuleId) : new Uint8Array(16);
+  const actorId = safeUuidToBytes(auth.actorId);
+  const capsuleId = safeUuidToBytes(auth.capsuleId);
+  const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
 
   const builder = new AxisFrameBuilder()
     .setPid(pid)
@@ -100,16 +165,14 @@ export async function sendIntent(
     .setProofType(ProofType.CAPSULE)
     .setProofRef(capsuleId)
     .setNonce(nonce)
-    .setBody(new TextEncoder().encode(JSON.stringify(body)));
+    .setBody(encodeIntentBody(body));
 
   // Sign if we have an active key
   const activeKey = auth.getActiveKey();
   let frameBytes: Uint8Array;
 
   if (activeKey?.privateKeyHex) {
-    const privKey = new Uint8Array(
-      activeKey.privateKeyHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-    );
+    const privKey = hexToBytes(activeKey.privateKeyHex);
     const unsigned = builder.buildUnsigned();
     const sig = await ed.signAsync(unsigned, privKey);
     frameBytes = builder.buildSigned(sig);
@@ -121,11 +184,11 @@ export async function sendIntent(
   let result: SendResult;
 
   try {
-    const res = await fetch(conn.nodeUrl, {
+    const res = await fetch(targetUrl, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/axis-bin',
-        'Accept': 'application/axis-bin'
+        'Accept': 'application/axis-bin, application/json, text/plain'
       },
       body: frameBytes as any,
       signal: AbortSignal.timeout(30_000),
@@ -135,15 +198,15 @@ export async function sendIntent(
     
     if (res.ok) {
       const buffer = new Uint8Array(await res.arrayBuffer());
-      const { body: respBody } = decodeAxisResponse(buffer);
+      const decoded = decodeResponseBuffer(buffer);
       
       result = {
         ok: true,
         status: res.status,
         durationMs,
-        response: respBody,
-        raw: '[BINARY AXIS FRAME]',
-        effect: respBody?.effect || respBody?.result?.effect || 'OK',
+        response: decoded.body,
+        raw: decoded.raw,
+        effect: decoded.effect,
       };
     } else {
       const text = await res.text();
@@ -168,18 +231,19 @@ export async function sendIntent(
     };
   }
 
-  // record in history
-  history.push({
-    id: bytesToHex(pid),
-    ts: Date.now(),
-    intent,
-    requestBody: JSON.stringify(body, null, 2),
-    responseBody: JSON.stringify(result.response, null, 2),
-    responseEffect: result.effect,
-    durationMs: result.durationMs,
-    status: result.ok ? 'ok' : 'error',
-    nodeUrl: conn.nodeUrl,
-  });
+  if (options?.recordHistory !== false) {
+    history.push({
+      id: bytesToHex(pid),
+      ts: Date.now(),
+      intent,
+      requestBody: JSON.stringify(body, null, 2),
+      responseBody: JSON.stringify(result.response, null, 2),
+      responseEffect: result.effect,
+      durationMs: result.durationMs,
+      status: result.ok ? 'ok' : 'error',
+      nodeUrl: targetUrl,
+    });
+  }
 
   return result;
 }
@@ -192,11 +256,11 @@ export async function fetchCatalog(): Promise<any[]> {
 }
 
 export async function describeIntent(intent: string): Promise<any> {
-  const res = await sendIntent('catalog.describe', { intent });
+  const res = await sendIntent('catalog.describe', intent);
   return res.ok ? (res.response?.definition || null) : null;
 }
 
 export async function searchCatalog(query: string): Promise<any[]> {
-  const res = await sendIntent('catalog.search', { query });
+  const res = await sendIntent('catalog.search', query);
   return res.ok ? (res.response?.intents || []) : [];
 }

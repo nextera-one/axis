@@ -18,15 +18,28 @@ export const useConnectionStore = defineStore('connection', () => {
     lastError.value = null;
   }
 
-  async function ping() {
+  async function ping(urlOverride?: string) {
     if (pinging.value) return;
     pinging.value = true;
     try {
       const { sendIntent } = await import('src/services/axis-client');
-      const result = await sendIntent('system.ping', {});
+      const result = await sendIntent(
+        'system.ping',
+        {},
+        urlOverride,
+        { recordHistory: false },
+      );
       
       latencyMs.value = result.durationMs;
-      connected.value = result.ok && (result.response?.ok === true || result.response?.status === 'OK');
+      const status = String(result.response?.status || '').toUpperCase();
+      connected.value =
+        result.ok &&
+        (
+          result.response?.ok === true ||
+          status === 'OK' ||
+          status === 'UP' ||
+          result.status === 200
+        );
       lastError.value = connected.value ? null : `Status: ${result.status}`;
     } catch (e: any) {
       latencyMs.value = null;

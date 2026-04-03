@@ -167,4 +167,24 @@ export type {
   AxisAlg as AxisJsonAlg,
 } from './types/axis-frame.types';
 
+// Upload handlers and stores
+export {
+  AxisFilesDownloadHandler,
+  AxisFilesFinalizeHandler,
+} from './upload/axis-files.handlers';
+export {
+  AXIS_UPLOAD_FILE_STORE,
+  AXIS_UPLOAD_RECEIPT_SIGNER,
+  AXIS_UPLOAD_SESSION_STORE,
+} from './upload/upload.tokens';
+export type {
+  UploadFileStore,
+  UploadFileStat,
+  UploadReceiptSigner,
+  UploadSessionRecord,
+  UploadSessionStatus,
+  UploadSessionStore,
+} from './upload/upload.types';
+export { DiskUploadFileStore } from './upload/disk-upload-file.store';
+
 // Types
