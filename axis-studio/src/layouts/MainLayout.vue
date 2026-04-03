@@ -1,10 +1,18 @@
 <template>
-  <div class="h-screen w-full bg-background text-on-surface font-body overflow-hidden flex">
+  <div
+    class="h-screen w-full bg-background text-on-surface font-body overflow-hidden flex"
+  >
     <!-- ═══════ SIDEBAR ════════════════════════════════════════ -->
-    <aside class="w-64 border-r border-white/5 bg-[#111318] flex flex-col z-50 shadow-[4px_0_24px_rgba(0,245,255,0.05)] font-headline tracking-tight">
+    <aside
+      class="w-64 border-r border-white/5 bg-[#111318] flex flex-col z-50 shadow-[4px_0_24px_rgba(0,245,255,0.05)] font-headline tracking-tight"
+    >
       <div class="p-6">
-        <div class="text-lg font-bold tracking-widest text-[#E1E4E8]">AXIS STUDIO</div>
-        <div class="text-[10px] text-primary-container/60 font-mono mt-1">V1.0.4-BETA</div>
+        <div class="text-lg font-bold tracking-widest text-[#E1E4E8]">
+          AXIS STUDIO
+        </div>
+        <div class="text-[10px] text-primary-container/60 font-mono mt-1">
+          V1.0.4-BETA
+        </div>
       </div>
 
       <nav class="flex-1 px-3 space-y-1">
@@ -14,29 +22,40 @@
           :to="nav.to"
           class="flex items-center gap-3 px-4 py-3 transition-colors duration-200 active:scale-[0.99]"
           :class="[
-            route.path.startsWith(nav.to) 
-              ? 'text-[#00F5FF] bg-[#1A1C20] border-r-2 border-[#00F5FF]' 
-              : 'text-[#E1E4E8]/60 hover:text-[#E1E4E8] hover:bg-[#1E2024]'
+            route.path.startsWith(nav.to)
+              ? 'text-[#00F5FF] bg-[#1A1C20] border-r-2 border-[#00F5FF]'
+              : 'text-[#E1E4E8]/60 hover:text-[#E1E4E8] hover:bg-[#1E2024]',
           ]"
         >
-          <span class="material-symbols-outlined" :style="route.path.startsWith(nav.to) ? 'font-variation-settings: \'FILL\' 1' : ''">{{ nav.icon }}</span>
+          <span
+            class="material-symbols-outlined"
+            :style="
+              route.path.startsWith(nav.to)
+                ? 'font-variation-settings: \'FILL\' 1'
+                : ''
+            "
+            >{{ nav.icon }}</span
+          >
           <span>{{ nav.label }}</span>
         </router-link>
       </nav>
 
       <div class="p-4 mt-auto border-t border-white/5">
-        <div 
+        <div
           class="flex items-center gap-3 px-4 py-3 text-[#E1E4E8]/60 hover:text-[#E1E4E8] cursor-pointer"
           @click="showConn = true"
         >
           <span class="material-symbols-outlined">settings</span>
           <span>Settings</span>
         </div>
-        <div class="flex items-center gap-3 px-4 py-3 text-[#E1E4E8]/60 hover:text-[#E1E4E8] cursor-pointer">
-          <span 
+        <div
+          class="flex items-center gap-3 px-4 py-3 text-[#E1E4E8]/60 hover:text-[#E1E4E8] cursor-pointer"
+        >
+          <span
             class="material-symbols-outlined"
             :class="conn.connected ? 'text-[#00F5FF]' : 'text-error'"
-          >sensors</span>
+            >sensors</span
+          >
           <span>Status</span>
         </div>
       </div>
@@ -44,10 +63,15 @@
 
     <div class="flex-1 flex flex-col relative min-w-0">
       <!-- ═══════ TOP BAR ════════════════════════════════════════ -->
-      <header class="flex items-center justify-between px-6 h-12 z-40 bg-[#0A0C10]/80 backdrop-blur-md border-b border-white/5 font-mono text-xs uppercase tracking-widest">
+      <header
+        class="flex items-center justify-between px-6 h-12 z-40 bg-[#0A0C10]/80 backdrop-blur-md border-b border-white/5 font-mono text-xs uppercase tracking-widest"
+      >
         <div class="flex items-center gap-8 flex-1">
           <div class="relative w-64 group">
-            <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant/40 scale-75">search</span>
+            <span
+              class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant/40 scale-75"
+              >search</span
+            >
             <input
               v-model="searchQuery"
               class="bg-transparent border-none focus:ring-0 pl-8 w-full text-[10px] text-on-surface placeholder:text-on-surface-variant/30"
@@ -57,24 +81,47 @@
             />
           </div>
           <nav class="flex items-center gap-6">
-            <a class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer" @click="router.push('/registry')">Intents</a>
-            <a class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer" @click="router.push('/auth')">Actors</a>
-            <a class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer" @click="router.push('/history')">Proofs</a>
+            <a
+              class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer"
+              @click="router.push('/registry')"
+              >Intents</a
+            >
+            <a
+              class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer"
+              @click="router.push('/auth')"
+              >Actors</a
+            >
+            <a
+              class="text-[#E1E4E8]/50 hover:text-[#00F5FF] transition-all cursor-pointer"
+              @click="router.push('/history')"
+              >Proofs</a
+            >
           </nav>
         </div>
 
         <div class="flex items-center gap-4">
-          <span class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90" title="Network" @click="router.push('/registry')">hub</span>
-          <span class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90" title="Security" @click="router.push('/auth')">security</span>
-          <span 
-            class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90" 
+          <span
+            class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90"
+            title="Network"
+            @click="router.push('/registry')"
+            >hub</span
+          >
+          <span
+            class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90"
+            title="Security"
+            @click="router.push('/auth')"
+            >security</span
+          >
+          <span
+            class="material-symbols-outlined text-[#E1E4E8]/50 hover:text-[#00F5FF] cursor-pointer scale-90"
             @click="toggleDark"
-          >{{ $q.dark.isActive ? 'light_mode' : 'dark_mode' }}</span>
-          <button 
+            >{{ $q.dark.isActive ? "light_mode" : "dark_mode" }}</span
+          >
+          <button
             class="bg-primary-container text-on-primary-fixed px-4 py-1 font-bold text-[10px] hover:opacity-80 active:scale-95 transition-all"
             @click="showConn = true"
           >
-            {{ conn.connected ? 'Connected' : 'Connect' }}
+            {{ conn.connected ? "Connected" : "Connect" }}
           </button>
         </div>
       </header>
@@ -89,32 +136,51 @@
       </main>
 
       <!-- ═══════ BOTTOM STATUS BAR ═════════════════════════════ -->
-      <footer class="flex items-center justify-start px-4 gap-8 h-8 z-50 bg-[#111318] border-t border-white/5 shadow-[0_-4px_20px_rgba(0,0,0,0.5)] font-mono text-[10px] uppercase">
-        <div 
+      <footer
+        class="flex items-center justify-start px-4 gap-8 h-8 z-50 bg-[#111318] border-t border-white/5 shadow-[0_-4px_20px_rgba(0,0,0,0.5)] font-mono text-[10px] uppercase"
+      >
+        <div
           class="flex items-center gap-2 cursor-pointer transition-colors"
-          :class="conn.connected ? 'text-[#E1E4E8]/60 hover:text-[#E1E4E8]' : 'text-error/60'"
+          :class="
+            conn.connected
+              ? 'text-[#E1E4E8]/60 hover:text-[#E1E4E8]'
+              : 'text-error/60'
+          "
         >
           <span class="material-symbols-outlined scale-75">speed</span>
-          <span>Latency: {{ conn.latencyMs != null ? conn.latencyMs + 'ms' : '—' }}</span>
+          <span
+            >Latency:
+            {{ conn.latencyMs != null ? conn.latencyMs + "ms" : "—" }}</span
+          >
         </div>
-        <div class="flex items-center gap-2 text-[#00F5FF] font-bold cursor-pointer">
+        <div
+          class="flex items-center gap-2 text-[#00F5FF] font-bold cursor-pointer"
+        >
           <span class="material-symbols-outlined scale-75">straighten</span>
-          <span>Frame: {{ conn.connected ? 'Secured' : 'N/A' }}</span>
+          <span>Frame: {{ conn.connected ? "Secured" : "N/A" }}</span>
         </div>
-        <div class="flex items-center gap-2 text-[#E1E4E8]/40 hover:text-[#E1E4E8] cursor-pointer">
+        <div
+          class="flex items-center gap-2 text-[#E1E4E8]/40 hover:text-[#E1E4E8] cursor-pointer"
+        >
           <span class="material-symbols-outlined scale-75">verified_user</span>
-          <span>Valid: {{ conn.connected ? '100%' : '—' }}</span>
+          <span>Valid: {{ conn.connected ? "100%" : "—" }}</span>
         </div>
-        <div class="flex items-center gap-2 text-[#E1E4E8]/40 hover:text-[#E1E4E8] cursor-pointer">
+        <div
+          class="flex items-center gap-2 text-[#E1E4E8]/40 hover:text-[#E1E4E8] cursor-pointer"
+        >
           <span class="material-symbols-outlined scale-75">terminal</span>
-          <span>Result: {{ conn.connected ? 'Success' : 'N/A' }}</span>
+          <span>Result: {{ conn.connected ? "Success" : "N/A" }}</span>
         </div>
-        <div class="ml-auto pr-4 text-[9px] text-on-surface-variant/30 flex items-center gap-2">
-          <span 
+        <div
+          class="ml-auto pr-4 text-[9px] text-on-surface-variant/30 flex items-center gap-2"
+        >
+          <span
             class="w-1.5 h-1.5 rounded-full"
-            :class="conn.connected ? 'bg-primary-container animate-pulse' : 'bg-error'"
+            :class="
+              conn.connected ? 'bg-primary-container animate-pulse' : 'bg-error'
+            "
           ></span>
-          {{ conn.connected ? 'LIVE_PROTOCOL_FEED' : 'DISCONNECTED' }}
+          {{ conn.connected ? "LIVE_PROTOCOL_FEED" : "DISCONNECTED" }}
         </div>
       </footer>
     </div>
@@ -195,10 +261,10 @@
             >
               {{
                 conn.connected
-                  ? 'check_circle'
+                  ? "check_circle"
                   : conn.lastError
-                    ? 'cancel'
-                    : 'help_outline'
+                    ? "cancel"
+                    : "help_outline"
               }}
             </span>
             <span style="font-size: 0.76rem; color: var(--ax-outline)">{{
@@ -245,11 +311,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useConnectionStore } from 'stores/connection';
-import AxisLogo from 'src/components/AxisLogo.vue';
+import { ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import { useConnectionStore } from "stores/connection";
+import AxisLogo from "src/components/AxisLogo.vue";
 
 const $q = useQuasar();
 const route = useRoute();
@@ -258,26 +324,26 @@ const conn = useConnectionStore();
 
 const showConn = ref(false);
 const tempUrl = ref(conn.nodeUrl);
-const searchQuery = ref('');
+const searchQuery = ref("");
 
 function searchProtocol() {
   const q = searchQuery.value.trim();
   if (q) {
-    router.push({ path: '/registry', query: { q } });
-    searchQuery.value = '';
+    router.push({ path: "/registry", query: { q } });
+    searchQuery.value = "";
   }
 }
 
 const navItems = [
-  { label: 'Sender', icon: 'send', to: '/sender' },
-  { label: 'Registry', icon: 'database', to: '/registry' },
-  { label: 'Auth', icon: 'key', to: '/auth' },
-  { label: 'History', icon: 'history', to: '/history' },
+  { label: "Sender", icon: "send", to: "/sender" },
+  { label: "Registry", icon: "database", to: "/registry" },
+  { label: "Auth", icon: "key", to: "/auth" },
+  { label: "History", icon: "history", to: "/history" },
 ];
 
 function toggleDark() {
   $q.dark.toggle();
-  localStorage.setItem('axis_dark_mode', String($q.dark.isActive));
+  localStorage.setItem("axis_dark_mode", String($q.dark.isActive));
 }
 
 function applyConn() {
