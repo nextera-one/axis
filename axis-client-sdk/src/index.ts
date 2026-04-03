@@ -109,3 +109,24 @@ export type {
   RestResponseLike,
   AxisProxyClientOptions,
 } from "./tlv";
+
+// TLV DTO helpers
+export { AxisTlvDto } from "./base/axis-tlv.dto";
+export {
+  TlvEnum,
+  TlvField,
+  TlvMinLen,
+  TlvRange,
+  TlvUtf8Pattern,
+  TlvValidate,
+} from "./decorators/tlv-field.decorator";
+
+// Copied backend client contracts
+export * from "./auth/axis-auth-qr.dto";
+export * from "./catalog/intent-catalog";
+export * from "./model/data_object";
+export * from "./payments/payments-axis.dto";
+export * from "./axis";
+
+// Ensure reflect metadata is initialized when the SDK is loaded.
+import "reflect-metadata";

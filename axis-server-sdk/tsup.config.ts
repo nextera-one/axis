@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/core/index.ts'],
+  entry: ['src/index.ts', 'src/core/index.ts', 'src/bin/generate-keys.ts'],
   format: ['cjs', 'esm'],
   dts: true,
   splitting: false,

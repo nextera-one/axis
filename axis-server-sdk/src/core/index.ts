@@ -3,3 +3,4 @@ export * from './varint';
 export * from './tlv';
 export * from './axis-bin';
 export * from './signature';
+export * from './axis-error';

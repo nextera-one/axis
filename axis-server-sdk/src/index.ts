@@ -188,3 +188,14 @@ export type {
 export { DiskUploadFileStore } from './upload/disk-upload-file.store';
 
 // Types
+
+// Grouped namespaces for the backend package merge surface
+export * as core from './core';
+export * as crypto from './crypto';
+export * as decorators from './decorators';
+export * as engine from './engine';
+export * as loom from './loom';
+export * as schemas from './schemas';
+export * as security from './security';
+export * as sensors from './sensors';
+export * as utils from './utils';

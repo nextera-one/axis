@@ -1,0 +1,6 @@
+export enum StatusEnum {
+  ACTIVE = 'ACTIVE',
+  DEPRECATED = 'DEPRECATED',
+  DISABLED = 'DISABLED',
+  REMOVED = 'REMOVED',
+}

@@ -1,0 +1,6 @@
+export enum StatusEnum {
+  ACTIVE = 'ACTIVE',
+  FINALIZING = 'FINALIZING',
+  COMPLETE = 'COMPLETE',
+  ABORTED = 'ABORTED',
+}

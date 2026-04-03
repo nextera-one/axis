@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-client-sdk",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Official TypeScript/JavaScript client SDK for the AXIS Protocol v1",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -34,7 +34,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/digital-pages-co/axis.git",
+    "url": "git+https://github.com/digital-pages-co/axis.git",
     "directory": "axis-client-sdk"
   },
   "homepage": "https://axisprotocol.io",
@@ -74,6 +74,7 @@
     "@noble/ed25519": "^3.0.0",
     "@noble/hashes": "^2.0.1",
     "axios": "^1.13.2",
+    "reflect-metadata": "^0.2.2",
     "ulid": "^3.0.2",
     "uuid": "^11.1.0"
   }
