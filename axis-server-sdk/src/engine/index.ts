@@ -5,3 +5,4 @@ export * from './intent.router';
 export * from './sensor-bands';
 export * from './sensor-discovery.service';
 export * from './registry/sensor.registry';
+export * as observation from './observation';

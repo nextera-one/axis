@@ -60,6 +60,42 @@ export {
 // Engine
 export { IntentRouter, AxisEffect } from './engine/intent.router';
 
+// Observation (protocol-level observation pipeline)
+export {
+  stableJsonStringify,
+} from './engine/observation/stable-json';
+export type {
+  ObservationQueueMessage,
+  ObservationQueueConfig,
+} from './engine/observation/observation-queue.types';
+export {
+  buildQueueMessage,
+  encodeQueueMessage,
+  decodeQueueMessage,
+  parseStreamEntries,
+  parseAutoClaimEntries,
+} from './engine/observation/observation-queue.codec';
+export type {
+  ObservationStreamEntry,
+} from './engine/observation/observation-queue.codec';
+export {
+  canonicalizeObservation,
+  hashObservation,
+  buildUnsignedWitness,
+} from './engine/observation/observation-hash';
+export type {
+  ObservationWitnessSummary,
+  UnsignedObservationWitness,
+} from './engine/observation/observation-hash';
+export {
+  verifyResponse,
+} from './engine/observation/response-observer';
+export type {
+  ResponseObserverContext,
+  ResponseContract,
+  ObserverVerdict,
+} from './engine/observation/response-observer';
+
 // Core Protocol
 export * from './core/constants';
 export * from './core/varint';
