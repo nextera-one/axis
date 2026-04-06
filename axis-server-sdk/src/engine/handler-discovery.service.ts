@@ -1,9 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { DiscoveryService, MetadataScanner } from '@nestjs/core';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { DiscoveryService, MetadataScanner } from "@nestjs/core";
 
-import { HANDLER_METADATA_KEY } from '../decorators/handler.decorator';
-import { INTENT_METADATA_KEY } from '../decorators/intent.decorator';
-import { IntentRouter } from './intent.router';
+import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
+import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
+import { INTENT_METADATA_KEY } from "../decorators/intent.decorator";
+import { IntentRouter } from "./intent.router";
 
 /**
  * HandlerDiscoveryService
@@ -60,6 +61,10 @@ export class HandlerDiscoveryService implements OnModuleInit {
       const methods = this.scanner.getAllMethodNames(proto);
       let registered = 0;
 
+      // Read @HandlerSensors from the class (if any)
+      const handlerSensors: Function[] =
+        Reflect.getMetadata(HANDLER_SENSORS_KEY, metatype) || [];
+
       for (const methodName of methods) {
         const meta = Reflect.getMetadata(
           INTENT_METADATA_KEY,
@@ -81,7 +86,12 @@ export class HandlerDiscoveryService implements OnModuleInit {
 
         // Always register metadata (@IntentBody, @IntentSensors) —
         // even for manually-registered intents
-        this.router.registerIntentMeta(meta.intent, proto, methodName);
+        this.router.registerIntentMeta(
+          meta.intent,
+          proto,
+          methodName,
+          handlerSensors,
+        );
       }
 
       if (registered > 0) {

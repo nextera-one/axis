@@ -1,40 +1,28 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
+import { Injectable, Logger, Optional } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 
-import { AxisFrame } from '../core/axis-bin';
-import { HANDLER_METADATA_KEY } from '../decorators/handler.decorator';
-import {
-  INTENT_METADATA_KEY,
-  INTENT_ROUTES_KEY,
-  IntentKind,
-  IntentRoute,
-  IntentTlvField,
-} from '../decorators/intent.decorator';
-import { INTENT_BODY_KEY } from '../decorators/intent-body.decorator';
-import { INTENT_SENSORS_KEY } from '../decorators/intent-sensors.decorator';
-import {
-  buildDtoDecoder,
-  extractDtoSchema,
-} from '../decorators/dto-schema.util';
-import type { TlvValidatorFn } from '../decorators/tlv-field.decorator';
-import {
-  AxisSensor,
-  SensorInput,
-  normalizeSensorDecision,
-} from '../sensor/axis-sensor';
+import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
+import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
+import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
+import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
+import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
+import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
+import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
+import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
+import { AxisFrame } from "../core/axis-bin";
 
 export interface IntentSchema {
   intent: string;
   version: number;
-  bodyProfile: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+  bodyProfile: "TLV_MAP" | "RAW" | "TLV_OBJ" | "TLV_ARR";
   fields: Array<{
     name: string;
     tlv: number;
-    kind: IntentTlvField['kind'];
+    kind: IntentTlvField["kind"];
     required?: boolean;
     maxLen?: number;
     max?: string;
-    scope?: 'header' | 'body';
+    scope?: "header" | "body";
   }>;
 }
 
@@ -76,12 +64,12 @@ export class IntentRouter {
 
   /** Intents handled inline in route() — not in `handlers` map */
   private static readonly BUILTIN_INTENTS = new Set([
-    'system.ping',
-    'public.ping',
-    'system.time',
-    'system.echo',
-    'INTENT.EXEC',
-    'axis.intent.exec',
+    "system.ping",
+    "public.ping",
+    "system.time",
+    "system.echo",
+    "INTENT.EXEC",
+    "axis.intent.exec",
   ]);
 
   /** Internal registry of dynamic intent handlers */
@@ -169,6 +157,10 @@ export class IntentRouter {
     const routes: IntentRoute[] =
       Reflect.getMetadata(INTENT_ROUTES_KEY, instance.constructor) || [];
 
+    // Read @HandlerSensors from the class (if any)
+    const handlerSensors: Function[] =
+      Reflect.getMetadata(HANDLER_SENSORS_KEY, instance.constructor) || [];
+
     for (const route of routes) {
       const intentName = route.absolute
         ? route.action
@@ -181,7 +173,12 @@ export class IntentRouter {
         this.register(intentName, fn);
       }
 
-      this.registerIntentMeta(intentName, Object.getPrototypeOf(instance), String(route.methodName));
+      this.registerIntentMeta(
+        intentName,
+        Object.getPrototypeOf(instance),
+        String(route.methodName),
+        handlerSensors,
+      );
     }
 
     const proto = Object.getPrototypeOf(instance);
@@ -193,7 +190,7 @@ export class IntentRouter {
         this.register(meta.intent, (instance as any)[key].bind(instance));
       }
 
-      this.registerIntentMeta(meta.intent, proto, key);
+      this.registerIntentMeta(meta.intent, proto, key, handlerSensors);
     }
   }
 
@@ -211,37 +208,37 @@ export class IntentRouter {
    */
   async route(frame: AxisFrame): Promise<AxisEffect> {
     const start = process.hrtime();
-    let intent = 'unknown';
+    let intent = "unknown";
 
     try {
       // Extract intent from header TLV (tag 3 = TLV_INTENT)
       const intentBytes = frame.headers.get(3);
-      if (!intentBytes) throw new Error('Missing intent');
+      if (!intentBytes) throw new Error("Missing intent");
       intent = new TextDecoder().decode(intentBytes);
 
       let effect: AxisEffect;
 
-      if (intent === 'system.ping' || intent === 'public.ping') {
-        this.logger.debug('PING received');
+      if (intent === "system.ping" || intent === "public.ping") {
+        this.logger.debug("PING received");
         effect = {
           ok: true,
-          effect: 'pong',
+          effect: "pong",
           headers: new Map([
-            [100, new TextEncoder().encode('AXIS_BACKEND_V1')],
+            [100, new TextEncoder().encode("AXIS_BACKEND_V1")],
           ]),
           body: new TextEncoder().encode(
             JSON.stringify({
-              status: 'ok',
+              status: "ok",
               timestamp: new Date().toISOString(),
-              version: '1.0.0',
+              version: "1.0.0",
             }),
           ),
         };
-      } else if (intent === 'system.time') {
+      } else if (intent === "system.time") {
         const ts = Date.now().toString();
         effect = {
           ok: true,
-          effect: 'time',
+          effect: "time",
           body: new TextEncoder().encode(
             JSON.stringify({
               ts,
@@ -249,13 +246,13 @@ export class IntentRouter {
             }),
           ),
         };
-      } else if (intent === 'system.echo') {
+      } else if (intent === "system.echo") {
         effect = {
           ok: true,
-          effect: 'echo',
+          effect: "echo",
           body: frame.body,
         };
-      } else if (intent === 'INTENT.EXEC' || intent === 'axis.intent.exec') {
+      } else if (intent === "INTENT.EXEC" || intent === "axis.intent.exec") {
         // Meta-intent: Unwrap and execute the inner intent
         try {
           const bodyJSON = JSON.parse(new TextDecoder().decode(frame.body));
@@ -263,7 +260,7 @@ export class IntentRouter {
           const innerArgs = bodyJSON.args || {};
 
           if (!innerIntent) {
-            throw new Error('INTENT.EXEC missing inner intent');
+            throw new Error("INTENT.EXEC missing inner intent");
           }
 
           this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
@@ -302,25 +299,25 @@ export class IntentRouter {
           }
         }
 
-        if (typeof handler === 'function') {
+        if (typeof handler === "function") {
           const resultBody = decoder
             ? await handler(decodedBody, frame.headers)
             : await handler(frame.body, frame.headers);
           effect = {
             ok: true,
-            effect: 'complete',
+            effect: "complete",
             body: resultBody,
           };
         } else {
-          if (typeof (handler as any).handle === 'function') {
+          if (typeof (handler as any).handle === "function") {
             effect = await (handler as any).handle(frame);
-          } else if (typeof (handler as any).execute === 'function') {
+          } else if (typeof (handler as any).execute === "function") {
             const bodyRes = decoder
               ? await (handler as any).execute(decodedBody, frame.headers)
               : await (handler as any).execute(frame.body, frame.headers);
             effect = {
               ok: true,
-              effect: 'complete',
+              effect: "complete",
               body: bodyRes,
             };
           } else {
@@ -354,15 +351,28 @@ export class IntentRouter {
     }
   }
 
-  registerIntentMeta(intent: string, proto: object, methodName: string): void {
+  registerIntentMeta(
+    intent: string,
+    proto: object,
+    methodName: string,
+    handlerSensors?: Function[],
+  ): void {
     const decoder = Reflect.getMetadata(INTENT_BODY_KEY, proto, methodName);
     if (decoder) {
       this.intentDecoders.set(intent, decoder);
     }
 
-    const sensors = Reflect.getMetadata(INTENT_SENSORS_KEY, proto, methodName);
-    if (sensors && Array.isArray(sensors) && sensors.length > 0) {
-      this.intentSensors.set(intent, sensors);
+    const intentSensors = Reflect.getMetadata(
+      INTENT_SENSORS_KEY,
+      proto,
+      methodName,
+    );
+    const combined = [
+      ...(handlerSensors || []),
+      ...(Array.isArray(intentSensors) ? intentSensors : []),
+    ];
+    if (combined.length > 0) {
+      this.intentSensors.set(intent, combined);
     }
 
     const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
@@ -397,7 +407,7 @@ export class IntentRouter {
         intent,
         body: frame.body,
         headerTLVs: frame.headers as any,
-        metadata: { phase: 'intent', intent },
+        metadata: { phase: "intent", intent },
       };
 
       if (sensor.supports && !sensor.supports(sensorInput)) continue;
@@ -417,7 +427,7 @@ export class IntentRouter {
     intent: string;
     tlv?: IntentTlvField[];
     dto?: Function;
-    bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+    bodyProfile?: "TLV_MAP" | "RAW" | "TLV_OBJ" | "TLV_ARR";
     kind?: IntentKind;
   }): void {
     if (meta.dto) {
@@ -431,7 +441,7 @@ export class IntentRouter {
       const schema: IntentSchema = {
         intent: meta.intent,
         version: 1,
-        bodyProfile: meta.bodyProfile || 'TLV_MAP',
+        bodyProfile: meta.bodyProfile || "TLV_MAP",
         fields: extracted.fields.map((f) => ({
           name: f.name,
           tlv: f.tag,
@@ -461,7 +471,7 @@ export class IntentRouter {
     const schema: IntentSchema = {
       intent: meta.intent,
       version: 1,
-      bodyProfile: meta.bodyProfile || 'TLV_MAP',
+      bodyProfile: meta.bodyProfile || "TLV_MAP",
       fields: meta.tlv.map((f) => ({
         name: f.name,
         tlv: f.tag,
