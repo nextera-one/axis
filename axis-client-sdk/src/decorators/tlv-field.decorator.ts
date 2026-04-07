@@ -1,23 +1,34 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 
-export const TLV_FIELDS_KEY = 'axis:tlv:fields';
-export const TLV_VALIDATORS_KEY = 'axis:tlv:validators';
+type ReflectWithMetadata = typeof Reflect & {
+  getOwnMetadata: (metadataKey: string, target: object) => unknown;
+  defineMetadata: (
+    metadataKey: string,
+    metadataValue: unknown,
+    target: object,
+  ) => void;
+};
+
+const reflectMetadata = Reflect as ReflectWithMetadata;
+
+export const TLV_FIELDS_KEY = "axis:tlv:fields";
+export const TLV_VALIDATORS_KEY = "axis:tlv:validators";
 
 export type TlvFieldKind =
-  | 'utf8'
-  | 'u64'
-  | 'bytes'
-  | 'bytes16'
-  | 'bool'
-  | 'obj'
-  | 'arr';
+  | "utf8"
+  | "u64"
+  | "bytes"
+  | "bytes16"
+  | "bool"
+  | "obj"
+  | "arr";
 
 export interface TlvFieldOptions {
   kind: TlvFieldKind;
   required?: boolean;
   maxLen?: number;
   max?: string;
-  scope?: 'header' | 'body';
+  scope?: "header" | "body";
 }
 
 export interface TlvFieldMeta {
@@ -43,7 +54,10 @@ export function TlvField(
 ): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {
     const existing: TlvFieldMeta[] =
-      Reflect.getOwnMetadata(TLV_FIELDS_KEY, target.constructor) || [];
+      (reflectMetadata.getOwnMetadata(
+        TLV_FIELDS_KEY,
+        target.constructor,
+      ) as TlvFieldMeta[]) || [];
 
     existing.push({
       property: String(propertyKey),
@@ -51,14 +65,21 @@ export function TlvField(
       options,
     });
 
-    Reflect.defineMetadata(TLV_FIELDS_KEY, existing, target.constructor);
+    reflectMetadata.defineMetadata(
+      TLV_FIELDS_KEY,
+      existing,
+      target.constructor,
+    );
   };
 }
 
 export function TlvValidate(validator: TlvValidatorFn): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {
     const existing: TlvValidatorMeta[] =
-      Reflect.getOwnMetadata(TLV_VALIDATORS_KEY, target.constructor) || [];
+      (reflectMetadata.getOwnMetadata(
+        TLV_VALIDATORS_KEY,
+        target.constructor,
+      ) as TlvValidatorMeta[]) || [];
 
     const prop = String(propertyKey);
     let entry = existing.find((item) => item.property === prop);
@@ -70,7 +91,11 @@ export function TlvValidate(validator: TlvValidatorFn): PropertyDecorator {
 
     entry.validators.push(validator);
 
-    Reflect.defineMetadata(TLV_VALIDATORS_KEY, existing, target.constructor);
+    reflectMetadata.defineMetadata(
+      TLV_VALIDATORS_KEY,
+      existing,
+      target.constructor,
+    );
   };
 }
 
@@ -103,7 +128,7 @@ export function TlvEnum(
     const decoded = new TextDecoder().decode(value);
     return set.has(decoded)
       ? null
-      : message || `${property}: must be one of [${allowed.join(', ')}]`;
+      : message || `${property}: must be one of [${allowed.join(", ")}]`;
   });
 }
 
@@ -121,7 +146,9 @@ export function TlvRange(
     }
 
     if (decoded < min || decoded > max) {
-      return message || `${property}: value ${decoded} out of range [${min}, ${max}]`;
+      return (
+        message || `${property}: value ${decoded} out of range [${min}, ${max}]`
+      );
     }
 
     return null;
