@@ -92,6 +92,8 @@ export type {
   UnsignedObservationWitness,
 } from "./engine/observation/observation-hash";
 export { verifyResponse } from "./engine/observation/response-observer";
+// Compatibility alias
+export { verifyResponse as ResponseObserver } from "./engine/observation/response-observer";
 export type {
   ResponseObserverContext,
   ResponseContract,
@@ -272,6 +274,44 @@ export type {
   CceExecutionContext as CceExecutionContextType,
   CceWitnessRecord as CceWitnessRecordType,
 } from "./cce/cce.types";
+
+// Utils
+export { encodeAxisTlvDto } from "./utils/axis-tlv-codec";
+
+// Loom runtime helpers and types
+export {
+  TLV_PRESENCE_ID,
+  TLV_WRIT,
+  TLV_THREAD_HASH,
+  deriveAnchorReflection,
+  canonicalizeWrit,
+  canonicalizeGrant,
+} from "./loom/loom.types";
+export type {
+  PresenceDeclaration,
+  PresenceChallenge,
+  PresenceProof,
+  PresenceReceipt,
+  PresenceStatus,
+  WritHead,
+  WritBody,
+  WritMeta,
+  WritSignature,
+  Writ,
+  GrantType,
+  GrantCapability,
+  GrantMeta,
+  Grant,
+  GrantStatus,
+  LoomReceipt,
+  ThreadState,
+  RevocationTargetType,
+  Revocation,
+  LoomValidationResult,
+  PresenceVerifyResult,
+  WritValidationResult,
+  GrantValidationResult,
+} from "./loom/loom.types";
 
 // Grouped namespaces for the backend package merge surface
 export * as cce from "./cce";
