@@ -91,9 +91,10 @@ export type {
   ObservationWitnessSummary,
   UnsignedObservationWitness,
 } from "./engine/observation/observation-hash";
-export { verifyResponse } from "./engine/observation/response-observer";
-// Compatibility alias
-export { verifyResponse as ResponseObserver } from "./engine/observation/response-observer";
+export {
+  verifyResponse,
+  ResponseObserver,
+} from "./engine/observation/response-observer";
 export type {
   ResponseObserverContext,
   ResponseContract,

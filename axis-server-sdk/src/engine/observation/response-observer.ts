@@ -112,3 +112,13 @@ export function verifyResponse(
 
   return { passed: true };
 }
+
+/**
+ * Function type and value alias for the response observer validator.
+ */
+export type ResponseObserver = (
+  ctx: ResponseObserverContext,
+  response: ResponseContract,
+) => ObserverVerdict;
+
+export const ResponseObserver: ResponseObserver = verifyResponse;
