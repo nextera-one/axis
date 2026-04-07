@@ -255,7 +255,26 @@ export type {
 export { AxisSensorChainService } from "./security/axis-sensor-chain.service";
 export type { ChainResult } from "./security/axis-sensor-chain.service";
 
+// CCE — Capsule-Carried Encryption
+export { executeCcePipeline } from "./cce/cce-pipeline";
+export type {
+  CceHandler,
+  CceHandlerContext,
+  CceHandlerResult,
+  CcePipelineConfig,
+  CcePipelineResult,
+} from "./cce/cce-pipeline";
+export { CCE_PROTOCOL_VERSION, CCE_ERROR, CceError } from "./cce/cce.types";
+export type {
+  CceCapsuleClaims as CceCapsuleClaimsType,
+  CceRequestEnvelope as CceRequestEnvelopeType,
+  CceResponseEnvelope as CceResponseEnvelopeType,
+  CceExecutionContext as CceExecutionContextType,
+  CceWitnessRecord as CceWitnessRecordType,
+} from "./cce/cce.types";
+
 // Grouped namespaces for the backend package merge surface
+export * as cce from "./cce";
 export * as core from "./core";
 export * as crypto from "./crypto";
 export * as decorators from "./decorators";

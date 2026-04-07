@@ -9,6 +9,8 @@ import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
 import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
 import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
 import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
+import { type CceHandler, type CceHandlerContext, type CceHandlerResult, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
 
 export interface IntentSchema {
@@ -89,6 +91,12 @@ export class IntentRouter {
 
   /** Per-intent operation kind */
   private intentKinds = new Map<string, IntentKind>();
+
+  /** CCE handler registry */
+  private cceHandlers = new Map<string, CceHandler>();
+
+  /** CCE pipeline configuration (set via configureCce) */
+  private ccePipelineConfig: Omit<CcePipelineConfig, "handlers"> | null = null;
 
   constructor(@Optional() private readonly moduleRef?: ModuleRef) {}
 
@@ -421,6 +429,65 @@ export class IntentRouter {
         throw new Error(`SENSOR_DENY:${reason}`);
       }
     }
+  }
+
+  // ===========================================================================
+  // CCE — Capsule-Carried Encryption Support
+  // ===========================================================================
+
+  /**
+   * Configure the CCE pipeline.
+   * Must be called before routeCce() can process encrypted requests.
+   */
+  configureCce(config: Omit<CcePipelineConfig, "handlers">): void {
+    this.ccePipelineConfig = config;
+    this.logger.log("CCE pipeline configured");
+  }
+
+  /**
+   * Register a CCE-encrypted intent handler.
+   * CCE handlers receive decrypted payloads and execution context.
+   */
+  registerCceHandler(intent: string, handler: CceHandler): void {
+    this.cceHandlers.set(intent, handler);
+    this.logger.debug(`CCE handler registered: ${intent}`);
+  }
+
+  /**
+   * Check if a CCE handler exists for the given intent.
+   */
+  hasCceHandler(intent: string): boolean {
+    return this.cceHandlers.has(intent);
+  }
+
+  /**
+   * Route a CCE-encrypted request through the full pipeline.
+   *
+   * Steps:
+   * 1. Sensor chain (envelope validation → capsule verification → replay → decrypt)
+   * 2. Execution context derivation
+   * 3. Handler execution
+   * 4. Response encryption
+   * 5. Witness recording
+   */
+  async routeCce(envelope: CceRequestEnvelope): Promise<CcePipelineResult> {
+    if (!this.ccePipelineConfig) {
+      return {
+        ok: false,
+        error: {
+          code: "CCE_NOT_CONFIGURED",
+          message: "CCE pipeline not configured. Call configureCce() first.",
+        },
+        status: "ERROR",
+      };
+    }
+
+    const config: CcePipelineConfig = {
+      ...this.ccePipelineConfig,
+      handlers: this.cceHandlers,
+    };
+
+    return executeCcePipeline(envelope, config);
   }
 
   private storeSchema(meta: {

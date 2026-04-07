@@ -128,5 +128,8 @@ export * from "./model/data_object";
 export * from "./payments/payments-axis.dto";
 export * from "./axis";
 
+// CCE — Capsule-Carried Encryption (Client)
+export * from "./cce";
+
 // Ensure reflect metadata is initialized when the SDK is loaded.
 import "reflect-metadata";
