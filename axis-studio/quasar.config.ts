@@ -1,17 +1,17 @@
-import { configure } from 'quasar/wrappers';
+import { configure } from "quasar/wrappers";
 
 export default configure(() => {
   return {
-    boot: ['pinia'],
+    boot: ["pinia"],
 
-    css: ['app.scss'],
+    css: ["app.scss"],
 
-    extras: ['material-icons', 'material-symbols-outlined'],
+    extras: ["material-icons", "material-symbols-outlined"],
 
     build: {
-      target: { browser: ['es2022', 'chrome100', 'firefox100', 'safari15'] },
+      target: { browser: ["es2022", "chrome100", "firefox100", "safari15"] },
       typescript: { strict: true, vueShim: true },
-      vueRouterMode: 'history',
+      vueRouterMode: "history",
       vitePlugins: [],
     },
 
@@ -24,23 +24,23 @@ export default configure(() => {
       config: {
         dark: true,
         brand: {
-          primary: '#7C3AED',
-          secondary: '#1A1C20',
-          accent: '#059669',
-          dark: '#111318',
-          'dark-page': '#0A0C10',
-          positive: '#4ADE80',
-          negative: '#FFB4AB',
-          info: '#0284C7',
-          warning: '#FFB875',
+          primary: "#A855F7",
+          secondary: "#120C28",
+          accent: "#06FFA5",
+          dark: "#080414",
+          "dark-page": "#030108",
+          positive: "#06FFA5",
+          negative: "#FF5C8A",
+          info: "#38BDF8",
+          warning: "#FFB547",
         },
       },
       plugins: [
-        'Notify',
-        'Dialog',
-        'LocalStorage',
-        'SessionStorage',
-        'Loading',
+        "Notify",
+        "Dialog",
+        "LocalStorage",
+        "SessionStorage",
+        "Loading",
       ],
     },
 

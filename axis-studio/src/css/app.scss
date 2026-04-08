@@ -2061,15 +2061,19 @@ body.body--light .ax-bento-card {
   gap: 12px;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 14px;
+  position: relative;
+  overflow: hidden;
 }
 
 .registry-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .registry-header h1 {
@@ -2094,21 +2098,31 @@ body.body--light .ax-bento-card {
   min-width: 110px;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface-low);
+  background-image: var(--ax-gradient-surface);
   padding: 8px 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.06);
+  }
 }
 
 .registry-stat span {
   display: block;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
 }
 
 .registry-stat small {
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--ax-outline);
+  letter-spacing: 0.1em;
 }
 
 .registry-controls {
@@ -2125,6 +2139,14 @@ body.body--light .ax-bento-card {
 
 .registry-card {
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--ax-border);
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.06);
+  }
 }
 
 .registry-card-head {
@@ -2154,10 +2176,11 @@ body.body--light .ax-bento-card {
 
 .registry-card-meta small {
   display: block;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 8px;
   color: var(--ax-outline);
+  letter-spacing: 0.1em;
 }
 
 .registry-card-meta span {
@@ -2183,9 +2206,11 @@ body.body--light .ax-bento-card {
   gap: 8px;
   padding: 30px;
   text-transform: uppercase;
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
+
 
 /* ── Auth Page ───────────────────────────────────────────── */
 .auth-page {
@@ -2210,11 +2235,12 @@ body.body--light .ax-bento-card {
 }
 
 .auth-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .auth-stats {
@@ -2226,15 +2252,17 @@ body.body--light .ax-bento-card {
 .auth-stat {
   border: 1px solid var(--ax-border);
   background: var(--ax-surface-low);
+  background-image: var(--ax-gradient-surface);
   padding: 8px 10px;
 }
 
 .auth-stat small {
   display: block;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .auth-stat span {
@@ -2243,10 +2271,18 @@ body.body--light .ax-bento-card {
   font-family: var(--ax-font-mono);
   font-size: 12px;
   color: var(--ax-primary);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.2);
 }
 
 .auth-card {
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
+  border: 1px solid var(--ax-border);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+  }
 }
 
 .auth-card--active h2 {
@@ -2259,10 +2295,10 @@ body.body--light .ax-bento-card {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--ax-font-mono);
-  font-size: 12px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--ax-outline);
 }
 
@@ -2273,6 +2309,7 @@ body.body--light .ax-bento-card {
 .auth-key-item--active {
   background: var(--ax-primary-muted);
   color: var(--ax-primary);
+  box-shadow: inset 2px 0 0 var(--ax-primary);
 }
 
 .auth-empty {
@@ -2283,9 +2320,10 @@ body.body--light .ax-bento-card {
   gap: 8px;
   color: var(--ax-outline);
   padding: 20px;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
 
 .auth-empty--large {
@@ -2295,9 +2333,10 @@ body.body--light .ax-bento-card {
 
 .auth-label {
   margin-bottom: 4px;
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--ax-outline);
 }
 
@@ -2337,6 +2376,7 @@ body.body--light .ax-bento-card {
 .history-head {
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 12px;
   display: flex;
   justify-content: space-between;
@@ -2399,10 +2439,12 @@ body.body--light .ax-bento-card {
 
 .history-dot--ok {
   background: var(--ax-ok);
+  box-shadow: 0 0 6px rgba(6, 255, 165, 0.4);
 }
 
 .history-dot--err {
   background: var(--ax-error);
+  box-shadow: 0 0 6px rgba(255, 92, 138, 0.4);
 }
 
 .history-detail {
@@ -2416,6 +2458,7 @@ body.body--light .ax-bento-card {
   min-height: 0;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
   display: flex;
   flex-direction: column;
 }
@@ -2429,11 +2472,12 @@ body.body--light .ax-bento-card {
 }
 
 .history-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
   color: var(--ax-primary);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .history-detail-head h2 {
@@ -2452,9 +2496,10 @@ body.body--light .ax-bento-card {
 .history-kv small {
   display: block;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 8px;
+  letter-spacing: 0.1em;
 }
 
 .history-kv span {
@@ -2533,8 +2578,9 @@ body.body--light .ax-bento-card {
   justify-content: center;
   color: var(--ax-outline);
   text-transform: uppercase;
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  letter-spacing: 0.1em;
   padding: 24px;
 }
 
@@ -2555,8 +2601,23 @@ body.body--light .ax-bento-card {
   width: min(560px, 100%);
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 28px 22px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 4s ease infinite;
+  }
 }
 
 .notfound-card h1 {
@@ -2568,12 +2629,66 @@ body.body--light .ax-bento-card {
 
 .notfound-card h1 span {
   color: var(--ax-primary);
+  text-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
 }
 
 .notfound-card p {
   margin: 10px 0 18px;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   XENOCORE — Ambient Effects
+   ═══════════════════════════════════════════════════════════ */
+
+/* Subtle scanline overlay on the entire app (dark mode only) */
+body.body--dark::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(168, 85, 247, 0.008) 2px,
+      rgba(168, 85, 247, 0.008) 4px
+    );
+  mix-blend-mode: overlay;
+}
+
+/* Ambient corner vignette */
+body.body--dark .studio-layout::before,
+body.body--dark .ax-page-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(3, 1, 8, 0.4) 100%);
+}
+
+/* Quasar dialog backdrop — dimensional */
+.q-dialog__backdrop {
+  background: rgba(3, 1, 8, 0.7) !important;
+  backdrop-filter: blur(8px) saturate(0.8) !important;
+}
+
+body.body--light .q-dialog__backdrop {
+  background: rgba(26, 5, 51, 0.3) !important;
+}
+
+/* Quasar menu popup — xeno glass */
+.q-menu {
+  background: var(--ax-surface) !important;
+  border: 1px solid var(--ax-border) !important;
+  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.12) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
