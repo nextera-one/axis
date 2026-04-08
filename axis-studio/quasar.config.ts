@@ -24,14 +24,14 @@ export default configure(() => {
       config: {
         dark: true,
         brand: {
-          primary: '#00F5FF',
+          primary: '#7C3AED',
           secondary: '#1A1C20',
-          accent: '#00DCE5',
+          accent: '#059669',
           dark: '#111318',
           'dark-page': '#0A0C10',
           positive: '#4ADE80',
           negative: '#FFB4AB',
-          info: '#00DCE5',
+          info: '#0284C7',
           warning: '#FFB875',
         },
       },

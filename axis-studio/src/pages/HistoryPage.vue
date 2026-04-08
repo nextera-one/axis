@@ -218,12 +218,12 @@ const traceSteps = computed(() => {
     {
       label: 'Intent Dispatch',
       detail: 'Binary AXIS frame broadcast to protocol cluster.',
-      color: '#00F5FF',
+      color: 'var(--ax-primary)',
     },
     {
       label: 'Network Resolution',
       detail: `Route established within ${e.durationMs}ms.`,
-      color: '#00F5FF',
+      color: 'var(--ax-primary)',
     },
     {
       label: 'Execution Finality',
@@ -231,14 +231,14 @@ const traceSteps = computed(() => {
         e.status === 'ok'
           ? 'Positive confirmation receipt acknowledged.'
           : 'Terminal error state encountered during processing.',
-      color: e.status === 'ok' ? '#4ADE80' : '#FFB4AB',
+      color: e.status === 'ok' ? 'var(--ax-ok)' : 'var(--ax-error)',
     },
     ...(e.responseEffect
       ? [
           {
             label: 'Side Effect Logged',
             detail: `State transition recorded as: ${e.responseEffect}`,
-            color: '#00F5FF',
+            color: 'var(--ax-primary)',
           },
         ]
       : []),

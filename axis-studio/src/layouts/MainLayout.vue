@@ -24,6 +24,8 @@
           </template>
         </q-input>
 
+        <div class="studio-header-badge">Beta</div>
+
         <q-space />
 
         <div class="studio-top-links gt-sm">
