@@ -112,6 +112,10 @@
                 <small>Sequence TS</small>
                 <span>{{ new Date(selectedEntry.ts).toLocaleString() }}</span>
               </div>
+              <div>
+                <small>HTTP Status</small>
+                <span>{{ selectedEntry.httpStatus ?? '—' }}</span>
+              </div>
             </div>
 
             <div class="history-trace">
@@ -131,22 +135,26 @@
               indicator-color="primary"
               class="history-tabs"
             >
-              <q-tab name="response" label="Response" />
               <q-tab name="request" label="Request" />
+              <q-tab name="requestRaw" label="Request Raw" />
+              <q-tab name="response" label="Response" />
+              <q-tab name="responseRaw" label="Response Raw" />
             </q-tabs>
 
             <div class="history-json">
               <JsonTree
+                v-if="currentDetailTab === 'request' || currentDetailTab === 'response'"
                 :value="
-                  parseSafe(
-                    currentDetailTab === 'response'
-                      ? selectedEntry.responseBody
-                      : selectedEntry.requestBody,
-                  )
+                  currentDetailTab === 'response'
+                    ? responseSnapshot.tree
+                    : requestSnapshot.tree
                 "
                 :max-height="'100%'"
                 class="history-json-tree"
               />
+              <pre v-else class="history-raw">
+{{ currentDetailTab === 'responseRaw' ? responseSnapshot.raw : requestSnapshot.raw }}
+              </pre>
             </div>
           </div>
 
@@ -173,11 +181,35 @@ const history = useHistoryStore();
 
 const selectedId = ref('');
 const splitterModel = ref(54);
-const currentDetailTab = ref<'response' | 'request'>('response');
+const currentDetailTab = ref<'request' | 'requestRaw' | 'response' | 'responseRaw'>(
+  'response',
+);
 
 const selectedEntry = computed(() =>
   history.filtered.find((e) => e.id === selectedId.value) ?? null,
 );
+
+const requestSnapshot = computed(() => {
+  if (selectedEntry.value?.requestSnapshot) {
+    return selectedEntry.value.requestSnapshot;
+  }
+  return {
+    transport: 'legacy',
+    tree: parseSafe(selectedEntry.value?.requestBody || ''),
+    raw: selectedEntry.value?.requestBody || '',
+  };
+});
+
+const responseSnapshot = computed(() => {
+  if (selectedEntry.value?.responseSnapshot) {
+    return selectedEntry.value.responseSnapshot;
+  }
+  return {
+    transport: 'legacy',
+    tree: parseSafe(selectedEntry.value?.responseBody || ''),
+    raw: selectedEntry.value?.responseBody || '',
+  };
+});
 
 const traceSteps = computed(() => {
   if (!selectedEntry.value) return [];
@@ -214,6 +246,7 @@ const traceSteps = computed(() => {
 });
 
 function parseSafe(raw: string): unknown {
+  if (!raw) return null;
   try {
     return JSON.parse(raw);
   } catch {

@@ -110,21 +110,35 @@
       <template #after>
         <div class="sender-panel">
           <div class="sender-result-head">
-            <q-tabs
-              v-model="viewTab"
-              dense
-              align="left"
-              indicator-color="primary"
-              class="sender-tabs"
-            >
-              <q-tab name="tree" label="Preview" />
-              <q-tab name="raw" label="Raw" />
-            </q-tabs>
+            <div class="sender-result-nav">
+              <q-tabs
+                v-model="viewerTarget"
+                dense
+                align="left"
+                indicator-color="primary"
+                class="sender-tabs"
+              >
+                <q-tab name="response" label="Response" />
+                <q-tab name="request" label="Request" />
+              </q-tabs>
+
+              <q-tabs
+                v-model="viewTab"
+                dense
+                align="left"
+                indicator-color="primary"
+                class="sender-tabs"
+              >
+                <q-tab name="tree" label="Preview" />
+                <q-tab name="raw" label="Raw" />
+              </q-tabs>
+            </div>
 
             <div v-if="lastResult" class="sender-result-meta">
               <span :class="lastResult.ok ? 'text-positive' : 'text-negative'">
-                {{ lastResult.ok ? '200 OK' : 'ERR ' + lastResult.status }}
+                {{ lastResult.ok ? lastResult.status + ' OK' : 'ERR ' + lastResult.status }}
               </span>
+              <span>{{ activeSnapshot?.transport || '—' }}</span>
               <span>{{ lastResult.durationMs }}ms</span>
             </div>
           </div>
@@ -132,8 +146,8 @@
           <q-tab-panels v-model="viewTab" animated class="sender-panels">
             <q-tab-panel name="tree" class="sender-tab-panel sender-tab-panel--result">
               <JsonTree
-                v-if="lastResult?.response !== undefined && lastResult?.response !== null"
-                :value="lastResult.response"
+                v-if="activeSnapshot"
+                :value="activeSnapshot.tree"
                 class="sender-tree"
                 :max-height="'100%'"
               />
@@ -144,7 +158,7 @@
             </q-tab-panel>
 
             <q-tab-panel name="raw" class="sender-tab-panel sender-tab-panel--result">
-              <pre v-if="lastResult" class="sender-raw">{{ lastResult.raw }}</pre>
+              <pre v-if="activeSnapshot" class="sender-raw">{{ activeSnapshot.raw }}</pre>
               <div v-else class="sender-empty">
                 <q-icon name="analytics" size="48px" />
               </div>
@@ -192,6 +206,7 @@ const intent = ref<string>('catalog.list');
 const bodyText = ref('{\n  \n}');
 const sending = ref(false);
 const lastResult = ref<SendResult | null>(null);
+const viewerTarget = ref<'response' | 'request'>('response');
 const viewTab = ref<'tree' | 'raw'>('tree');
 const reqTab = ref<'body' | 'context' | 'auth'>('body');
 const splitterModel = ref(44);
@@ -235,10 +250,18 @@ const bodyByteSize = computed(() => {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`;
 });
 
+const activeSnapshot = computed(() => {
+  if (!lastResult.value) return null;
+  return viewerTarget.value === 'response'
+    ? lastResult.value.responseSnapshot
+    : lastResult.value.requestSnapshot;
+});
+
 function clearForm() {
   intent.value = '';
   bodyText.value = '{\n  \n}';
   lastResult.value = null;
+  viewerTarget.value = 'response';
 }
 
 async function send() {
@@ -260,6 +283,7 @@ async function send() {
     }
 
     lastResult.value = await sendIntent(intent.value, payload);
+    viewerTarget.value = 'response';
     viewTab.value = 'tree';
   } catch (e: any) {
     lastResult.value = {
@@ -269,7 +293,19 @@ async function send() {
       response: { error: e.message },
       raw: e.message,
       effect: 'PARSE_ERROR',
+      requestSnapshot: {
+        transport: 'json',
+        tree: { error: 'Request JSON parse failed', bodyText: bodyText.value },
+        raw: bodyText.value,
+      },
+      responseSnapshot: {
+        transport: 'text',
+        tree: { error: e.message },
+        raw: e.message,
+      },
+      responseHeaders: {},
     };
+    viewerTarget.value = 'response';
     $q.notify({
       message: e.message,
       color: 'negative',

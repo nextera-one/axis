@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
+export interface HistorySnapshot {
+  transport: string;
+  tree: unknown;
+  raw: string;
+}
+
 export interface HistoryEntry {
   id: string;
   ts: number;
@@ -11,6 +17,9 @@ export interface HistoryEntry {
   durationMs: number;
   status: 'ok' | 'error';
   nodeUrl: string;
+  httpStatus?: number;
+  requestSnapshot?: HistorySnapshot;
+  responseSnapshot?: HistorySnapshot;
 }
 
 const MAX_ENTRIES = 500;
@@ -18,7 +27,8 @@ const MAX_ENTRIES = 500;
 function loadHistory(): HistoryEntry[] {
   try {
     const raw = localStorage.getItem('axis_history');
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }

@@ -1632,6 +1632,13 @@ body.body--light .ax-bento-card {
   background: var(--ax-surface);
 }
 
+.sender-result-nav {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sender-result-meta {
   display: inline-flex;
   align-items: center;
@@ -2146,6 +2153,20 @@ body.body--light .ax-bento-card {
 
 .history-json-tree {
   height: 100%;
+}
+
+.history-raw {
+  margin: 0;
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--ax-border);
+  background: var(--ax-surface-low);
+  padding: 10px;
+  font-family: var(--ax-font-mono);
+  font-size: 11px;
+  color: var(--ax-on-surface);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .history-empty {
