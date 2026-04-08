@@ -24,6 +24,7 @@ const REQUIRED_FIELDS: (keyof CceRequestEnvelope)[] = [
   "encrypted_payload",
   "request_nonce",
   "client_sig",
+  "content_type",
   "algorithms",
 ];
 

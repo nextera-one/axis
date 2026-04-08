@@ -42,6 +42,7 @@ export interface CceCapsuleClaims {
   tps_to: number;
   capsule_nonce: string;
   challenge_id: string;
+  proof_hash?: string;
   policy_hash?: string;
   iat: number;
   exp: number;
@@ -89,6 +90,7 @@ export interface CceResponseEnvelope {
   response_id: string;
   request_id: string;
   correlation_id: string;
+  capsule_id: string;
   encrypted_key: CceEncryptedKey;
   encrypted_payload: CceEncryptedPayload;
   response_nonce: string;
@@ -294,6 +296,8 @@ export interface DecryptCceResponseOptions {
   response: CceResponseEnvelope;
   /** The original request ID (for binding verification) */
   requestId: string;
+  /** The original request capsule ID (for strict response binding) */
+  requestCapsuleId?: string;
   /** Key decryptor for unwrapping the response AES key */
   keyDecryptor: CceKeyDecryptor;
   /** AES-GCM provider */
@@ -319,11 +323,18 @@ export async function decryptCceResponse(
   const {
     response,
     requestId,
+    requestCapsuleId,
     keyDecryptor,
     aesProvider,
     axisVerifier,
     axisPublicKeyHex,
   } = options;
+
+  if (response.ver !== CCE_PROTOCOL_VERSION) {
+    throw new Error(
+      `CCE_RESPONSE_VERSION_UNSUPPORTED: expected ${CCE_PROTOCOL_VERSION}, got ${response.ver}`,
+    );
+  }
 
   // Step 1: Verify AXIS signature
   const { axis_sig, ...signable } = response;
@@ -345,6 +356,11 @@ export async function decryptCceResponse(
       `CCE_RESPONSE_BINDING_MISMATCH: expected request_id=${requestId}, got ${response.request_id}`,
     );
   }
+  if (requestCapsuleId && response.capsule_id !== requestCapsuleId) {
+    throw new Error(
+      `CCE_RESPONSE_CAPSULE_MISMATCH: expected capsule_id=${requestCapsuleId}, got ${response.capsule_id}`,
+    );
+  }
 
   // Step 3: Decrypt AES key
   const aesKey = await keyDecryptor.unwrapKey(response.encrypted_key);
@@ -355,6 +371,7 @@ export async function decryptCceResponse(
     response.request_id,
     response.response_id,
     response.correlation_id,
+    response.capsule_id,
     response.response_nonce,
   );
 
@@ -452,8 +469,9 @@ function buildResponseAad(
   requestId: string,
   responseId: string,
   correlationId: string,
+  capsuleId: string,
   responseNonce: string,
 ): Uint8Array {
-  const parts = [requestId, responseId, correlationId, responseNonce];
+  const parts = [requestId, responseId, correlationId, capsuleId, responseNonce];
   return new TextEncoder().encode(parts.join("|"));
 }

@@ -54,6 +54,24 @@ export interface CceHandlerResult {
   effect?: string;
 }
 
+export interface CcePolicyContext {
+  envelope: CceRequestEnvelope;
+  capsule: CceCapsuleClaims;
+  executionContext: CceExecutionContext;
+  decryptedPayload: Uint8Array;
+  clientPublicKeyHex: string;
+}
+
+export interface CcePolicyDecision {
+  allow: boolean;
+  code?: string;
+  message?: string;
+}
+
+export interface CcePolicyEvaluator {
+  evaluate(context: CcePolicyContext): Promise<CcePolicyDecision>;
+}
+
 /**
  * CCE Pipeline Configuration
  */
@@ -72,6 +90,8 @@ export interface CcePipelineConfig {
   clientKeyEncryptor: CceClientKeyEncryptor;
   /** AXIS response signer */
   axisSigner: CceAxisSigner;
+  /** Optional policy/law evaluator run after decryption and before handler execution */
+  policyEvaluator?: CcePolicyEvaluator;
 }
 
 /**
@@ -181,6 +201,56 @@ export async function executeCcePipeline(
     derivationInput,
     envelope.request_id,
   );
+
+  if (config.policyEvaluator) {
+    try {
+      const policyDecision = await config.policyEvaluator.evaluate({
+        envelope,
+        capsule,
+        executionContext,
+        decryptedPayload,
+        clientPublicKeyHex: clientKey.publicKeyHex,
+      });
+      if (!policyDecision.allow) {
+        const verification = extractVerificationState(sensorInput.metadata ?? {});
+        const witness = buildWitnessRecord(
+          envelope,
+          capsule,
+          verification,
+          {
+            status: "DENIED",
+            handlerDurationMs: 0,
+            effect: "policy_denied",
+          },
+          {
+            axisLocalSecret: config.axisLocalSecret,
+            requestPayload: decryptedPayload,
+            responseEncrypted: false,
+          },
+        );
+        await config.witnessStore.record(witness);
+
+        return {
+          ok: false,
+          error: {
+            code: policyDecision.code ?? CCE_ERROR.POLICY_DENIED,
+            message:
+              policyDecision.message ?? "Request denied by policy evaluator",
+          },
+          status: "DENIED",
+        };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        error: {
+          code: CCE_ERROR.POLICY_DENIED,
+          message: "Policy evaluator failed",
+        },
+        status: "ERROR",
+      };
+    }
+  }
 
   // Route to handler
   const handler = config.handlers.get(capsule.intent);

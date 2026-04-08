@@ -64,6 +64,8 @@ export interface CceCapsuleClaims {
   capsule_nonce: string;
   /** Reference to originating challenge */
   challenge_id: string;
+  /** Content hash of the validated proof used to issue this capsule */
+  proof_hash?: string;
   /** Policy hash (hex) — Digital Fabric Law binding */
   policy_hash?: string;
   /** Issued-at timestamp (Unix seconds) */
@@ -192,6 +194,8 @@ export interface CceResponseEnvelope {
   request_id: string;
   /** Correlation identifier */
   correlation_id: string;
+  /** Capsule identifier of the originating request */
+  capsule_id: string;
   /** Encrypted transport key (Client public key encrypted) */
   encrypted_key: CceEncryptedKey;
   /** Encrypted response payload */

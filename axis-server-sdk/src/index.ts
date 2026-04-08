@@ -264,6 +264,9 @@ export type {
   CceHandler,
   CceHandlerContext,
   CceHandlerResult,
+  CcePolicyContext,
+  CcePolicyDecision,
+  CcePolicyEvaluator,
   CcePipelineConfig,
   CcePipelineResult,
 } from "./cce/cce-pipeline";

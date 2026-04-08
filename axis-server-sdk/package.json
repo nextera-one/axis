@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-server-sdk",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Axis Protocol server-side SDK — decorators, interfaces, and routing primitives for building Axis handlers",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -71,6 +71,7 @@
     "@nestjs/core": "^11.1.17",
     "@types/express": "^5.0.3",
     "@types/node": "^25.5.0",
+    "esbuild-plugin-tsc": "^0.5.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.2"

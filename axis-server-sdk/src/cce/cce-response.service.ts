@@ -115,6 +115,7 @@ export async function buildCceResponse(
     response_id: responseId,
     request_id: request.request_id,
     correlation_id: request.correlation_id,
+    capsule_id: capsule.capsule_id,
     encrypted_key: encryptedKey,
     encrypted_payload: encryptedPayload,
     response_nonce: responseNonce,

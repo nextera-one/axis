@@ -1,3 +1,4 @@
+import esbuildPluginTsc from 'esbuild-plugin-tsc';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
@@ -8,4 +9,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: ['@nestjs/common', '@nestjs/core', 'reflect-metadata'],
+  esbuildPlugins: [esbuildPluginTsc({ force: true })],
 });

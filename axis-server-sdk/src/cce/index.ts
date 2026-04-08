@@ -86,6 +86,9 @@ export {
   type CceHandler,
   type CceHandlerContext,
   type CceHandlerResult,
+  type CcePolicyContext,
+  type CcePolicyDecision,
+  type CcePolicyEvaluator,
   type CcePipelineConfig,
   type CcePipelineResult,
 } from "./cce-pipeline";
@@ -107,4 +110,6 @@ export {
   type CceReplayStore,
   type CceAxisKeyProvider,
   type CceAesGcmProvider,
+  type CcePayloadValidator,
+  type CcePayloadValidatorResult,
 } from "./sensors";

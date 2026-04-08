@@ -40,4 +40,6 @@ export {
   CcePayloadDecryptionSensor,
   type CceAxisKeyProvider,
   type CceAesGcmProvider,
+  type CcePayloadValidator,
+  type CcePayloadValidatorResult,
 } from "./cce-payload-decryption.sensor";

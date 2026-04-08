@@ -49,6 +49,24 @@ export interface CceAesGcmProvider {
   ): Promise<Uint8Array | null>;
 }
 
+export interface CcePayloadValidatorResult {
+  ok: boolean;
+  intent?: string;
+  code?: string;
+  reason?: string;
+}
+
+/**
+ * Optional decrypted payload validator.
+ * Use this hook to enforce intent-specific schema checks before handler execution.
+ */
+export interface CcePayloadValidator {
+  validate(
+    plaintext: Uint8Array,
+    envelope: CceRequestEnvelope,
+  ): Promise<CcePayloadValidatorResult>;
+}
+
 export class CcePayloadDecryptionSensor implements AxisSensor {
   readonly name = "cce.payload.decryption";
   readonly order = 145;
@@ -58,6 +76,7 @@ export class CcePayloadDecryptionSensor implements AxisSensor {
     private readonly keyProvider: CceAxisKeyProvider,
     private readonly aesProvider: CceAesGcmProvider,
     private readonly maxPayloadBytes: number = 64 * 1024,
+    private readonly payloadValidator?: CcePayloadValidator,
   ) {}
 
   supports(input: SensorInput): boolean {
@@ -168,6 +187,47 @@ export class CcePayloadDecryptionSensor implements AxisSensor {
       };
     }
 
+    const capsule = input.metadata?.cceCapsule as
+      | { intent: string }
+      | undefined;
+
+    // Built-in JSON intent binding check.
+    if (capsule && isJsonContentType(envelope.content_type)) {
+      const parsed = tryParseJsonObject(plaintext);
+      if (parsed && typeof parsed.intent === "string") {
+        if (parsed.intent !== capsule.intent) {
+          return {
+            allow: false,
+            riskScore: 100,
+            reasons: [
+              `${CCE_ERROR.INTENT_SCHEMA_MISMATCH}: payload.intent=${parsed.intent}, capsule.intent=${capsule.intent}`,
+            ],
+            code: CCE_ERROR.INTENT_SCHEMA_MISMATCH,
+          };
+        }
+        input.metadata = input.metadata ?? {};
+        input.metadata.cceRequestIntent = parsed.intent;
+      }
+    }
+
+    if (this.payloadValidator) {
+      const verdict = await this.payloadValidator.validate(plaintext, envelope);
+      if (!verdict.ok) {
+        const code = verdict.code ?? CCE_ERROR.PAYLOAD_SCHEMA_INVALID;
+        return {
+          allow: false,
+          riskScore: 100,
+          reasons: [verdict.reason ?? code],
+          code,
+        };
+      }
+
+      if (verdict.intent) {
+        input.metadata = input.metadata ?? {};
+        input.metadata.cceRequestIntent = verdict.intent;
+      }
+    }
+
     // Store decrypted payload for handler
     input.metadata = input.metadata ?? {};
     input.metadata.cceDecryptedPayload = plaintext;
@@ -201,14 +261,30 @@ function buildAad(envelope: CceRequestEnvelope): Uint8Array {
   return new TextEncoder().encode(parts.join("|"));
 }
 
+function isJsonContentType(contentType: string | undefined): boolean {
+  return (
+    typeof contentType === "string" &&
+    contentType.toLowerCase().includes("application/json")
+  );
+}
+
+function tryParseJsonObject(
+  payload: Uint8Array,
+): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(payload));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Base64url decode */
 function base64UrlDecode(input: string): Uint8Array {
   const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const binary = atob(base64 + padding);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+  return new Uint8Array(Buffer.from(base64 + padding, "base64"));
 }
