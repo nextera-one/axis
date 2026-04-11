@@ -6,6 +6,7 @@
  */
 
 import {
+  AXIS_TAG,
   AxisFrameBuilder,
   FrameFlags,
   ProofType,
@@ -13,6 +14,7 @@ import {
   bytesToUuid,
   decodeVarint,
   decodeTLVs,
+  encodeTLVs,
   generateNonce,
   generatePid,
   uuidToBytes,
@@ -159,11 +161,22 @@ function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
   }
 }
 
-function encodeIntentBody(body: unknown): Uint8Array {
-  if (body instanceof Uint8Array) return body;
-  if (typeof body === 'string') return textEncoder.encode(body);
-  if (body === null || body === undefined) return new Uint8Array();
-  return textEncoder.encode(JSON.stringify(body));
+function encodeIntentBody(body: unknown): { bytes: Uint8Array; isTLV: boolean } {
+  if (body === null || body === undefined) {
+    return { bytes: new Uint8Array(), isTLV: false };
+  }
+  if (body instanceof Uint8Array) {
+    if (body.length === 0) return { bytes: new Uint8Array(), isTLV: false };
+    const tlv = encodeTLVs([{ type: AXIS_TAG.BODY, value: body }]);
+    return { bytes: tlv, isTLV: true };
+  }
+  if (typeof body === 'object' && Object.keys(body).length === 0) {
+    return { bytes: new Uint8Array(), isTLV: false };
+  }
+  const json = typeof body === 'string' ? body : JSON.stringify(body);
+  const jsonBytes = textEncoder.encode(json);
+  const tlv = encodeTLVs([{ type: AXIS_TAG.JSON, value: jsonBytes }]);
+  return { bytes: tlv, isTLV: true };
 }
 
 function readU64(bytes: Uint8Array): string {
@@ -201,7 +214,7 @@ function flagNames(flags: number): string[] {
 }
 
 function headerName(tag: number): string {
-  const name = TLVType[tag as keyof typeof TLVType];
+  const name = TLVType[tag as unknown as keyof typeof TLVType];
   return typeof name === 'string' ? name : `TAG_${tag}`;
 }
 
@@ -597,6 +610,8 @@ export async function sendIntent(
   const proofRef = hasCapsule ? safeProofRefToBytes(auth.capsuleId) : EMPTY_16;
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
 
+  const encodedBody = encodeIntentBody(body);
+
   const builder = new AxisFrameBuilder()
     .setPid(pid)
     .setTimestamp(BigInt(Date.now()))
@@ -605,7 +620,8 @@ export async function sendIntent(
     .setProofType(hasCapsule ? ProofType.CAPSULE : ProofType.NONE)
     .setProofRef(proofRef)
     .setNonce(nonce)
-    .setBody(encodeIntentBody(body));
+    .setFlags(encodedBody.isTLV)
+    .setBody(encodedBody.bytes);
 
   const activeKey = auth.getActiveKey();
   let frameBytes: Uint8Array;
