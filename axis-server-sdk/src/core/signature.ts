@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 
-import { AxisFrame, encodeFrame } from './axis-bin';
+import { AxisFrame, getSignTarget } from './axis-bin';
 
 /**
  * Signature utilities for AXIS binary frames
@@ -15,14 +15,7 @@ import { AxisFrame, encodeFrame } from './axis-bin';
  * @returns {Buffer} The serialized canonical bytes for the signature algorithm
  */
 export function computeSignaturePayload(frame: AxisFrame): Buffer {
-  // Re-encode frame with empty signature
-  const frameWithoutSig: AxisFrame = {
-    ...frame,
-    sig: new Uint8Array(0),
-  };
-
-  const encoded = encodeFrame(frameWithoutSig);
-  return Buffer.from(encoded);
+  return Buffer.from(getSignTarget(frame));
 }
 
 /**

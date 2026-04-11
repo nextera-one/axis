@@ -92,6 +92,18 @@ export type {
   UnsignedObservationWitness,
 } from "./engine/observation/observation-hash";
 export {
+  scoreTruth,
+  verifyObservation,
+} from "./engine/observation/truth-scoring";
+export type {
+  TruthStatus,
+  TruthVerdict,
+  ExpectedOutcome,
+  Anomaly,
+  AnomalyLevel,
+  ObservedDeed,
+} from "./engine/observation/truth-scoring";
+export {
   verifyResponse,
   ResponseObserver,
 } from "./engine/observation/response-observer";
@@ -179,6 +191,9 @@ export { AxisCrudHandler } from "./interfaces/axis-crud-handler.interface";
 export * from "./security/scopes";
 export * from "./security/capabilities";
 
+// Law
+export * from "./law";
+
 // Risk
 export * from "./risk/index";
 
@@ -258,6 +273,30 @@ export type {
 export { AxisSensorChainService } from "./security/axis-sensor-chain.service";
 export type { ChainResult } from "./security/axis-sensor-chain.service";
 
+// Timeline Engine
+export { TimelineEngine } from "./timeline/timeline.engine";
+export { InMemoryTimelineStore } from "./timeline/timeline.store";
+export type { TimelineStore } from "./timeline/timeline.store";
+export type {
+  TimelineEvent,
+  TimelineBranch,
+  TimelineDomain,
+  TimelineEventStatus,
+  StateSnapshot,
+  ReplayRequest,
+  ReplayResult,
+  ReplayDifference,
+  ForkRequest,
+  ForkResult,
+  SimulationRequest,
+  SimulationResult,
+  SimulatedSideEffect,
+  TimelineComparison,
+  TimelineHandler,
+  TimelineHandlerContext,
+  TimelineHandlerResult,
+} from "./timeline/timeline.types";
+
 // CCE — Capsule-Carried Encryption
 export { executeCcePipeline } from "./cce/cce-pipeline";
 export type {
@@ -291,6 +330,28 @@ export {
   canonicalizeWrit,
   canonicalizeGrant,
 } from "./loom/loom.types";
+export {
+  createPresenceChallenge,
+  signPresenceChallenge,
+  verifyPresenceProof,
+  getPresenceStatus,
+  renewPresence,
+  createWrit,
+  validateWrit,
+  grantCoversAction,
+  getGrantStatus,
+  validateGrant,
+  createGrant,
+  createReceipt,
+  verifyReceiptChain,
+  updateThreadState,
+  createRevocation,
+  isRevoked,
+  executeLoomPipeline,
+} from "./loom/loom.engine";
+export type {
+  LoomExecutionResult,
+} from "./loom/loom.engine";
 export type {
   PresenceDeclaration,
   PresenceChallenge,
@@ -317,14 +378,122 @@ export type {
   GrantValidationResult,
 } from "./loom/loom.types";
 
+// IDEL — Intent Description & Execution Language
+export { IdelSchemaRegistry, IdelCompiler } from "./idel/idel.compiler";
+export type {
+  IntentProposal,
+  CompiledIntent,
+  IntentConstraint,
+  ConstraintKind,
+  AlternativeIntent,
+  ClarificationQuestion,
+  IntentRisk,
+  RiskLevel,
+  IntentSchema,
+  IntentParamSchema,
+  CompilationResult,
+  CompilationError,
+} from "./idel/idel.types";
+
+// Needle & Thread — Unified execution pipeline
+export { assembleNeedle, formStitch, runNeedlePipeline } from "./needle/needle.engine";
+export type {
+  Needle,
+  NeedlePhase,
+  NeedleError,
+  NeedleHandler,
+  NeedleHandlerContext,
+  NeedleHandlerResult,
+  NeedlePipelineConfig,
+  NeedlePipelineResult,
+  Stitch,
+  StitchKind,
+  Thread,
+} from "./needle/needle.types";
+
+// Knot — Critical binding points in the Thread
+export {
+  openKnot,
+  addStitchToKnot,
+  validateKnot,
+  tieKnot,
+  breakKnot,
+  forkFromKnot,
+  isKnotOpen,
+  isPointOfNoReturn,
+  findKnotsForStitch,
+  getIrreversibleKnots,
+  getDecisionPoints,
+} from "./needle/knot.engine";
+export type {
+  KnotType,
+  KnotStatus,
+  Knot,
+  KnotValidationResult,
+  KnotError,
+  KnotBreakRequest,
+} from "./needle/knot.types";
+
+// Fabric — State-space projection from woven Stitches
+export {
+  createFabric,
+  applyStitch,
+  weave,
+  projectAt,
+  lockCells,
+  queryFabric,
+  getFabricValue,
+  diffFabrics,
+} from "./needle/fabric.engine";
+export type {
+  FabricCell,
+  Fabric,
+  FabricEffect,
+  FabricEffectResolver,
+  FabricDiff,
+  FabricDiffEntry,
+  FabricDiffKind,
+  FabricQuery,
+} from "./needle/fabric.types";
+
+// Pattern — Recurring structure detection
+export {
+  InMemoryPatternStore,
+  detectSequencePatterns,
+  detectKnotPatterns,
+  matchPatterns,
+  recordOccurrence,
+  detectAnomalies,
+} from "./needle/pattern.engine";
+export type {
+  PatternKind,
+  Pattern,
+  PatternSignature,
+  PatternMatch,
+  PatternPrediction,
+  PatternStore,
+  PatternConfidence,
+} from "./needle/pattern.types";
+
+// Sensors — Reality gates
+export { TpsSensor } from "./sensors/tps.sensor";
+export type { TpsSensorOptions } from "./sensors/tps.sensor";
+export { RiskGateSensor } from "./sensors/risk-gate.sensor";
+export type { RiskGateSensorOptions, RiskSignalCollector } from "./sensors/risk-gate.sensor";
+export { TickAuthSensor } from "./sensors/tickauth.sensor";
+export type { TickAuthSensorOptions, TickAuthVerifier, TickAuthCapsuleRef } from "./sensors/tickauth.sensor";
+
 // Grouped namespaces for the backend package merge surface
 export * as cce from "./cce";
 export * as core from "./core";
 export * as crypto from "./crypto";
 export * as decorators from "./decorators";
 export * as engine from "./engine";
+export * as idel from "./idel";
 export * as loom from "./loom";
+export * as needle from "./needle";
 export * as schemas from "./schemas";
 export * as security from "./security";
 export * as sensors from "./sensors";
+export * as timeline from "./timeline";
 export * as utils from "./utils";

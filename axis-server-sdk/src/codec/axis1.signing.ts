@@ -1,7 +1,9 @@
 // axis1.signing.ts
+import { AXIS_MAGIC, AXIS_VERSION } from '@nextera.one/axis-protocol';
+
 import { encVarint } from './tlv.encode';
 
-const MAGIC = Buffer.from('AXIS1', 'ascii');
+const MAGIC = Buffer.from(AXIS_MAGIC);
 
 export function axis1SigningBytes(params: {
   ver: number;
@@ -9,7 +11,7 @@ export function axis1SigningBytes(params: {
   hdr: Buffer;
   body: Buffer;
 }): Buffer {
-  if (params.ver !== 1) throw new Error('AXIS1_BAD_VER');
+  if (params.ver !== AXIS_VERSION) throw new Error('AXIS1_BAD_VER');
   const hdrLen = encVarint(BigInt(params.hdr.length));
   const bodyLen = encVarint(BigInt(params.body.length));
   const sigLenZero = encVarint(0n); // IMPORTANT: sigLen=0 in signing bytes

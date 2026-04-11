@@ -2,6 +2,7 @@ import 'reflect-metadata';
 
 export const TLV_FIELDS_KEY = 'axis:tlv:fields';
 export const TLV_VALIDATORS_KEY = 'axis:tlv:validators';
+const textDecoder = new TextDecoder();
 
 export type TlvFieldKind =
   | 'utf8'
@@ -52,6 +53,24 @@ export interface TlvValidatorMeta {
   validators: TlvValidatorFn[];
 }
 
+function assertUniqueFieldMetadata(
+  existing: TlvFieldMeta[],
+  property: string,
+  tag: number,
+): void {
+  const duplicateProperty = existing.find((item) => item.property === property);
+  if (duplicateProperty) {
+    throw new Error(`Duplicate @TlvField for property ${property}`);
+  }
+
+  const duplicateTag = existing.find((item) => item.tag === tag);
+  if (duplicateTag) {
+    throw new Error(
+      `Duplicate @TlvField tag ${tag} for ${property}; already used by ${duplicateTag.property}`,
+    );
+  }
+}
+
 /**
  * @TlvField — Declare a TLV field contract on a DTO property.
  *
@@ -80,8 +99,11 @@ export function TlvField(
     const existing: TlvFieldMeta[] =
       Reflect.getOwnMetadata(TLV_FIELDS_KEY, target.constructor) || [];
 
+    const property = String(propertyKey);
+    assertUniqueFieldMetadata(existing, property, tag);
+
     existing.push({
-      property: String(propertyKey),
+      property,
       tag,
       options,
     });
@@ -126,9 +148,11 @@ export function TlvUtf8Pattern(
   pattern: RegExp,
   message?: string,
 ): PropertyDecorator {
+  const matcher = new RegExp(pattern.source, pattern.flags);
   return TlvValidate((val, prop) => {
-    const str = new TextDecoder().decode(val);
-    return pattern.test(str)
+    const str = textDecoder.decode(val);
+    matcher.lastIndex = 0;
+    return matcher.test(str)
       ? null
       : message || `${prop}: failed pattern check`;
   });
@@ -154,7 +178,7 @@ export function TlvEnum(
 ): PropertyDecorator {
   const set = new Set(allowed);
   return TlvValidate((val, prop) => {
-    const str = new TextDecoder().decode(val);
+    const str = textDecoder.decode(val);
     return set.has(str)
       ? null
       : message || `${prop}: must be one of [${allowed.join(', ')}]`;

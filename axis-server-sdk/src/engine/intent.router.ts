@@ -12,6 +12,8 @@ import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis
 import { type CceHandler, type CceHandlerContext, type CceHandlerResult, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
+import type { IdelCompiler } from "../idel/idel.compiler";
+import type { CompiledIntent, IntentProposal } from "../idel/idel.types";
 
 export interface IntentSchema {
   intent: string;
@@ -98,6 +100,9 @@ export class IntentRouter {
   /** CCE pipeline configuration (set via configureCce) */
   private ccePipelineConfig: Omit<CcePipelineConfig, "handlers"> | null = null;
 
+  /** IDEL compiler for intent resolution (optional) */
+  private idelCompiler: IdelCompiler | null = null;
+
   constructor(@Optional() private readonly moduleRef?: ModuleRef) {}
 
   getSchema(intent: string): IntentSchema | undefined {
@@ -116,6 +121,59 @@ export class IntentRouter {
 
   getRegisteredIntents(): string[] {
     return [...IntentRouter.BUILTIN_INTENTS, ...this.handlers.keys()];
+  }
+
+  // ===========================================================================
+  // IDEL — Intent Description & Execution Language Bridge
+  // ===========================================================================
+
+  /**
+   * Attach an IdelCompiler for intent resolution.
+   * When set, `resolveIntent()` and `routeIdel()` become available.
+   */
+  configureIdel(compiler: IdelCompiler): void {
+    this.idelCompiler = compiler;
+    this.logger.log("IDEL compiler configured");
+  }
+
+  /**
+   * Resolve raw intent text through IDEL, returning a CompiledIntent.
+   * Throws if IDEL is not configured or compilation fails.
+   */
+  resolveIntent(proposal: IntentProposal): CompiledIntent {
+    if (!this.idelCompiler) {
+      throw new Error("IDEL compiler not configured. Call configureIdel() first.");
+    }
+    const result = this.idelCompiler.compile(proposal);
+    if (!result.ok || !result.compiled) {
+      const msg = result.errors?.map((e) => e.message).join("; ") ?? "Unknown compilation error";
+      throw new Error(`IDEL compilation failed: ${msg}`);
+    }
+    return result.compiled;
+  }
+
+  /**
+   * Route an intent through IDEL and then execute it via the standard pipeline.
+   *
+   * Flow: IDEL resolve → build frame → route(frame)
+   */
+  async routeIdel(proposal: IntentProposal, frame: AxisFrame): Promise<AxisEffect & { compiled: CompiledIntent }> {
+    const compiled = this.resolveIntent(proposal);
+
+    // Rewrite the frame's intent header to the resolved intent
+    const resolvedFrame: AxisFrame = {
+      ...frame,
+      headers: new Map(frame.headers),
+    };
+    resolvedFrame.headers.set(3, new TextEncoder().encode(compiled.intent));
+
+    // If IDEL provided validated params, encode them as the body
+    if (compiled.params && Object.keys(compiled.params).length > 0) {
+      resolvedFrame.body = new TextEncoder().encode(JSON.stringify(compiled.params));
+    }
+
+    const effect = await this.route(resolvedFrame);
+    return { ...effect, compiled };
   }
 
   getIntentEntry(intent: string): {

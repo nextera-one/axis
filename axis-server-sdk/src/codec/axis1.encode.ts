@@ -1,7 +1,9 @@
 // axis1.encode.ts
+import { AXIS_MAGIC, AXIS_VERSION } from '@nextera.one/axis-protocol';
+
 import { encVarint } from './tlv.encode';
 
-const MAGIC = Buffer.from('AXIS1', 'ascii');
+const MAGIC = Buffer.from(AXIS_MAGIC);
 
 export type Axis1FrameToEncode = {
   ver: number; // 1
@@ -19,7 +21,7 @@ export function encodeAxis1Frame(f: Axis1FrameToEncode): Buffer {
   ) {
     throw new Error('AXIS1_BAD_BUFFERS');
   }
-  if (f.ver !== 1) throw new Error('AXIS1_BAD_VER');
+  if (f.ver !== AXIS_VERSION) throw new Error('AXIS1_BAD_VER');
 
   const hdrLen = encVarint(BigInt(f.hdr.length));
   const bodyLen = encVarint(BigInt(f.body.length));

@@ -1,3 +1,5 @@
+import { AXIS_MAGIC } from '@nextera.one/axis-protocol';
+
 import { decVarint } from './tlv';
 
 /**
@@ -22,7 +24,7 @@ export type Axis1DecodedFrame = {
   frameSize: number;
 };
 
-const MAGIC = Buffer.from('AXIS1', 'ascii');
+const MAGIC = Buffer.from(AXIS_MAGIC);
 
 /**
  * Decodes a raw binary buffer into a structured Axis1DecodedFrame.

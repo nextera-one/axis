@@ -10,6 +10,25 @@ type ReflectWithMetadata = typeof Reflect & {
 };
 
 const reflectMetadata = Reflect as ReflectWithMetadata;
+const textDecoder = new TextDecoder();
+
+function assertUniqueFieldMetadata(
+  existing: TlvFieldMeta[],
+  property: string,
+  tag: number,
+): void {
+  const duplicateProperty = existing.find((item) => item.property === property);
+  if (duplicateProperty) {
+    throw new Error(`Duplicate @TlvField for property ${property}`);
+  }
+
+  const duplicateTag = existing.find((item) => item.tag === tag);
+  if (duplicateTag) {
+    throw new Error(
+      `Duplicate @TlvField tag ${tag} for ${property}; already used by ${duplicateTag.property}`,
+    );
+  }
+}
 
 export const TLV_FIELDS_KEY = "axis:tlv:fields";
 export const TLV_VALIDATORS_KEY = "axis:tlv:validators";
@@ -59,8 +78,11 @@ export function TlvField(
         target.constructor,
       ) as TlvFieldMeta[]) || [];
 
+    const property = String(propertyKey);
+    assertUniqueFieldMetadata(existing, property, tag);
+
     existing.push({
-      property: String(propertyKey),
+      property,
       tag,
       options,
     });
@@ -103,9 +125,11 @@ export function TlvUtf8Pattern(
   pattern: RegExp,
   message?: string,
 ): PropertyDecorator {
+  const matcher = new RegExp(pattern.source, pattern.flags);
   return TlvValidate((value, property) => {
-    const decoded = new TextDecoder().decode(value);
-    return pattern.test(decoded)
+    const decoded = textDecoder.decode(value);
+    matcher.lastIndex = 0;
+    return matcher.test(decoded)
       ? null
       : message || `${property}: failed pattern check`;
   });
@@ -125,7 +149,7 @@ export function TlvEnum(
 ): PropertyDecorator {
   const set = new Set(allowed);
   return TlvValidate((value, property) => {
-    const decoded = new TextDecoder().decode(value);
+    const decoded = textDecoder.decode(value);
     return set.has(decoded)
       ? null
       : message || `${property}: must be one of [${allowed.join(", ")}]`;
