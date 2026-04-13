@@ -40,6 +40,15 @@
               placeholder="optional UUID"
               @update:model-value="(v) => auth.setCapsuleId(String(v ?? ''))"
             />
+            <q-input
+              :model-value="auth.intentSecret"
+              dense
+              outlined
+              type="password"
+              label="Intent Secret"
+              placeholder="base64url capsule secret (optional)"
+              @update:model-value="(v) => auth.setIntentSecret(String(v ?? '').trim())"
+            />
           </q-card-section>
         </q-card>
 

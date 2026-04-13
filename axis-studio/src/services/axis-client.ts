@@ -6,6 +6,7 @@
  */
 
 import {
+  AXIS_TAG,
   AxisFrameBuilder,
   FrameFlags,
   ProofType,
@@ -13,6 +14,7 @@ import {
   bytesToUuid,
   decodeVarint,
   decodeTLVs,
+  encodeTLVs,
   generateNonce,
   generatePid,
   uuidToBytes,
@@ -29,6 +31,19 @@ const EMPTY_16 = new Uint8Array(16);
 const MAX_RAW_CHARS = 16_000;
 const DEV_PROXY_PATH = '/axis';
 const DEV_PROXY_TARGET_HEADER = 'X-AXIS-Proxy-Target';
+
+// Intent prefixes that are always routed plain by the server (no decryption).
+// Must stay in sync with IntentAliasService.PASSTHROUGH_PREFIXES on the backend.
+const INTENT_PASSTHROUGH_PREFIXES = [
+  'public.',
+  'schema.',
+  'system.',
+  'health.',
+];
+
+function isPassthroughIntent(intent: string): boolean {
+  return INTENT_PASSTHROUGH_PREFIXES.some((p) => intent.startsWith(p));
+}
 
 type SnapshotTransport =
   | 'axis-bin'
@@ -84,6 +99,97 @@ function formatHex(bytes: Uint8Array, columns = 16): string {
 function truncateRaw(raw: string, limit = MAX_RAW_CHARS): string {
   if (raw.length <= limit) return raw;
   return `${raw.slice(0, limit)}\n\n… truncated (${raw.length - limit} chars omitted)`;
+}
+
+function base64UrlDecode(input: string): Uint8Array {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(normalized + padding);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const p of parts) {
+    out.set(p, offset);
+    offset += p.length;
+  }
+  return out;
+}
+
+async function encryptIntentToken(
+  intent: string,
+  capsuleId: string,
+  intentSecret: string,
+): Promise<string> {
+  const keyBytes = base64UrlDecode(intentSecret.trim());
+  if (keyBytes.length !== 32) {
+    throw new Error('Intent Secret must decode to exactly 32 bytes');
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBytes.buffer as ArrayBuffer,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt'],
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipherBuf = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv,
+      tagLength: 128,
+      additionalData: textEncoder.encode(capsuleId),
+    },
+    cryptoKey,
+    textEncoder.encode(intent),
+  );
+
+  const cipherBytes = new Uint8Array(cipherBuf);
+  return base64UrlEncode(concatBytes([iv, cipherBytes]));
+}
+
+async function resolveWireIntent(
+  intent: string,
+  capsuleId: string,
+  intentSecret?: string | null,
+): Promise<string> {
+  if (isPassthroughIntent(intent)) {
+    return intent;
+  }
+
+  if (!capsuleId) {
+    throw new Error(
+      'Capsule ID is required for non-passthrough intents to avoid readable wire intent',
+    );
+  }
+
+  if (!intentSecret?.trim()) {
+    throw new Error(
+      'Intent Secret is required for non-passthrough intents to avoid readable wire intent',
+    );
+  }
+
+  return encryptIntentToken(intent, capsuleId, intentSecret);
 }
 
 function resolveRequestUrl(targetUrl: string): {
@@ -187,11 +293,35 @@ function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
   }
 }
 
-function encodeIntentBody(body: unknown): Uint8Array {
-  if (body instanceof Uint8Array) return body;
-  if (typeof body === 'string') return textEncoder.encode(body);
-  if (body === null || body === undefined) return new Uint8Array();
-  return textEncoder.encode(JSON.stringify(body));
+function encodeIntentBody(body: unknown): {
+  bytes: Uint8Array;
+  isTLV: boolean;
+} {
+  if (body === null || body === undefined) {
+    return { bytes: new Uint8Array(), isTLV: false };
+  }
+  if (body instanceof Uint8Array) {
+    if (body.length === 0) return { bytes: new Uint8Array(), isTLV: false };
+    return {
+      bytes: encodeTLVs([{ type: AXIS_TAG.BODY, value: body }]),
+      isTLV: true,
+    };
+  }
+  if (typeof body === 'object' && Object.keys(body).length === 0) {
+    return {
+      bytes: encodeTLVs([
+        { type: AXIS_TAG.JSON, value: textEncoder.encode('{}') },
+      ]),
+      isTLV: true,
+    };
+  }
+  const json = typeof body === 'string' ? body : JSON.stringify(body);
+  return {
+    bytes: encodeTLVs([
+      { type: AXIS_TAG.JSON, value: textEncoder.encode(json) },
+    ]),
+    isTLV: true,
+  };
 }
 
 function readU64(bytes: Uint8Array): string {
@@ -370,7 +500,10 @@ function decodeBody(bytes: Uint8Array, flags: number) {
   };
 }
 
-function getHeaderText(headers: Map<number, Uint8Array>, tag: number): string | undefined {
+function getHeaderText(
+  headers: Map<number, Uint8Array>,
+  tag: number,
+): string | undefined {
   const value = headers.get(tag);
   if (!value) return undefined;
   const text = tryDecodeText(value);
@@ -453,9 +586,12 @@ function buildRequestSnapshot(
   };
 }
 
-function responseTransportForJson(json: Record<string, unknown>): SnapshotTransport {
+function responseTransportForJson(
+  json: Record<string, unknown>,
+): SnapshotTransport {
   if (json.ver === 'cce-v1' && 'response_id' in json) return 'cce-response';
-  if (json.ver === 'cce-v1' && 'request_id' in json && 'error' in json) return 'cce-error';
+  if (json.ver === 'cce-v1' && 'request_id' in json && 'error' in json)
+    return 'cce-error';
   return 'json';
 }
 
@@ -474,7 +610,9 @@ function buildPlainResponseSnapshot(
   if (text !== null && isProbablyText(text)) {
     const json = safeParseJson(text);
     if (json !== undefined && json && typeof json === 'object') {
-      const transport = responseTransportForJson(json as Record<string, unknown>);
+      const transport = responseTransportForJson(
+        json as Record<string, unknown>,
+      );
       const effect = extractEffect(json, status);
       return {
         body: json,
@@ -543,8 +681,14 @@ function extractAxisBody(frame: AxisFrameLike): any {
   return body.parsed ?? null;
 }
 
-function extractEffect(body: any, status?: number, frame?: AxisFrameLike): string {
-  const headerEffect = frame ? getHeaderText(frame.headers, TLVType.EFFECT) : undefined;
+function extractEffect(
+  body: any,
+  status?: number,
+  frame?: AxisFrameLike,
+): string {
+  const headerEffect = frame
+    ? getHeaderText(frame.headers, TLVType.EFFECT)
+    : undefined;
   if (headerEffect) return headerEffect;
 
   if (body && typeof body === 'object') {
@@ -621,20 +765,28 @@ export async function sendIntent(
   const pid = generatePid();
   const nonce = generateNonce(32);
   const actorId = safeActorIdToBytes(auth.actorId);
-  const hasCapsule = Boolean(auth.capsuleId?.trim());
-  const proofRef = hasCapsule ? safeProofRefToBytes(auth.capsuleId) : EMPTY_16;
+  const capsuleId = auth.capsuleId?.trim() || '';
+  const hasCapsule = Boolean(capsuleId);
+  const proofRef = hasCapsule ? safeProofRefToBytes(capsuleId) : EMPTY_16;
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
   const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
+  const wireIntent = await resolveWireIntent(
+    intent,
+    capsuleId,
+    auth.intentSecret,
+  );
+  const encodedBody = encodeIntentBody(body);
 
   const builder = new AxisFrameBuilder()
     .setPid(pid)
     .setTimestamp(BigInt(Date.now()))
-    .setIntent(intent)
+    .setIntent(wireIntent)
     .setActorId(actorId)
     .setProofType(hasCapsule ? ProofType.CAPSULE : ProofType.NONE)
     .setProofRef(proofRef)
     .setNonce(nonce)
-    .setBody(encodeIntentBody(body));
+    .setBody(encodedBody.bytes)
+    .setFlags(encodedBody.isTLV, false, false);
 
   const activeKey = auth.getActiveKey();
   let frameBytes: Uint8Array;
@@ -748,15 +900,15 @@ export async function sendIntent(
 
 export async function fetchCatalog(): Promise<any[]> {
   const res = await sendIntent('catalog.list', {});
-  return res.ok ? (res.response?.intents || []) : [];
+  return res.ok ? res.response?.intents || [] : [];
 }
 
 export async function describeIntent(intent: string): Promise<any> {
   const res = await sendIntent('catalog.describe', intent);
-  return res.ok ? (res.response?.definition || null) : null;
+  return res.ok ? res.response?.definition || null : null;
 }
 
 export async function searchCatalog(query: string): Promise<any[]> {
   const res = await sendIntent('catalog.search', query);
-  return res.ok ? (res.response?.intents || []) : [];
+  return res.ok ? res.response?.intents || [] : [];
 }

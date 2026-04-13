@@ -84,6 +84,13 @@
                 </q-card-section>
                 <q-separator />
                 <q-card-section>
+                  <div class="sender-info-label">Intent Alias</div>
+                  <div class="sender-info-value">
+                    {{ auth.capsuleId && auth.intentSecret ? 'ENCRYPTED_ON_WIRE' : 'REQUIRED_FOR_SECURE_INTENTS' }}
+                  </div>
+                </q-card-section>
+                <q-separator />
+                <q-card-section>
                   <router-link to="/auth" class="sender-link">
                     Modify signing context
                   </router-link>
