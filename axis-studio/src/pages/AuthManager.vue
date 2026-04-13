@@ -40,12 +40,21 @@
               placeholder="optional UUID"
               @update:model-value="(v) => auth.setCapsuleId(String(v ?? ''))"
             />
+            <q-toggle
+              :model-value="auth.secureIntentAliasMode"
+              label="Secure Intent Alias Mode"
+              left-label
+              color="primary"
+              @update:model-value="
+                (v) => auth.setSecureIntentAliasMode(Boolean(v))
+              "
+            />
             <q-input
               :model-value="auth.intentSecret"
               dense
               outlined
               type="password"
-              label="Intent Secret"
+              label="Intent Secret (used in secure mode)"
               placeholder="base64url capsule secret (optional)"
               @update:model-value="(v) => auth.setIntentSecret(String(v ?? '').trim())"
             />

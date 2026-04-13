@@ -40,6 +40,11 @@ const INTENT_PASSTHROUGH_PREFIXES = [
   'system.',
   'health.',
 ];
+const CAPSULE_BOOTSTRAP_INTENTS = [
+  'axis.capsules.create',
+  'capsule.issue',
+  'capsule.create',
+];
 
 function isPassthroughIntent(intent: string): boolean {
   return INTENT_PASSTHROUGH_PREFIXES.some((p) => intent.startsWith(p));
@@ -170,22 +175,32 @@ async function encryptIntentToken(
 
 async function resolveWireIntent(
   intent: string,
-  capsuleId: string,
-  intentSecret?: string | null,
+  options: {
+    secureAliasMode: boolean;
+    capsuleId?: string;
+    intentSecret?: string | null;
+    forcePlainIntent?: boolean;
+  },
 ): Promise<string> {
+  if (options.forcePlainIntent || !options.secureAliasMode) {
+    return intent;
+  }
+
   if (isPassthroughIntent(intent)) {
     return intent;
   }
 
+  const capsuleId = options.capsuleId?.trim() || '';
   if (!capsuleId) {
     throw new Error(
-      'Capsule ID is required for non-passthrough intents to avoid readable wire intent',
+      'Secure alias mode is enabled, but Capsule ID is missing',
     );
   }
 
-  if (!intentSecret?.trim()) {
+  const intentSecret = options.intentSecret?.trim();
+  if (!intentSecret) {
     throw new Error(
-      'Intent Secret is required for non-passthrough intents to avoid readable wire intent',
+      'Secure alias mode is enabled, but Intent Secret is missing',
     );
   }
 
@@ -291,6 +306,77 @@ function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
       return EMPTY_16;
     }
   }
+}
+
+function normalizeFieldKey(key: string): string {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function findStringFieldDeep(
+  root: unknown,
+  acceptedKeys: Set<string>,
+  maxDepth = 8,
+): string | undefined {
+  const seen = new WeakSet<object>();
+
+  const walk = (value: unknown, depth: number): string | undefined => {
+    if (depth > maxDepth || value === null || value === undefined) {
+      return undefined;
+    }
+    if (typeof value === 'string') {
+      return value.trim() ? value : undefined;
+    }
+    if (typeof value !== 'object') {
+      return undefined;
+    }
+    if (seen.has(value as object)) {
+      return undefined;
+    }
+    seen.add(value as object);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = walk(item, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      if (acceptedKeys.has(normalizeFieldKey(key))) {
+        const found = walk(entryValue, depth + 1);
+        if (found) return found;
+      }
+    }
+
+    for (const entryValue of Object.values(value)) {
+      const found = walk(entryValue, depth + 1);
+      if (found) return found;
+    }
+
+    return undefined;
+  };
+
+  return walk(root, 0);
+}
+
+function extractCapsuleBootstrapContext(response: unknown): {
+  capsuleId?: string;
+  intentSecret?: string;
+} {
+  const capsuleId = findStringFieldDeep(
+    response,
+    new Set(['capsuleid', 'capsuleuid']),
+  );
+  const intentSecret = findStringFieldDeep(
+    response,
+    new Set(['intentsecret', 'capsulesecret']),
+  );
+
+  return {
+    capsuleId: capsuleId?.trim() || undefined,
+    intentSecret: intentSecret?.trim() || undefined,
+  };
 }
 
 function encodeIntentBody(body: unknown): {
@@ -752,11 +838,73 @@ function decodeResponseBuffer(
 
 /* ── main send ───────────────────────────────────────────── */
 
+interface SendIntentOptions {
+  recordHistory?: boolean;
+  forcePlainIntent?: boolean;
+  skipCapsuleBootstrap?: boolean;
+}
+
+async function ensureCapsuleContext(
+  targetUrl: string,
+): Promise<{ capsuleId: string; intentSecret?: string }> {
+  const auth = useAuthStore();
+  const existingCapsuleId = auth.capsuleId?.trim() || '';
+  const existingIntentSecret = auth.intentSecret?.trim() || '';
+  if (existingCapsuleId && existingIntentSecret) {
+    return {
+      capsuleId: existingCapsuleId,
+      intentSecret: existingIntentSecret,
+    };
+  }
+
+  const actorId = auth.actorId?.trim() || '';
+  const bootstrapBody = actorId
+    ? {
+        actor_id: actorId,
+        actorId,
+      }
+    : {};
+
+  const errors: string[] = [];
+
+  for (const bootstrapIntent of CAPSULE_BOOTSTRAP_INTENTS) {
+    const res = await sendIntent(bootstrapIntent, bootstrapBody, targetUrl, {
+      recordHistory: false,
+      forcePlainIntent: true,
+      skipCapsuleBootstrap: true,
+    });
+
+    if (!res.ok) {
+      errors.push(
+        `${bootstrapIntent}: ${res.effect || `HTTP_${res.status || 0}`}`,
+      );
+      continue;
+    }
+
+    const context = extractCapsuleBootstrapContext(res.response);
+    if (!context.capsuleId) {
+      errors.push(`${bootstrapIntent}: response missing capsule id`);
+      continue;
+    }
+
+    auth.setCapsuleId(context.capsuleId);
+    if (context.intentSecret) {
+      auth.setIntentSecret(context.intentSecret);
+    }
+
+    return context;
+  }
+
+  throw new Error(
+    `Secure alias bootstrap failed: ${errors[0] || 'unable to obtain capsule context'}`,
+  );
+}
+
 export async function sendIntent(
   intent: string,
   body: unknown = {},
   nodeUrlOverride?: string,
-  options?: { recordHistory?: boolean },
+  options?: SendIntentOptions,
 ): Promise<SendResult> {
   const conn = useConnectionStore();
   const auth = useAuthStore();
@@ -765,16 +913,33 @@ export async function sendIntent(
   const pid = generatePid();
   const nonce = generateNonce(32);
   const actorId = safeActorIdToBytes(auth.actorId);
-  const capsuleId = auth.capsuleId?.trim() || '';
-  const hasCapsule = Boolean(capsuleId);
-  const proofRef = hasCapsule ? safeProofRefToBytes(capsuleId) : EMPTY_16;
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
   const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
-  const wireIntent = await resolveWireIntent(
-    intent,
+  const secureAliasMode =
+    auth.secureIntentAliasMode === true && options?.forcePlainIntent !== true;
+
+  let capsuleId = auth.capsuleId?.trim() || '';
+  let intentSecret = auth.intentSecret?.trim() || '';
+
+  if (
+    secureAliasMode &&
+    !isPassthroughIntent(intent) &&
+    !options?.skipCapsuleBootstrap &&
+    (!capsuleId || !intentSecret)
+  ) {
+    const bootstrap = await ensureCapsuleContext(targetUrl);
+    capsuleId = bootstrap.capsuleId?.trim() || capsuleId;
+    intentSecret = bootstrap.intentSecret?.trim() || intentSecret;
+  }
+
+  const hasCapsule = Boolean(capsuleId);
+  const proofRef = hasCapsule ? safeProofRefToBytes(capsuleId) : EMPTY_16;
+  const wireIntent = await resolveWireIntent(intent, {
+    secureAliasMode,
     capsuleId,
-    auth.intentSecret,
-  );
+    intentSecret,
+    forcePlainIntent: options?.forcePlainIntent,
+  });
   const encodedBody = encodeIntentBody(body);
 
   const builder = new AxisFrameBuilder()

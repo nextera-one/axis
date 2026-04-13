@@ -84,9 +84,24 @@
                 </q-card-section>
                 <q-separator />
                 <q-card-section>
+                  <div class="sender-info-label">Secure Alias Mode</div>
+                  <div class="sender-info-value">
+                    {{ auth.secureIntentAliasMode ? 'ENABLED' : 'DISABLED' }}
+                  </div>
+                </q-card-section>
+                <q-separator />
+                <q-card-section>
                   <div class="sender-info-label">Intent Alias</div>
                   <div class="sender-info-value">
-                    {{ auth.capsuleId && auth.intentSecret ? 'ENCRYPTED_ON_WIRE' : 'REQUIRED_FOR_SECURE_INTENTS' }}
+                    {{
+                      !auth.secureIntentAliasMode
+                        ? 'PLAINTEXT_MODE'
+                        : auth.capsuleId && auth.intentSecret
+                          ? 'ENCRYPTED_ON_WIRE'
+                          : auth.capsuleId
+                            ? 'SECRET_MISSING'
+                            : 'BOOTSTRAP_ON_FIRST_SECURE_INTENT'
+                    }}
                   </div>
                 </q-card-section>
                 <q-separator />
