@@ -27,6 +27,8 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const EMPTY_16 = new Uint8Array(16);
 const MAX_RAW_CHARS = 16_000;
+const DEV_PROXY_PATH = '/axis';
+const DEV_PROXY_TARGET_HEADER = 'X-AXIS-Proxy-Target';
 
 type SnapshotTransport =
   | 'axis-bin'
@@ -82,6 +84,32 @@ function formatHex(bytes: Uint8Array, columns = 16): string {
 function truncateRaw(raw: string, limit = MAX_RAW_CHARS): string {
   if (raw.length <= limit) return raw;
   return `${raw.slice(0, limit)}\n\n… truncated (${raw.length - limit} chars omitted)`;
+}
+
+function resolveRequestUrl(targetUrl: string): {
+  url: string;
+  proxyTarget?: string;
+} {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.location === 'undefined' ||
+    !import.meta.env.DEV
+  ) {
+    return { url: targetUrl };
+  }
+
+  try {
+    const resolvedTarget = new URL(targetUrl, window.location.href);
+    if (resolvedTarget.origin === window.location.origin) {
+      return { url: resolvedTarget.toString() };
+    }
+    return {
+      url: new URL(DEV_PROXY_PATH, window.location.origin).toString(),
+      proxyTarget: resolvedTarget.toString(),
+    };
+  } catch {
+    return { url: targetUrl };
+  }
 }
 
 function safeParseJson(text: string): unknown {
@@ -596,6 +624,7 @@ export async function sendIntent(
   const hasCapsule = Boolean(auth.capsuleId?.trim());
   const proofRef = hasCapsule ? safeProofRefToBytes(auth.capsuleId) : EMPTY_16;
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
+  const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
 
   const builder = new AxisFrameBuilder()
     .setPid(pid)
@@ -622,6 +651,7 @@ export async function sendIntent(
   const requestHeaders = {
     'Content-Type': 'application/axis-bin',
     Accept: 'application/axis-bin, application/json, text/plain',
+    ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
   };
   const requestSnapshot = buildRequestSnapshot(
     frameBytes,
@@ -635,7 +665,7 @@ export async function sendIntent(
   let result: SendResult;
 
   try {
-    const res = await fetch(targetUrl, {
+    const res = await fetch(requestUrl, {
       method: 'POST',
       headers: requestHeaders,
       body: frameBytes as BodyInit,
