@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-proxy",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "AXIS Protocol Gateway - REST to AXIS binary protocol translation with rate limiting, circuit breaker, and metrics",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
