@@ -1,5 +1,7 @@
 import { configure } from 'quasar/wrappers';
 
+import { createAxisDevProxyPlugin } from './build/axis-dev-proxy';
+
 export default configure(() => {
   return {
     boot: ['pinia'],
@@ -12,7 +14,7 @@ export default configure(() => {
       target: { browser: ['es2022', 'chrome100', 'firefox100', 'safari15'] },
       typescript: { strict: true, vueShim: true },
       vueRouterMode: 'history',
-      vitePlugins: [],
+      vitePlugins: [createAxisDevProxyPlugin()],
     },
 
     devServer: {
@@ -24,15 +26,15 @@ export default configure(() => {
       config: {
         dark: true,
         brand: {
-          primary: '#00F5FF',
-          secondary: '#1A1C20',
-          accent: '#00DCE5',
-          dark: '#111318',
-          'dark-page': '#0A0C10',
-          positive: '#4ADE80',
-          negative: '#FFB4AB',
-          info: '#00DCE5',
-          warning: '#FFB875',
+          primary: '#A855F7',
+          secondary: '#120C28',
+          accent: '#06FFA5',
+          dark: '#080414',
+          'dark-page': '#030108',
+          positive: '#06FFA5',
+          negative: '#FF5C8A',
+          info: '#38BDF8',
+          warning: '#FFB547',
         },
       },
       plugins: [

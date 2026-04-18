@@ -29,6 +29,26 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const EMPTY_16 = new Uint8Array(16);
 const MAX_RAW_CHARS = 16_000;
+const DEV_PROXY_PATH = '/axis';
+const DEV_PROXY_TARGET_HEADER = 'X-AXIS-Proxy-Target';
+
+// Intent prefixes that are always routed plain by the server (no decryption).
+// Must stay in sync with IntentAliasService.PASSTHROUGH_PREFIXES on the backend.
+const INTENT_PASSTHROUGH_PREFIXES = [
+  'public.',
+  'schema.',
+  'system.',
+  'health.',
+];
+const CAPSULE_BOOTSTRAP_INTENTS = [
+  'axis.capsules.create',
+  'capsule.issue',
+  'capsule.create',
+];
+
+function isPassthroughIntent(intent: string): boolean {
+  return INTENT_PASSTHROUGH_PREFIXES.some((p) => intent.startsWith(p));
+}
 
 type SnapshotTransport =
   | 'axis-bin'
@@ -84,6 +104,133 @@ function formatHex(bytes: Uint8Array, columns = 16): string {
 function truncateRaw(raw: string, limit = MAX_RAW_CHARS): string {
   if (raw.length <= limit) return raw;
   return `${raw.slice(0, limit)}\n\n… truncated (${raw.length - limit} chars omitted)`;
+}
+
+function base64UrlDecode(input: string): Uint8Array {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(normalized + padding);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const p of parts) {
+    out.set(p, offset);
+    offset += p.length;
+  }
+  return out;
+}
+
+async function encryptIntentToken(
+  intent: string,
+  capsuleId: string,
+  intentSecret: string,
+): Promise<string> {
+  const keyBytes = base64UrlDecode(intentSecret.trim());
+  if (keyBytes.length !== 32) {
+    throw new Error('Intent Secret must decode to exactly 32 bytes');
+  }
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBytes.buffer as ArrayBuffer,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt'],
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipherBuf = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv,
+      tagLength: 128,
+      additionalData: textEncoder.encode(capsuleId),
+    },
+    cryptoKey,
+    textEncoder.encode(intent),
+  );
+
+  const cipherBytes = new Uint8Array(cipherBuf);
+  return base64UrlEncode(concatBytes([iv, cipherBytes]));
+}
+
+async function resolveWireIntent(
+  intent: string,
+  options: {
+    secureAliasMode: boolean;
+    capsuleId?: string;
+    intentSecret?: string | null;
+    forcePlainIntent?: boolean;
+  },
+): Promise<string> {
+  if (options.forcePlainIntent || !options.secureAliasMode) {
+    return intent;
+  }
+
+  if (isPassthroughIntent(intent)) {
+    return intent;
+  }
+
+  const capsuleId = options.capsuleId?.trim() || '';
+  if (!capsuleId) {
+    throw new Error(
+      'Secure alias mode is enabled, but Capsule ID is missing',
+    );
+  }
+
+  const intentSecret = options.intentSecret?.trim();
+  if (!intentSecret) {
+    throw new Error(
+      'Secure alias mode is enabled, but Intent Secret is missing',
+    );
+  }
+
+  return encryptIntentToken(intent, capsuleId, intentSecret);
+}
+
+function resolveRequestUrl(targetUrl: string): {
+  url: string;
+  proxyTarget?: string;
+} {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.location === 'undefined' ||
+    !import.meta.env.DEV
+  ) {
+    return { url: targetUrl };
+  }
+
+  try {
+    const resolvedTarget = new URL(targetUrl, window.location.href);
+    if (resolvedTarget.origin === window.location.origin) {
+      return { url: resolvedTarget.toString() };
+    }
+    return {
+      url: new URL(DEV_PROXY_PATH, window.location.origin).toString(),
+      proxyTarget: resolvedTarget.toString(),
+    };
+  } catch {
+    return { url: targetUrl };
+  }
 }
 
 function safeParseJson(text: string): unknown {
@@ -161,22 +308,106 @@ function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
   }
 }
 
-function encodeIntentBody(body: unknown): { bytes: Uint8Array; isTLV: boolean } {
+function normalizeFieldKey(key: string): string {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function findStringFieldDeep(
+  root: unknown,
+  acceptedKeys: Set<string>,
+  maxDepth = 8,
+): string | undefined {
+  const seen = new WeakSet<object>();
+
+  const walk = (value: unknown, depth: number): string | undefined => {
+    if (depth > maxDepth || value === null || value === undefined) {
+      return undefined;
+    }
+    if (typeof value === 'string') {
+      return value.trim() ? value : undefined;
+    }
+    if (typeof value !== 'object') {
+      return undefined;
+    }
+    if (seen.has(value as object)) {
+      return undefined;
+    }
+    seen.add(value as object);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = walk(item, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      if (acceptedKeys.has(normalizeFieldKey(key))) {
+        const found = walk(entryValue, depth + 1);
+        if (found) return found;
+      }
+    }
+
+    for (const entryValue of Object.values(value)) {
+      const found = walk(entryValue, depth + 1);
+      if (found) return found;
+    }
+
+    return undefined;
+  };
+
+  return walk(root, 0);
+}
+
+function extractCapsuleBootstrapContext(response: unknown): {
+  capsuleId?: string;
+  intentSecret?: string;
+} {
+  const capsuleId = findStringFieldDeep(
+    response,
+    new Set(['capsuleid', 'capsuleuid']),
+  );
+  const intentSecret = findStringFieldDeep(
+    response,
+    new Set(['intentsecret', 'capsulesecret']),
+  );
+
+  return {
+    capsuleId: capsuleId?.trim() || undefined,
+    intentSecret: intentSecret?.trim() || undefined,
+  };
+}
+
+function encodeIntentBody(body: unknown): {
+  bytes: Uint8Array;
+  isTLV: boolean;
+} {
   if (body === null || body === undefined) {
     return { bytes: new Uint8Array(), isTLV: false };
   }
   if (body instanceof Uint8Array) {
     if (body.length === 0) return { bytes: new Uint8Array(), isTLV: false };
-    const tlv = encodeTLVs([{ type: AXIS_TAG.BODY, value: body }]);
-    return { bytes: tlv, isTLV: true };
+    return {
+      bytes: encodeTLVs([{ type: AXIS_TAG.BODY, value: body }]),
+      isTLV: true,
+    };
   }
   if (typeof body === 'object' && Object.keys(body).length === 0) {
-    return { bytes: new Uint8Array(), isTLV: false };
+    return {
+      bytes: encodeTLVs([
+        { type: AXIS_TAG.JSON, value: textEncoder.encode('{}') },
+      ]),
+      isTLV: true,
+    };
   }
   const json = typeof body === 'string' ? body : JSON.stringify(body);
-  const jsonBytes = textEncoder.encode(json);
-  const tlv = encodeTLVs([{ type: AXIS_TAG.JSON, value: jsonBytes }]);
-  return { bytes: tlv, isTLV: true };
+  return {
+    bytes: encodeTLVs([
+      { type: AXIS_TAG.JSON, value: textEncoder.encode(json) },
+    ]),
+    isTLV: true,
+  };
 }
 
 function readU64(bytes: Uint8Array): string {
@@ -355,7 +586,10 @@ function decodeBody(bytes: Uint8Array, flags: number) {
   };
 }
 
-function getHeaderText(headers: Map<number, Uint8Array>, tag: number): string | undefined {
+function getHeaderText(
+  headers: Map<number, Uint8Array>,
+  tag: number,
+): string | undefined {
   const value = headers.get(tag);
   if (!value) return undefined;
   const text = tryDecodeText(value);
@@ -438,9 +672,12 @@ function buildRequestSnapshot(
   };
 }
 
-function responseTransportForJson(json: Record<string, unknown>): SnapshotTransport {
+function responseTransportForJson(
+  json: Record<string, unknown>,
+): SnapshotTransport {
   if (json.ver === 'cce-v1' && 'response_id' in json) return 'cce-response';
-  if (json.ver === 'cce-v1' && 'request_id' in json && 'error' in json) return 'cce-error';
+  if (json.ver === 'cce-v1' && 'request_id' in json && 'error' in json)
+    return 'cce-error';
   return 'json';
 }
 
@@ -459,7 +696,9 @@ function buildPlainResponseSnapshot(
   if (text !== null && isProbablyText(text)) {
     const json = safeParseJson(text);
     if (json !== undefined && json && typeof json === 'object') {
-      const transport = responseTransportForJson(json as Record<string, unknown>);
+      const transport = responseTransportForJson(
+        json as Record<string, unknown>,
+      );
       const effect = extractEffect(json, status);
       return {
         body: json,
@@ -528,8 +767,14 @@ function extractAxisBody(frame: AxisFrameLike): any {
   return body.parsed ?? null;
 }
 
-function extractEffect(body: any, status?: number, frame?: AxisFrameLike): string {
-  const headerEffect = frame ? getHeaderText(frame.headers, TLVType.EFFECT) : undefined;
+function extractEffect(
+  body: any,
+  status?: number,
+  frame?: AxisFrameLike,
+): string {
+  const headerEffect = frame
+    ? getHeaderText(frame.headers, TLVType.EFFECT)
+    : undefined;
   if (headerEffect) return headerEffect;
 
   if (body && typeof body === 'object') {
@@ -593,11 +838,73 @@ function decodeResponseBuffer(
 
 /* ── main send ───────────────────────────────────────────── */
 
+interface SendIntentOptions {
+  recordHistory?: boolean;
+  forcePlainIntent?: boolean;
+  skipCapsuleBootstrap?: boolean;
+}
+
+async function ensureCapsuleContext(
+  targetUrl: string,
+): Promise<{ capsuleId: string; intentSecret?: string }> {
+  const auth = useAuthStore();
+  const existingCapsuleId = auth.capsuleId?.trim() || '';
+  const existingIntentSecret = auth.intentSecret?.trim() || '';
+  if (existingCapsuleId && existingIntentSecret) {
+    return {
+      capsuleId: existingCapsuleId,
+      intentSecret: existingIntentSecret,
+    };
+  }
+
+  const actorId = auth.actorId?.trim() || '';
+  const bootstrapBody = actorId
+    ? {
+        actor_id: actorId,
+        actorId,
+      }
+    : {};
+
+  const errors: string[] = [];
+
+  for (const bootstrapIntent of CAPSULE_BOOTSTRAP_INTENTS) {
+    const res = await sendIntent(bootstrapIntent, bootstrapBody, targetUrl, {
+      recordHistory: false,
+      forcePlainIntent: true,
+      skipCapsuleBootstrap: true,
+    });
+
+    if (!res.ok) {
+      errors.push(
+        `${bootstrapIntent}: ${res.effect || `HTTP_${res.status || 0}`}`,
+      );
+      continue;
+    }
+
+    const context = extractCapsuleBootstrapContext(res.response);
+    if (!context.capsuleId) {
+      errors.push(`${bootstrapIntent}: response missing capsule id`);
+      continue;
+    }
+
+    auth.setCapsuleId(context.capsuleId);
+    if (context.intentSecret) {
+      auth.setIntentSecret(context.intentSecret);
+    }
+
+    return context;
+  }
+
+  throw new Error(
+    `Secure alias bootstrap failed: ${errors[0] || 'unable to obtain capsule context'}`,
+  );
+}
+
 export async function sendIntent(
   intent: string,
   body: unknown = {},
   nodeUrlOverride?: string,
-  options?: { recordHistory?: boolean },
+  options?: SendIntentOptions,
 ): Promise<SendResult> {
   const conn = useConnectionStore();
   const auth = useAuthStore();
@@ -606,22 +913,45 @@ export async function sendIntent(
   const pid = generatePid();
   const nonce = generateNonce(32);
   const actorId = safeActorIdToBytes(auth.actorId);
-  const hasCapsule = Boolean(auth.capsuleId?.trim());
-  const proofRef = hasCapsule ? safeProofRefToBytes(auth.capsuleId) : EMPTY_16;
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
+  const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
+  const secureAliasMode =
+    auth.secureIntentAliasMode === true && options?.forcePlainIntent !== true;
 
+  let capsuleId = auth.capsuleId?.trim() || '';
+  let intentSecret = auth.intentSecret?.trim() || '';
+
+  if (
+    secureAliasMode &&
+    !isPassthroughIntent(intent) &&
+    !options?.skipCapsuleBootstrap &&
+    (!capsuleId || !intentSecret)
+  ) {
+    const bootstrap = await ensureCapsuleContext(targetUrl);
+    capsuleId = bootstrap.capsuleId?.trim() || capsuleId;
+    intentSecret = bootstrap.intentSecret?.trim() || intentSecret;
+  }
+
+  const hasCapsule = Boolean(capsuleId);
+  const proofRef = hasCapsule ? safeProofRefToBytes(capsuleId) : EMPTY_16;
+  const wireIntent = await resolveWireIntent(intent, {
+    secureAliasMode,
+    capsuleId,
+    intentSecret,
+    forcePlainIntent: options?.forcePlainIntent,
+  });
   const encodedBody = encodeIntentBody(body);
 
   const builder = new AxisFrameBuilder()
     .setPid(pid)
     .setTimestamp(BigInt(Date.now()))
-    .setIntent(intent)
+    .setIntent(wireIntent)
     .setActorId(actorId)
     .setProofType(hasCapsule ? ProofType.CAPSULE : ProofType.NONE)
     .setProofRef(proofRef)
     .setNonce(nonce)
-    .setFlags(encodedBody.isTLV)
-    .setBody(encodedBody.bytes);
+    .setBody(encodedBody.bytes)
+    .setFlags(encodedBody.isTLV, false, false);
 
   const activeKey = auth.getActiveKey();
   let frameBytes: Uint8Array;
@@ -638,6 +968,7 @@ export async function sendIntent(
   const requestHeaders = {
     'Content-Type': 'application/axis-bin',
     Accept: 'application/axis-bin, application/json, text/plain',
+    ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
   };
   const requestSnapshot = buildRequestSnapshot(
     frameBytes,
@@ -651,7 +982,7 @@ export async function sendIntent(
   let result: SendResult;
 
   try {
-    const res = await fetch(targetUrl, {
+    const res = await fetch(requestUrl, {
       method: 'POST',
       headers: requestHeaders,
       body: frameBytes as BodyInit,
@@ -734,15 +1065,15 @@ export async function sendIntent(
 
 export async function fetchCatalog(): Promise<any[]> {
   const res = await sendIntent('catalog.list', {});
-  return res.ok ? (res.response?.intents || []) : [];
+  return res.ok ? res.response?.intents || [] : [];
 }
 
 export async function describeIntent(intent: string): Promise<any> {
   const res = await sendIntent('catalog.describe', intent);
-  return res.ok ? (res.response?.definition || null) : null;
+  return res.ok ? res.response?.definition || null : null;
 }
 
 export async function searchCatalog(query: string): Promise<any[]> {
   const res = await sendIntent('catalog.search', query);
-  return res.ok ? (res.response?.intents || []) : [];
+  return res.ok ? res.response?.intents || [] : [];
 }

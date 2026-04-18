@@ -1,19 +1,116 @@
 import { Injectable, Logger, Optional } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
+import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
 
-import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
-import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
-import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
-import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
-import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
-import { type CceHandler, type CceHandlerContext, type CceHandlerResult, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
-import type { IdelCompiler } from "../idel/idel.compiler";
-import type { CompiledIntent, IntentProposal } from "../idel/idel.types";
+import { AxisError } from "../core/axis-error";
+import {
+  TLV_ACTOR_ID,
+  TLV_CAPSULE,
+  TLV_INTENT,
+  TLV_NODE,
+  TLV_PROOF_REF,
+  TLV_REALM
+} from "../core/constants";
+import {
+  CAPSULE_POLICY_METADATA_KEY,
+  type CapsulePolicyOptions,
+  mergeCapsulePolicyOptions,
+  normalizeCapsulePolicyOptions,
+} from "../decorators/capsule-policy.decorator";
+import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
+import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
+import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
+import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
+import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
+import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
+import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
+import {
+  AxisObserverBinding,
+  AxisObserverRef,
+  OBSERVER_BINDINGS_KEY,
+} from "../decorators/observer.decorator";
+import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
+import {
+  inlineCapsuleAllowsIntent,
+  inlineCapsuleSatisfiesScopes,
+  isInlineCapsuleExpired,
+  normalizeInlineCapsule,
+  resolvePolicyScopes,
+} from "../security/inline-capsule";
+import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
+import {
+  AxisChainEnvelope,
+  AxisChainRequest,
+  ChainOptions,
+  RegisteredChainConfig,
+} from "./axis-chain.types";
+import {
+  getAxisExecutionContext,
+  mergeAxisExecutionContext,
+  withAxisExecutionContext,
+} from "./axis-execution-context";
+import { ObserverDispatcherService } from "./observer-dispatcher.service";
+import { IdelCompiler, IntentProposal } from "src/idel";
+
+function observerRefKey(ref: AxisObserverRef): string {
+  return typeof ref === "string" ? ref : ref.name;
+}
+
+function mergeObserverBindings(
+  bindings: AxisObserverBinding[],
+): AxisObserverBinding[] {
+  const merged = new Map<string, AxisObserverBinding>();
+
+  for (const binding of bindings) {
+    for (const ref of binding.refs) {
+      const key = observerRefKey(ref);
+      const existing = merged.get(key);
+      if (!existing) {
+        merged.set(key, {
+          refs: [ref],
+          tags: binding.tags ? [...new Set(binding.tags)] : undefined,
+          events: binding.events ? [...new Set(binding.events)] : undefined,
+        });
+        continue;
+      }
+
+      existing.tags = Array.from(
+        new Set([...(existing.tags || []), ...(binding.tags || [])]),
+      );
+      existing.events =
+        existing.events === undefined || binding.events === undefined
+          ? undefined
+          : Array.from(new Set([...existing.events, ...binding.events]));
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+function normalizeChainConfig(
+  decoratorConfig?: RegisteredChainConfig,
+  intentConfig?: boolean | ChainOptions,
+): RegisteredChainConfig | undefined {
+  if (decoratorConfig) {
+    return decoratorConfig;
+  }
+
+  if (!intentConfig) {
+    return undefined;
+  }
+
+  if (intentConfig === true) {
+    return { enabled: true };
+  }
+
+  return {
+    enabled: true,
+    ...intentConfig,
+  };
+}
 
 export interface IntentSchema {
   intent: string;
@@ -65,6 +162,8 @@ export interface AxisEffect {
 @Injectable()
 export class IntentRouter {
   private readonly logger = new Logger(IntentRouter.name);
+  private readonly decoder = new TextDecoder();
+  private readonly encoder = new TextEncoder();
 
   /** Intents handled inline in route() — not in `handlers` map */
   private static readonly BUILTIN_INTENTS = new Set([
@@ -72,6 +171,8 @@ export class IntentRouter {
     "public.ping",
     "system.time",
     "system.echo",
+    "CHAIN.EXEC",
+    "axis.chain.exec",
     "INTENT.EXEC",
     "axis.intent.exec",
   ]);
@@ -93,6 +194,15 @@ export class IntentRouter {
 
   /** Per-intent operation kind */
   private intentKinds = new Map<string, IntentKind>();
+
+  /** Per-intent chain configuration */
+  private intentChains = new Map<string, RegisteredChainConfig>();
+
+  /** Per-intent observer bindings */
+  private intentObservers = new Map<string, AxisObserverBinding[]>();
+
+  /** Per-intent capsule policies */
+  private intentCapsulePolicies = new Map<string, CapsulePolicyOptions>();
 
   /** CCE handler registry */
   private cceHandlers = new Map<string, CceHandler>();
@@ -182,6 +292,9 @@ export class IntentRouter {
     hasSensors: boolean;
     builtin: boolean;
     kind?: IntentKind;
+    chain?: RegisteredChainConfig;
+    capsulePolicy?: CapsulePolicyOptions;
+    observerCount: number;
   } | null {
     if (!this.has(intent)) return null;
     return {
@@ -190,7 +303,18 @@ export class IntentRouter {
       hasSensors: this.intentSensors.has(intent),
       builtin: IntentRouter.BUILTIN_INTENTS.has(intent),
       kind: this.intentKinds.get(intent),
+      chain: this.intentChains.get(intent),
+      capsulePolicy: this.intentCapsulePolicies.get(intent),
+      observerCount: this.getObservers(intent).length,
     };
+  }
+
+  getChainConfig(intent: string): RegisteredChainConfig | undefined {
+    return this.intentChains.get(intent);
+  }
+
+  getObservers(intent: string): AxisObserverBinding[] {
+    return this.intentObservers.get(intent) || [];
   }
 
   /**
@@ -222,10 +346,15 @@ export class IntentRouter {
 
     const routes: IntentRoute[] =
       Reflect.getMetadata(INTENT_ROUTES_KEY, instance.constructor) || [];
+    const routedMethods = new Set(routes.map((route) => String(route.methodName)));
 
     // Read @HandlerSensors from the class (if any)
     const handlerSensors: Function[] =
       Reflect.getMetadata(HANDLER_SENSORS_KEY, instance.constructor) || [];
+    const handlerObservers: AxisObserverBinding[] =
+      Reflect.getMetadata(OBSERVER_BINDINGS_KEY, instance.constructor) || [];
+
+    const proto = Object.getPrototypeOf(instance);
 
     for (const route of routes) {
       const intentName = route.absolute
@@ -241,22 +370,32 @@ export class IntentRouter {
 
       this.registerIntentMeta(
         intentName,
-        Object.getPrototypeOf(instance),
+        proto,
         String(route.methodName),
         handlerSensors,
+        handlerObservers,
       );
     }
 
-    const proto = Object.getPrototypeOf(instance);
     for (const key of Object.getOwnPropertyNames(proto)) {
+      if (routedMethods.has(key)) continue;
+
       const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, key);
       if (!meta?.intent) continue;
 
-      if (!this.handlers.has(meta.intent)) {
-        this.register(meta.intent, (instance as any)[key].bind(instance));
+      const intentName = meta.absolute ? meta.intent : `${prefix}.${meta.intent}`;
+
+      if (!this.handlers.has(intentName)) {
+        this.register(intentName, (instance as any)[key].bind(instance));
       }
 
-      this.registerIntentMeta(meta.intent, proto, key, handlerSensors);
+      this.registerIntentMeta(
+        intentName,
+        proto,
+        key,
+        handlerSensors,
+        handlerObservers,
+      );
     }
   }
 
@@ -277,10 +416,17 @@ export class IntentRouter {
     let intent = "unknown";
 
     try {
-      // Extract intent from header TLV (tag 3 = TLV_INTENT)
-      const intentBytes = frame.headers.get(3);
+      const intentBytes = frame.headers.get(TLV_INTENT);
       if (!intentBytes) throw new Error("Missing intent");
-      intent = new TextDecoder().decode(intentBytes);
+      intent = this.decoder.decode(intentBytes);
+      const observerBindings = this.getObservers(intent);
+
+      await this.emitIntentObservers(observerBindings, {
+        event: "intent.received",
+        timestamp: Date.now(),
+        intent,
+        frame,
+      });
 
       let effect: AxisEffect;
 
@@ -318,30 +464,44 @@ export class IntentRouter {
           effect: "echo",
           body: frame.body,
         };
+      } else if (intent === "CHAIN.EXEC" || intent === "axis.chain.exec") {
+        const chainRequest = this.parseChainRequestBody(frame.body);
+        effect = await this.executeChainRequest(frame, chainRequest);
       } else if (intent === "INTENT.EXEC" || intent === "axis.intent.exec") {
-        // Meta-intent: Unwrap and execute the inner intent
-        try {
-          const bodyJSON = JSON.parse(new TextDecoder().decode(frame.body));
-          const innerIntent = bodyJSON.intent;
-          const innerArgs = bodyJSON.args || {};
+        const execBody = this.parseIntentExecBody(frame.body);
+        const innerIntent = execBody.intent;
+        const innerArgs = execBody.args || {};
 
-          if (!innerIntent) {
-            throw new Error("INTENT.EXEC missing inner intent");
-          }
-
-          this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
-
-          const innerFrame: AxisFrame = {
-            ...frame,
-            headers: new Map(frame.headers),
-            body: new TextEncoder().encode(JSON.stringify(innerArgs)),
-          };
-          innerFrame.headers.set(3, new TextEncoder().encode(innerIntent));
-
-          return await this.route(innerFrame);
-        } catch (e: any) {
-          throw new Error(`INTENT.EXEC unwrapping failed: ${e.message}`);
+        if (!innerIntent) {
+          throw new Error("INTENT.EXEC missing inner intent");
         }
+
+        this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
+
+        const innerHeaders = new Map(frame.headers);
+        innerHeaders.set(TLV_INTENT, this.encoder.encode(innerIntent));
+
+        const inlineCapsule = this.toInlineCapsuleRecord(execBody.capsule);
+        const capsuleId = this.extractInlineCapsuleId(inlineCapsule);
+        if (capsuleId) {
+          innerHeaders.set(TLV_CAPSULE, this.encoder.encode(capsuleId));
+          innerHeaders.set(TLV_PROOF_REF, this.encoder.encode(capsuleId));
+        }
+
+        const innerFrame = withAxisExecutionContext(
+          {
+            ...frame,
+            headers: innerHeaders,
+            body: this.encodeJson(innerArgs),
+          },
+          mergeAxisExecutionContext(getAxisExecutionContext(frame), {
+            metaIntent: "INTENT.EXEC",
+            actorId: this.getActorIdFromFrame(frame),
+            inlineCapsule,
+          }) || {},
+        );
+
+        effect = await this.route(innerFrame);
       } else {
         const handler = this.handlers.get(intent);
         if (!handler) {
@@ -364,6 +524,13 @@ export class IntentRouter {
             );
           }
         }
+
+        this.enforceCapsulePolicy(
+          intent,
+          frame,
+          decodedBody,
+          this.getEffectiveCapsulePolicy(intent, frame),
+        );
 
         if (typeof handler === "function") {
           const resultBody = decoder
@@ -394,9 +561,25 @@ export class IntentRouter {
         }
       }
 
+      await this.emitIntentObservers(observerBindings, {
+        event: "intent.completed",
+        timestamp: Date.now(),
+        intent,
+        frame,
+        effect,
+        metadata: effect.metadata,
+      });
+
       this.logIntent(intent, start, true);
       return effect;
     } catch (e: any) {
+      await this.emitIntentObservers(this.getObservers(intent), {
+        event: "intent.failed",
+        timestamp: Date.now(),
+        intent,
+        frame,
+        error: e.message,
+      });
       this.logIntent(intent, start, false, e.message);
       throw e;
     }
@@ -422,6 +605,7 @@ export class IntentRouter {
     proto: object,
     methodName: string,
     handlerSensors?: Function[],
+    handlerObservers?: AxisObserverBinding[],
   ): void {
     const decoder = Reflect.getMetadata(INTENT_BODY_KEY, proto, methodName);
     if (decoder) {
@@ -441,13 +625,58 @@ export class IntentRouter {
       this.intentSensors.set(intent, combined);
     }
 
+    const methodObservers: AxisObserverBinding[] =
+      Reflect.getMetadata(OBSERVER_BINDINGS_KEY, proto, methodName) || [];
+    const observers = mergeObserverBindings([
+      ...(handlerObservers || []),
+      ...methodObservers,
+    ]);
+    if (observers.length > 0) {
+      this.intentObservers.set(intent, observers);
+    }
+
+    const handlerCapsulePolicy = Reflect.getMetadata(
+      CAPSULE_POLICY_METADATA_KEY,
+      proto.constructor,
+    ) as CapsulePolicyOptions | undefined;
+    const methodCapsulePolicy = Reflect.getMetadata(
+      CAPSULE_POLICY_METADATA_KEY,
+      proto,
+      methodName,
+    ) as CapsulePolicyOptions | undefined;
+    const capsulePolicy = mergeCapsulePolicyOptions(
+      handlerCapsulePolicy,
+      methodCapsulePolicy,
+    );
+    if (capsulePolicy) {
+      this.intentCapsulePolicies.set(intent, capsulePolicy);
+    }
+
     const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
     if (meta) {
-      this.storeSchema(meta);
+      this.storeSchema({ ...meta, intent });
       if (meta.kind) {
         this.intentKinds.set(intent, meta.kind);
       }
+
+      const chainMeta = Reflect.getMetadata(
+        CHAIN_METADATA_KEY,
+        proto,
+        methodName,
+      ) as RegisteredChainConfig | undefined;
+      const chainConfig = normalizeChainConfig(chainMeta, meta.chain);
+      if (chainConfig) {
+        this.intentChains.set(intent, chainConfig);
+      }
     }
+  }
+
+  private async emitIntentObservers(
+    bindings: AxisObserverBinding[],
+    context: Parameters<ObserverDispatcherService["dispatch"]>[1],
+  ): Promise<void> {
+    if (!this.observerDispatcher || bindings.length === 0) return;
+    await this.observerDispatcher.dispatch(bindings, context);
   }
 
   private async runIntentSensors(
@@ -487,6 +716,398 @@ export class IntentRouter {
         throw new Error(`SENSOR_DENY:${reason}`);
       }
     }
+  }
+
+  private getEffectiveCapsulePolicy(
+    intent: string,
+    frame: AxisFrame,
+  ): CapsulePolicyOptions | undefined {
+    const registeredPolicy = this.intentCapsulePolicies.get(intent);
+    const chainConfig = this.intentChains.get(intent);
+    const executionContext = getAxisExecutionContext(frame);
+
+    const derivedScopes = Array.from(
+      new Set([
+        ...this.toScopeList(chainConfig?.capsuleScope),
+        ...this.toScopeList(executionContext?.capsuleRef?.scope),
+        ...this.toScopeList(executionContext?.chainStep?.capsuleScope),
+      ]),
+    );
+
+    const requiresCapsule =
+      chainConfig?.proofRequired ||
+      executionContext?.capsuleRef?.proofRequired ||
+      executionContext?.chainStep?.proofRequired ||
+      executionContext?.chainEnvelope?.capsule?.proofRequired ||
+      derivedScopes.length > 0;
+
+    const derivedPolicy = requiresCapsule
+      ? normalizeCapsulePolicyOptions({
+          required: true,
+          scopes: derivedScopes.length > 0 ? derivedScopes : undefined,
+        })
+      : undefined;
+
+    return mergeCapsulePolicyOptions(registeredPolicy, derivedPolicy);
+  }
+
+  private enforceCapsulePolicy(
+    intent: string,
+    frame: AxisFrame,
+    body: unknown,
+    policy?: CapsulePolicyOptions,
+  ): void {
+    const executionContext = getAxisExecutionContext(frame);
+    const inlineCapsuleRecord = this.toInlineCapsuleRecord(
+      executionContext?.inlineCapsule,
+    );
+    const inlineCapsule = normalizeInlineCapsule(inlineCapsuleRecord);
+    const normalizedPolicy = policy
+      ? normalizeCapsulePolicyOptions(policy)
+      : undefined;
+
+    if (!inlineCapsule) {
+      if (normalizedPolicy?.required) {
+        if (
+          normalizedPolicy.allowCapsuleRef &&
+          this.hasCapsuleReference(frame) &&
+          this.toScopeList(normalizedPolicy.scopes).length === 0 &&
+          normalizedPolicy.intentBound === false
+        ) {
+          return;
+        }
+
+        throw new AxisError(
+          this.hasCapsuleReference(frame)
+            ? "CAPSULE_CLAIMS_REQUIRED"
+            : "CAPSULE_REQUIRED",
+          `Intent ${intent} requires an inline capsule for policy enforcement`,
+          403,
+          { intent },
+        );
+      }
+
+      return;
+    }
+
+    if (isInlineCapsuleExpired(inlineCapsule)) {
+      throw new AxisError(
+        "CAPSULE_EXPIRED",
+        `Capsule for ${intent} is expired`,
+        403,
+        { intent, capsuleId: inlineCapsule.id },
+      );
+    }
+
+    const actorId = this.getActorIdFromFrame(frame) || executionContext?.actorId;
+    if (
+      actorId &&
+      inlineCapsule.actorId &&
+      !this.identifiersMatch(actorId, inlineCapsule.actorId)
+    ) {
+      throw new AxisError(
+        "CAPSULE_ACTOR_MISMATCH",
+        `Capsule actor does not match request actor for ${intent}`,
+        403,
+        {
+          intent,
+          actorId,
+          capsuleActorId: inlineCapsule.actorId,
+        },
+      );
+    }
+
+    const proofRef = this.getProofRefFromFrame(frame);
+    if (
+      proofRef &&
+      inlineCapsule.id &&
+      !this.identifiersMatch(proofRef, inlineCapsule.id)
+    ) {
+      throw new AxisError(
+        "CAPSULE_REF_MISMATCH",
+        `Capsule reference does not match request proof for ${intent}`,
+        403,
+        {
+          intent,
+          proofRef,
+          capsuleId: inlineCapsule.id,
+        },
+      );
+    }
+
+    const realm = this.getHeaderValue(frame, TLV_REALM);
+    if (realm && inlineCapsule.realm && realm !== inlineCapsule.realm) {
+      throw new AxisError(
+        "CAPSULE_REALM_MISMATCH",
+        `Capsule realm does not match request realm for ${intent}`,
+        403,
+        { intent, realm, capsuleRealm: inlineCapsule.realm },
+      );
+    }
+
+    const node = this.getHeaderValue(frame, TLV_NODE);
+    if (node && inlineCapsule.node && node !== inlineCapsule.node) {
+      throw new AxisError(
+        "CAPSULE_NODE_MISMATCH",
+        `Capsule node does not match request node for ${intent}`,
+        403,
+        { intent, node, capsuleNode: inlineCapsule.node },
+      );
+    }
+
+    const shouldCheckIntent = normalizedPolicy?.intentBound ?? true;
+    if (shouldCheckIntent && !inlineCapsuleAllowsIntent(inlineCapsule, intent)) {
+      throw new AxisError(
+        "CAPSULE_DENIED",
+        `Capsule does not authorize ${intent}`,
+        403,
+        {
+          intent,
+          capsuleId: inlineCapsule.id,
+          allowedIntents: inlineCapsule.intents,
+        },
+      );
+    }
+
+    const requiredScopes = this.toScopeList(normalizedPolicy?.scopes);
+    if (requiredScopes.length === 0) {
+      return;
+    }
+
+    let resolvedScopes: string[];
+    try {
+      resolvedScopes = resolvePolicyScopes(requiredScopes, {
+        body,
+        intent,
+        actorId,
+        chainId: executionContext?.chainEnvelope?.chainId,
+        stepId: executionContext?.chainStep?.stepId,
+      });
+    } catch (error: any) {
+      this.logger.error(`Scope template error for ${intent}: ${error.message}`);
+      throw new AxisError(
+        "CAPSULE_SCOPE_TEMPLATE_UNRESOLVED",
+        "Scope policy validation failed",
+        400,
+        { intent },
+      );
+    }
+
+    if (
+      !inlineCapsuleSatisfiesScopes(
+        inlineCapsule,
+        resolvedScopes,
+        normalizedPolicy?.scopeMode ?? "all",
+      )
+    ) {
+      throw new AxisError(
+        "SCOPE_MISMATCH",
+        `Capsule scopes do not satisfy ${intent}`,
+        403,
+        {
+          intent,
+          requiredScopes: resolvedScopes,
+          availableScopes: inlineCapsule.scopes || [],
+        },
+      );
+    }
+  }
+
+  private async executeChainRequest(
+    frame: AxisFrame,
+    request: AxisChainRequest<unknown, Record<string, unknown>>,
+  ): Promise<AxisEffect> {
+    const { AxisChainExecutor } = await import("./axis-chain.executor");
+    const headerActorId = this.getActorIdFromFrame(frame);
+    if (
+      request.actorId &&
+      headerActorId &&
+      !this.identifiersMatch(request.actorId, headerActorId)
+    ) {
+      throw new AxisError(
+        "ACTOR_MISMATCH",
+        "CHAIN.EXEC actorId conflicts with authenticated frame identity",
+        403,
+      );
+    }
+    const actorId = headerActorId || request.actorId;
+    const inlineCapsule = this.toInlineCapsuleRecord(request.capsule);
+    const capsuleId = this.extractInlineCapsuleId(inlineCapsule);
+    const headers = new Map(frame.headers);
+
+    if (capsuleId) {
+      headers.set(TLV_CAPSULE, this.encoder.encode(capsuleId));
+      headers.set(TLV_PROOF_REF, this.encoder.encode(capsuleId));
+    }
+
+    const baseFrame = withAxisExecutionContext(
+      {
+        ...frame,
+        headers,
+      },
+      mergeAxisExecutionContext(getAxisExecutionContext(frame), {
+        metaIntent: "CHAIN.EXEC",
+        actorId,
+        inlineCapsule,
+        capsuleRef: request.envelope.capsule,
+        chainEnvelope: request.envelope,
+      }) || {},
+    );
+
+    const executor = new AxisChainExecutor(this, this.observerDispatcher);
+    const result = await executor.execute(request.envelope, {
+      actorId,
+      baseFrame,
+    });
+
+    return {
+      ok: result.status !== "FAILED",
+      effect: "chain.complete",
+      body: this.encodeJson(result),
+      metadata: {
+        chainId: result.chainId,
+        status: result.status,
+      },
+    };
+  }
+
+  private parseIntentExecBody(
+    bytes: Uint8Array,
+  ): {
+    intent: string;
+    args?: unknown;
+    capsule?: Record<string, unknown>;
+    execNonce?: string;
+  } {
+    try {
+      return JSON.parse(this.decoder.decode(bytes));
+    } catch (error: any) {
+      throw new Error(`INTENT.EXEC unwrapping failed: ${error.message}`);
+    }
+  }
+
+  private parseChainRequestBody(
+    bytes: Uint8Array,
+  ): AxisChainRequest<unknown, Record<string, unknown>> {
+    let jsonError: Error | undefined;
+
+    try {
+      const parsed = JSON.parse(this.decoder.decode(bytes));
+      if (this.isChainRequestLike(parsed)) {
+        return {
+          envelope: parsed.envelope,
+          capsule: this.toInlineCapsuleRecord(parsed.capsule),
+          actorId: typeof parsed.actorId === "string" ? parsed.actorId : undefined,
+        };
+      }
+
+      if (this.isChainEnvelopeLike(parsed)) {
+        return { envelope: parsed };
+      }
+    } catch (error: any) {
+      jsonError = error;
+    }
+
+    try {
+      const decoded = decodeChainRequest<unknown, Record<string, unknown>>(bytes);
+      return {
+        envelope: decoded.envelope,
+        capsule: this.toInlineCapsuleRecord(decoded.capsule),
+        actorId: decoded.actorId,
+      };
+    } catch (requestError: any) {
+      try {
+        return {
+          envelope: decodeChainEnvelope(bytes) as AxisChainEnvelope,
+        };
+      } catch (envelopeError: any) {
+        const reason = [jsonError?.message, requestError.message, envelopeError.message]
+          .filter(Boolean)
+          .join(" | ");
+        throw new Error(`CHAIN.EXEC decode failed: ${reason}`);
+      }
+    }
+  }
+
+  private isChainRequestLike(
+    value: unknown,
+  ): value is AxisChainRequest<unknown, Record<string, unknown>> {
+    return (
+      !!value &&
+      typeof value === "object" &&
+      "envelope" in value &&
+      this.isChainEnvelopeLike((value as Record<string, unknown>).envelope)
+    );
+  }
+
+  private isChainEnvelopeLike(value: unknown): value is AxisChainEnvelope {
+    return (
+      !!value &&
+      typeof value === "object" &&
+      typeof (value as Record<string, unknown>).chainId === "string" &&
+      Array.isArray((value as Record<string, unknown>).steps)
+    );
+  }
+
+  private encodeJson(value: unknown): Uint8Array {
+    return this.encoder.encode(JSON.stringify(value));
+  }
+
+  private getActorIdFromFrame(frame: AxisFrame): string | undefined {
+    return this.getHeaderValue(frame, TLV_ACTOR_ID);
+  }
+
+  private getProofRefFromFrame(frame: AxisFrame): string | undefined {
+    return this.getHeaderValue(frame, TLV_PROOF_REF) || this.getHeaderValue(frame, TLV_CAPSULE);
+  }
+
+  private hasCapsuleReference(frame: AxisFrame): boolean {
+    return !!this.getProofRefFromFrame(frame);
+  }
+
+  private getHeaderValue(frame: AxisFrame, tag: number): string | undefined {
+    const value = frame.headers.get(tag);
+    if (!value || value.length === 0) {
+      return undefined;
+    }
+
+    const decoded = this.decoder.decode(value);
+    if (/^[\x20-\x7e]+$/.test(decoded)) {
+      return decoded;
+    }
+
+    return Buffer.from(value).toString("hex");
+  }
+
+  private identifiersMatch(left: string, right: string): boolean {
+    const normalize = (value: string) =>
+      /^[0-9a-f]+$/i.test(value) ? value.toLowerCase() : value;
+    return normalize(left) === normalize(right);
+  }
+
+  private extractInlineCapsuleId(
+    capsule?: Record<string, unknown>,
+  ): string | undefined {
+    const id = capsule?.id;
+    return typeof id === "string" && id.length > 0 ? id : undefined;
+  }
+
+  private toInlineCapsuleRecord(
+    value: unknown,
+  ): Record<string, unknown> | undefined {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return undefined;
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private toScopeList(value?: string | string[]): string[] {
+    if (!value) {
+      return [];
+    }
+
+    return Array.isArray(value) ? value : [value];
   }
 
   // ===========================================================================

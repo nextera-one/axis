@@ -1,122 +1,147 @@
 /* ═══════════════════════════════════════════════════════════
-   AXIS Studio — Stitch Design System
-   Material Design 3 inspired token hierarchy
+   AXIS Studio — X E N O C O R E  Design System
+   Year 2226 ∙ Alien Tech Interface ∙ Post-Human Design
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
-/* ── Dark mode tokens ──────────────────────────────────── */
+/* ── Dark mode tokens — Xenocore Void ─────────────────── */
 :root {
-  --ax-bg: #0a0c10;
-  --ax-surface: #111318;
-  --ax-surface-low: #1a1c20;
-  --ax-surface-mid: #1e2024;
-  --ax-surface-high: #282a2e;
-  --ax-surface-highest: #333539;
-  --ax-surface-bright: #37393e;
-  --ax-surface-lowest: #0c0e12;
+  --ax-bg: #030108;
+  --ax-surface: #080414;
+  --ax-surface-low: #0d0820;
+  --ax-surface-mid: #120c28;
+  --ax-surface-high: #1a1234;
+  --ax-surface-highest: #231a40;
+  --ax-surface-bright: #2c224d;
+  --ax-surface-lowest: #020007;
 
-  --ax-primary: #00f5ff;
-  --ax-primary-dim: #00dce5;
-  --ax-primary-muted: rgba(0, 245, 255, 0.1);
-  --ax-primary-container: #006c71;
-  --ax-on-primary: #003739;
-  --ax-on-primary-fixed: #002021;
+  --ax-primary: #a855f7;
+  --ax-primary-dim: #7c3aed;
+  --ax-primary-muted: rgba(168, 85, 247, 0.1);
+  --ax-primary-container: #4c1d95;
+  --ax-on-primary: #f3e8ff;
+  --ax-on-primary-fixed: #1a0533;
 
-  --ax-on-surface: #e1e4e8;
-  --ax-on-surface-variant: #b9caca;
-  --ax-outline: #849495;
-  --ax-outline-variant: #3a494a;
+  --ax-accent: #06ffa5;
+  --ax-accent-dim: #00d68f;
+  --ax-accent-muted: rgba(6, 255, 165, 0.08);
 
-  --ax-border: rgba(255, 255, 255, 0.05);
-  --ax-border-hover: rgba(255, 255, 255, 0.1);
+  --ax-plasma: #ff2d78;
+  --ax-plasma-muted: rgba(255, 45, 120, 0.1);
 
-  --ax-error: #ffb4ab;
-  --ax-error-container: #93000a;
-  --ax-on-error: #690005;
-  --ax-ok: #4ade80;
-  --ax-warn: #ffb875;
-  --ax-info: #00dce5;
+  --ax-on-surface: #e8dff2;
+  --ax-on-surface-variant: #a89bc0;
+  --ax-outline: #6b5f80;
+  --ax-outline-variant: #2e2445;
 
-  --ax-secondary: #bbcac7;
-  --ax-secondary-container: #3e4c4a;
+  --ax-border: rgba(168, 85, 247, 0.08);
+  --ax-border-hover: rgba(168, 85, 247, 0.18);
+
+  --ax-error: #ff5c8a;
+  --ax-error-container: #4a0020;
+  --ax-on-error: #2d000f;
+  --ax-ok: #06ffa5;
+  --ax-warn: #ffb547;
+  --ax-info: #38bdf8;
+
+  --ax-secondary: #c4b5d9;
+  --ax-secondary-container: #3b2d4f;
 
   /* Sidebar glow */
-  --ax-sidebar-shadow: 4px 0 24px rgba(0, 245, 255, 0.05);
+  --ax-sidebar-shadow: 4px 0 40px rgba(168, 85, 247, 0.06);
 
-  /* Typography */
-  --ax-font-headline: 'Space Grotesk', 'Inter', sans-serif;
-  --ax-font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Typography — Alien glyphs */
+  --ax-font-headline: 'Orbitron', 'Exo 2', sans-serif;
+  --ax-font-body: 'Exo 2', -apple-system, BlinkMacSystemFont, sans-serif;
   --ax-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Radius — small, protocol-grade */
-  --ax-radius: 0.125rem;
-  --ax-radius-lg: 0.25rem;
-  --ax-radius-xl: 0.5rem;
+  /* Radius — chamfered alien edges */
+  --ax-radius: 2px;
+  --ax-radius-lg: 4px;
+  --ax-radius-xl: 8px;
 
-  /* JSON tree tokens (dark) */
-  --jtn-str: #5cb85c;
-  --jtn-num: #5bc0de;
-  --jtn-bool-t: #f0ad4e;
-  --jtn-bool-f: #ffb4ab;
-  --jtn-null: #849495;
-  --jtn-key: #00f5ff;
-  --jtn-idx: #849495;
-  --jtn-brkt: #3a494a;
-  --jtn-punt: #333539;
-  --jtn-hint: #3a494a;
-  --jtn-hover: rgba(0, 245, 255, 0.05);
+  /* Plasma gradient */
+  --ax-gradient-plasma: linear-gradient(135deg, #a855f7 0%, #ff2d78 50%, #06ffa5 100%);
+  --ax-gradient-void: linear-gradient(180deg, #080414 0%, #030108 100%);
+  --ax-gradient-aurora: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(6, 255, 165, 0.05) 50%, rgba(255, 45, 120, 0.1) 100%);
+  --ax-gradient-surface: linear-gradient(135deg, rgba(168, 85, 247, 0.04) 0%, rgba(6, 255, 165, 0.02) 100%);
+
+  /* JSON tree tokens (xenocore) */
+  --jtn-str: #06ffa5;
+  --jtn-num: #38bdf8;
+  --jtn-bool-t: #ffb547;
+  --jtn-bool-f: #ff5c8a;
+  --jtn-null: #6b5f80;
+  --jtn-key: #a855f7;
+  --jtn-idx: #6b5f80;
+  --jtn-brkt: #2e2445;
+  --jtn-punt: #231a40;
+  --jtn-hint: #2e2445;
+  --jtn-hover: rgba(168, 85, 247, 0.06);
 }
 
-/* ── Light mode tokens ─────────────────────────────────── */
+/* ── Light mode tokens — Xenocore Holo ────────────────── */
 body.body--light {
-  --ax-bg: #f8f9fa;
-  --ax-surface: #f8f9fa;
-  --ax-surface-low: #f3f4f5;
-  --ax-surface-mid: #edeeef;
-  --ax-surface-high: #e7e8e9;
-  --ax-surface-highest: #e1e3e4;
-  --ax-surface-bright: #f8f9fa;
+  --ax-bg: #faf7ff;
+  --ax-surface: #f5f0ff;
+  --ax-surface-low: #efe8ff;
+  --ax-surface-mid: #e8dff7;
+  --ax-surface-high: #ddd2f0;
+  --ax-surface-highest: #d1c4e9;
+  --ax-surface-bright: #f5f0ff;
   --ax-surface-lowest: #ffffff;
 
-  --ax-primary: #006876;
-  --ax-primary-dim: #00acc1;
-  --ax-primary-muted: rgba(0, 104, 118, 0.08);
-  --ax-primary-container: #00acc1;
+  --ax-primary: #7c3aed;
+  --ax-primary-dim: #6d28d9;
+  --ax-primary-muted: rgba(124, 58, 237, 0.08);
+  --ax-primary-container: #6d28d9;
   --ax-on-primary: #ffffff;
-  --ax-on-primary-fixed: #001f24;
+  --ax-on-primary-fixed: #1a0533;
 
-  --ax-on-surface: #191c1d;
-  --ax-on-surface-variant: #3d494b;
-  --ax-outline: #6d797c;
-  --ax-outline-variant: #bcc9cc;
+  --ax-accent: #059669;
+  --ax-accent-dim: #047857;
+  --ax-accent-muted: rgba(5, 150, 105, 0.08);
 
-  --ax-border: rgba(188, 201, 204, 0.2);
-  --ax-border-hover: rgba(188, 201, 204, 0.4);
+  --ax-plasma: #db2777;
+  --ax-plasma-muted: rgba(219, 39, 119, 0.08);
 
-  --ax-error: #ba1a1a;
-  --ax-error-container: #ffdad6;
+  --ax-on-surface: #1a0533;
+  --ax-on-surface-variant: #4c3566;
+  --ax-outline: #7c6b99;
+  --ax-outline-variant: #c4b5d9;
+
+  --ax-border: rgba(124, 58, 237, 0.1);
+  --ax-border-hover: rgba(124, 58, 237, 0.2);
+
+  --ax-error: #dc2626;
+  --ax-error-container: #fef2f2;
   --ax-on-error: #ffffff;
-  --ax-ok: #1ea65e;
-  --ax-warn: #8d4f00;
-  --ax-info: #006876;
+  --ax-ok: #059669;
+  --ax-warn: #d97706;
+  --ax-info: #0284c7;
 
-  --ax-secondary: #3a656d;
-  --ax-secondary-container: #bbe7f1;
+  --ax-secondary: #4c3566;
+  --ax-secondary-container: #ede5f7;
 
-  --ax-sidebar-shadow: none;
+  --ax-sidebar-shadow: 4px 0 30px rgba(124, 58, 237, 0.04);
 
-  --jtn-str: #2e7d32;
-  --jtn-num: #0077a8;
-  --jtn-bool-t: #c25b00;
-  --jtn-bool-f: #ba1a1a;
-  --jtn-null: #6d797c;
-  --jtn-key: #006876;
-  --jtn-idx: #6d797c;
-  --jtn-brkt: #bcc9cc;
-  --jtn-punt: #e1e3e4;
-  --jtn-hint: #bcc9cc;
-  --jtn-hover: rgba(0, 104, 118, 0.05);
+  --ax-gradient-plasma: linear-gradient(135deg, #7c3aed 0%, #db2777 50%, #059669 100%);
+  --ax-gradient-void: linear-gradient(180deg, #f5f0ff 0%, #faf7ff 100%);
+  --ax-gradient-aurora: linear-gradient(135deg, rgba(124, 58, 237, 0.06) 0%, rgba(5, 150, 105, 0.04) 50%, rgba(219, 39, 119, 0.05) 100%);
+  --ax-gradient-surface: linear-gradient(135deg, rgba(124, 58, 237, 0.03) 0%, rgba(5, 150, 105, 0.02) 100%);
+
+  --jtn-str: #059669;
+  --jtn-num: #0284c7;
+  --jtn-bool-t: #d97706;
+  --jtn-bool-f: #dc2626;
+  --jtn-null: #7c6b99;
+  --jtn-key: #7c3aed;
+  --jtn-idx: #7c6b99;
+  --jtn-brkt: #c4b5d9;
+  --jtn-punt: #d1c4e9;
+  --jtn-hint: #c4b5d9;
+  --jtn-hover: rgba(124, 58, 237, 0.05);
 }
 
 /* ── Base ──────────────────────────────────────────────── */
@@ -137,7 +162,7 @@ body {
 
 ::selection {
   background: var(--ax-primary);
-  color: var(--ax-on-primary-fixed);
+  color: var(--ax-on-primary);
 }
 
 .font-mono {
@@ -148,29 +173,88 @@ body {
   font-family: var(--ax-font-headline);
 }
 
-/* Custom scrollbar */
+/* ── Xeno Scrollbar ────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--ax-surface);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--ax-surface-mid);
-  border-radius: 2px;
+  background: linear-gradient(180deg, var(--ax-primary), var(--ax-accent, var(--ax-primary-dim)));
+  border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ax-surface-highest);
+  background: var(--ax-primary);
+  box-shadow: 0 0 6px var(--ax-primary);
 }
 
 /* ── Material Symbols icon sizing ────────────────────── */
 .material-symbols-outlined {
   font-variation-settings:
     'FILL' 0,
-    'wght' 400,
+    'wght' 300,
     'GRAD' 0,
     'opsz' 24;
   font-size: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   XENOCORE EFFECTS — Plasma, Holo, Dimensional
+   ═══════════════════════════════════════════════════════════ */
+
+/* Scanning line overlay */
+@keyframes xeno-scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Plasma border animation */
+@keyframes xeno-border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Dimensional pulse */
+@keyframes xeno-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.3); }
+  50% { opacity: 0.7; box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.15); }
+}
+
+/* Energy flow */
+@keyframes xeno-energy {
+  0% { opacity: 0.3; transform: scaleX(0.5); }
+  50% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0.3; transform: scaleX(0.5); }
+}
+
+/* Holographic shimmer */
+@keyframes xeno-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glyph flicker */
+@keyframes xeno-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.4; }
+  97% { opacity: 1; }
+  98% { opacity: 0.6; }
+}
+
+/* Aurora drift */
+@keyframes xeno-aurora {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* Floating particles */
+@keyframes xeno-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+  25% { transform: translateY(-8px) rotate(90deg); opacity: 1; }
+  50% { transform: translateY(-3px) rotate(180deg); opacity: 0.4; }
+  75% { transform: translateY(-10px) rotate(270deg); opacity: 0.8; }
 }
 
 /* ── Layout: Sidebar ─────────────────────────────────── */
@@ -187,17 +271,29 @@ body {
   z-index: 2000;
   box-shadow: var(--ax-sidebar-shadow);
   font-family: var(--ax-font-headline);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.04em;
+
+  /* Xeno: subtle aurora gradient on sidebar */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ax-gradient-aurora);
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 .ax-sidebar-brand {
   padding: 20px 20px 0;
+  position: relative;
+  z-index: 1;
 }
 
 .ax-sidebar-title {
   font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 800;
+  letter-spacing: 0.18em;
   color: var(--ax-on-surface);
 }
 
@@ -218,6 +314,8 @@ body {
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .ax-nav-link {
@@ -225,18 +323,24 @@ body {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  color: rgba(var(--ax-on-surface-rgb, 225, 228, 232), 0.6);
+  color: rgba(var(--ax-on-surface-rgb, 232, 223, 242), 0.5);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   transition:
-    color 0.15s,
-    background 0.15s;
+    color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
   border-right: 2px solid transparent;
   cursor: pointer;
+  position: relative;
 
   &:hover {
     color: var(--ax-on-surface);
     background: var(--ax-surface-mid);
+    box-shadow: inset -2px 0 12px rgba(168, 85, 247, 0.06);
   }
 
   .material-symbols-outlined {
@@ -246,8 +350,9 @@ body {
 
 .ax-nav-link--active {
   color: var(--ax-primary) !important;
-  background: var(--ax-surface-low) !important;
+  background: var(--ax-primary-muted) !important;
   border-right-color: var(--ax-primary) !important;
+  box-shadow: inset -2px 0 20px rgba(168, 85, 247, 0.1) !important;
 
   .material-symbols-outlined {
     font-variation-settings:
@@ -255,6 +360,7 @@ body {
       'wght' 400,
       'GRAD' 0,
       'opsz' 24;
+    filter: drop-shadow(0 0 4px var(--ax-primary));
   }
 }
 
@@ -268,7 +374,7 @@ body.body--light {
   }
   .ax-nav-link--active {
     color: var(--ax-primary) !important;
-    background: var(--ax-surface-highest) !important;
+    background: var(--ax-primary-muted) !important;
   }
 }
 
@@ -276,9 +382,11 @@ body.body--light {
   margin-top: auto;
   border-top: 1px solid var(--ax-border);
   padding: 12px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── Layout: Top Bar ─────────────────────────────────── */
+/* ── Layout: Top Bar — Xeno Command Strip ────────────── */
 .ax-topbar {
   position: fixed;
   top: 0;
@@ -294,18 +402,32 @@ body.body--light {
   font-family: var(--ax-font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
+
+  /* Xeno: bottom edge plasma line */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 6s ease infinite;
+    opacity: 0.4;
+  }
 }
 
 body.body--dark .ax-topbar,
 :root .ax-topbar {
-  background: rgba(10, 12, 16, 0.8);
-  backdrop-filter: blur(12px);
+  background: rgba(3, 1, 8, 0.85);
+  backdrop-filter: blur(20px) saturate(1.4);
 }
 
 body.body--light .ax-topbar {
-  background: rgba(248, 249, 250, 0.8);
-  backdrop-filter: blur(20px);
+  background: rgba(250, 247, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(1.2);
 }
 
 .ax-topbar-search {
@@ -386,32 +508,37 @@ body.body--light .ax-topbar {
 }
 
 .ax-connect-btn {
-  background: var(--ax-primary);
-  color: var(--ax-on-primary-fixed);
+  background: var(--ax-gradient-plasma);
+  background-size: 200% 100%;
+  animation: xeno-border-flow 4s ease infinite;
+  color: #fff;
   border: none;
-  padding: 4px 16px;
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  padding: 5px 18px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.2s, box-shadow 0.2s;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.9;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
   }
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
 }
 
 body.body--light .ax-connect-btn {
-  background: var(--ax-primary);
-  color: var(--ax-on-primary);
+  background: var(--ax-gradient-plasma);
+  background-size: 200% 100%;
+  color: #fff;
 }
 
-/* ── Layout: Bottom Status Bar ───────────────────────── */
+/* ── Layout: Bottom Status Bar — Telemetry Strip ─────── */
 .ax-statusbar {
   position: fixed;
   bottom: 0;
@@ -425,16 +552,31 @@ body.body--light .ax-connect-btn {
   z-index: 1500;
   background: var(--ax-surface);
   border-top: 1px solid var(--ax-border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -4px 30px rgba(168, 85, 247, 0.08);
   font-family: var(--ax-font-mono);
   font-size: 10px;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  /* Xeno: top edge plasma line */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 8s ease infinite;
+    opacity: 0.3;
+  }
 }
 
 body.body--light .ax-statusbar {
-  background: #191c1d;
+  background: #1a0533;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-  color: #bcc9cc;
+  color: #c4b5d9;
 }
 
 .ax-status-item {
@@ -463,7 +605,7 @@ body.body--light .ax-statusbar {
 body.body--light .ax-status-item {
   color: #bcc9cc;
   &--active {
-    color: #00acc1;
+    color: var(--ax-primary);
   }
 }
 
@@ -481,19 +623,19 @@ body.body--light .ax-status-item {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ax-primary);
-  animation: ax-pulse 2s infinite;
+  background: var(--ax-accent, var(--ax-primary));
+  animation: ax-pulse 2.5s infinite;
+  position: relative;
 }
 
 @keyframes ax-pulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4);
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.5), 0 0 4px 1px rgba(6, 255, 165, 0.3);
   }
   50% {
-    opacity: 0.6;
-    box-shadow: 0 0 8px 2px rgba(0, 245, 255, 0.2);
+    opacity: 0.5;
+    box-shadow: 0 0 12px 3px rgba(168, 85, 247, 0.2), 0 0 20px 6px rgba(6, 255, 165, 0.1);
   }
 }
 
@@ -521,33 +663,36 @@ body.body--light .ax-status-item {
   background: var(--ax-bg) !important;
 }
 
-/* ── Send Frame Button ───────────────────────────────── */
+/* ── Send Frame Button — Plasma Action ─────────────── */
 .ax-send-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
+  padding: 8px 22px;
   background: var(--ax-primary);
-  color: var(--ax-on-primary-fixed);
+  color: var(--ax-on-primary);
   border: none;
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: all 0.2s;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
 
   &:hover:not(:disabled) {
-    opacity: 0.9;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.15);
+    transform: translateY(-1px);
   }
   &:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: scale(0.97) translateY(0);
   }
   &:disabled {
     background: var(--ax-surface-highest);
     color: var(--ax-outline);
     cursor: not-allowed;
+    box-shadow: none;
   }
 }
 
@@ -576,17 +721,22 @@ body.body--light .ax-send-btn {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 0 12px;
+  padding: 0 14px;
   background: var(--ax-surface-mid);
   border-right: 1px solid var(--ax-border);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
-  transition: background 0.12s;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
 
   &:hover {
     background: var(--ax-primary-muted);
+    color: var(--ax-primary);
   }
 }
 
@@ -639,22 +789,22 @@ body.body--light .ax-send-btn {
   align-items: center;
   gap: 6px;
   height: 100%;
-  padding: 0 20px;
+  padding: 0 22px;
   background: var(--ax-primary);
-  color: var(--ax-on-primary-fixed);
+  color: var(--ax-on-primary);
   border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 9px;
   font-weight: 700;
-  font-family: var(--ax-font-mono);
-  letter-spacing: 0.1em;
+  font-family: var(--ax-font-headline);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: all 0.15s;
   flex-shrink: 0;
 
   &:hover:not(:disabled) {
-    opacity: 0.9;
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
   &:disabled {
     background: var(--ax-surface-highest);
@@ -668,27 +818,32 @@ body.body--light .ins-send-btn {
   color: var(--ax-on-primary);
 }
 
-/* ── Tabs ────────────────────────────────────────────── */
+/* ── Tabs — Xeno Frequency Selector ──────────────────── */
 .ins-tabs {
   .q-tabs__content {
     background: var(--ax-surface-low);
     border-bottom: 1px solid var(--ax-border);
   }
   .q-tab {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 0 14px;
     min-height: 34px;
     color: var(--ax-outline);
     opacity: 1;
+    font-family: var(--ax-font-headline);
+    transition: color 0.2s, text-shadow 0.2s;
   }
   .q-tab--active {
     color: var(--ax-primary) !important;
+    text-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
   }
   .q-tab__indicator {
-    background: var(--ax-primary) !important;
+    background: var(--ax-gradient-plasma) !important;
+    background-size: 200% 100% !important;
+    animation: xeno-border-flow 4s ease infinite;
     height: 2px !important;
   }
 }
@@ -728,17 +883,20 @@ body.body--light .ins-send-btn {
   color: var(--ax-outline);
 }
 
-/* ── Panel / card ────────────────────────────────────── */
+/* ── Panel / card — Xeno Dimensional Layer ─────────── */
 .ax-panel {
   background: var(--ax-surface-low);
+  background-image: var(--ax-gradient-surface);
   border: 1px solid var(--ax-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .ax-panel-accent {
   border-left: 2px solid var(--ax-primary);
+  box-shadow: inset 3px 0 12px rgba(168, 85, 247, 0.06);
 }
 
 .ax-panel-header {
@@ -749,78 +907,83 @@ body.body--light .ins-send-btn {
 }
 
 .ax-panel-title {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ax-outline);
 }
 
-/* ── Badges ──────────────────────────────────────────── */
+/* ── Badges — Xeno Signal Tags ───────────────────────── */
 .ax-badge {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 8px;
-  font-size: 10px;
+  padding: 2px 10px;
+  font-size: 9px;
   font-weight: 700;
-  font-family: var(--ax-font-mono);
-  letter-spacing: 0.02em;
+  font-family: var(--ax-font-headline);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
 }
 
 .ax-badge--ok,
 .ax-badge--success {
-  background: rgba(74, 222, 128, 0.12);
+  background: rgba(6, 255, 165, 0.12);
   color: var(--ax-ok);
+  text-shadow: 0 0 8px rgba(6, 255, 165, 0.3);
 }
 .ax-badge--error {
-  background: rgba(255, 180, 171, 0.12);
+  background: rgba(255, 92, 138, 0.12);
   color: var(--ax-error);
+  text-shadow: 0 0 8px rgba(255, 92, 138, 0.3);
 }
 .ax-badge--warn,
 .ax-badge--warning {
-  background: rgba(255, 184, 117, 0.12);
+  background: rgba(255, 181, 71, 0.12);
   color: var(--ax-warn);
 }
 .ax-badge--info {
-  background: rgba(0, 220, 229, 0.12);
+  background: rgba(56, 189, 248, 0.12);
   color: var(--ax-info);
 }
 .ax-badge--primary,
 .ax-badge--accent {
   background: var(--ax-primary-muted);
   color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 .ax-badge--neutral {
-  background: rgba(128, 128, 160, 0.1);
+  background: rgba(107, 95, 128, 0.1);
   color: var(--ax-outline);
 }
 
 /* ── Method badges ───────────────────────────────────── */
 .ax-method {
   display: inline-block;
-  padding: 1px 6px;
-  font-size: 10px;
+  padding: 2px 8px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  font-family: var(--ax-font-mono);
+  letter-spacing: 0.1em;
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
 }
 
 .ax-method--axis {
   color: var(--ax-primary);
   background: var(--ax-primary-muted);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
 }
 
-/* ── Input overrides ─────────────────────────────────── */
+/* ── Input overrides — Xeno Data Ports ────────────────── */
 .q-field--outlined .q-field__control {
   background: var(--ax-surface-low) !important;
   border-radius: var(--ax-radius) !important;
 }
 .q-field--focused .q-field__control {
-  box-shadow: 0 0 0 2px var(--ax-primary-muted);
+  box-shadow: 0 0 0 2px var(--ax-primary-muted), 0 0 12px rgba(168, 85, 247, 0.08);
 }
 
 /* ── Connection status ───────────────────────────────── */
@@ -852,24 +1015,31 @@ body.body--light .ins-send-btn {
 
   &--connected .ax-conn-dot {
     background: var(--ax-ok);
-    box-shadow: 0 0 6px var(--ax-ok);
+    box-shadow: 0 0 8px var(--ax-ok), 0 0 16px rgba(6, 255, 165, 0.3);
   }
   &--error .ax-conn-dot {
     background: var(--ax-error);
+    box-shadow: 0 0 6px var(--ax-error);
   }
 }
 
-/* ── Page transition ─────────────────────────────────── */
+/* ── Page transition — Dimensional Shift ─────────────── */
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    filter 0.2s ease;
 }
-.page-fade-enter-from,
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px) scale(0.995);
+  filter: blur(2px);
+}
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(-4px) scale(0.995);
+  filter: blur(2px);
 }
 
 /* ── JsonEditor ──────────────────────────────────────── */
@@ -879,7 +1049,8 @@ body.body--light .ins-send-btn {
   transition: border-color 0.12s;
 
   &--error {
-    border-color: rgba(255, 180, 171, 0.5);
+    border-color: rgba(255, 92, 138, 0.5);
+    box-shadow: 0 0 12px rgba(255, 92, 138, 0.08);
   }
   &--dark {
     background: var(--ax-surface-lowest);
@@ -906,19 +1077,19 @@ body.body--light .ins-send-btn {
 
 body.body--light {
   .cm-editor .cm-string {
-    color: #2e7d32;
+    color: #059669;
   }
   .cm-editor .cm-number {
-    color: #0077a8;
+    color: #0284c7;
   }
   .cm-editor .cm-bool {
-    color: #c25b00;
+    color: #d97706;
   }
   .cm-editor .cm-null {
-    color: #6d797c;
+    color: #7c6b99;
   }
   .cm-editor .cm-keyword {
-    color: #006876;
+    color: #7c3aed;
   }
 }
 
@@ -977,9 +1148,10 @@ body.body--light {
   cursor: pointer;
   &:hover {
     background: var(--jtn-hover);
+    box-shadow: inset 2px 0 0 var(--ax-primary);
   }
   &:focus {
-    outline: 1px solid rgba(0, 245, 255, 0.3);
+    outline: 1px solid rgba(168, 85, 247, 0.3);
   }
 }
 
@@ -1037,7 +1209,7 @@ body.body--light {
   font-style: italic;
 }
 
-/* ── Raw viewer ──────────────────────────────────────── */
+/* ── Raw viewer — Xeno Data Stream ─────────────────── */
 .ax-raw-viewer {
   font-family: var(--ax-font-mono);
   font-size: 11px;
@@ -1045,11 +1217,12 @@ body.body--light {
   white-space: pre-wrap;
   word-break: break-all;
   padding: 16px;
-  color: var(--ax-primary);
-  opacity: 0.7;
+  color: var(--ax-accent, var(--ax-primary));
+  opacity: 0.8;
   max-height: 100%;
   overflow-y: auto;
   background: var(--ax-surface-lowest);
+  text-shadow: 0 0 6px rgba(6, 255, 165, 0.15);
 }
 
 /* ── Registry / history items ────────────────────────── */
@@ -1094,51 +1267,72 @@ body.body--light {
   font-style: italic;
 }
 
-/* ── Stat card ───────────────────────────────────────── */
+/* ── Stat card — Xeno Telemetry ───────────────────────── */
 .ax-stat-card {
   padding: 12px 16px;
   background: var(--ax-surface-mid);
-  border-bottom: 2px solid var(--ax-outline-variant);
+  background-image: var(--ax-gradient-surface);
+  border-bottom: 2px solid var(--ax-primary);
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 6s ease infinite;
+  }
 }
 
 .ax-stat-label {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   color: var(--ax-outline);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
 
 .ax-stat-value {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--ax-on-surface);
-  font-family: var(--ax-font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ax-primary);
+  font-family: var(--ax-font-headline);
+  text-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
 }
 
 /* ── Quick picks / chips ─────────────────────────────── */
 .ax-chip {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--ax-surface-low);
   font-size: 9px;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   color: var(--ax-outline);
   cursor: pointer;
   user-select: none;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   transition:
-    color 0.12s,
-    background 0.12s;
+    color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+  clip-path: polygon(3px 0%, 100% 0%, calc(100% - 3px) 100%, 0% 100%);
 
   &:hover {
     color: var(--ax-primary);
     background: var(--ax-primary-muted);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
   }
 }
 
-/* ── Empty state ─────────────────────────────────────── */
+/* ── Empty state — Xeno Void ───────────────────────── */
 .ax-empty {
   display: flex;
   flex-direction: column;
@@ -1150,10 +1344,14 @@ body.body--light {
 }
 .ax-empty-icon {
   font-size: 34px;
-  opacity: 0.25;
+  opacity: 0.2;
+  animation: xeno-float 8s ease-in-out infinite;
 }
 .ax-empty-text {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-family: var(--ax-font-headline);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ── Transparent tab panels ──────────────────────────── */
@@ -1164,24 +1362,26 @@ body.body--light {
   }
 }
 
-/* ── Glass overlay ───────────────────────────────────── */
+/* ── Glass overlay — Xeno Dimensional Glass ─────────── */
 .ax-glass {
-  background: rgba(51, 53, 57, 0.6);
-  backdrop-filter: blur(12px);
+  background: rgba(18, 12, 40, 0.65);
+  backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(168, 85, 247, 0.08);
 }
 
 body.body--light .ax-glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
+  background: rgba(245, 240, 255, 0.75);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(124, 58, 237, 0.06);
 }
 
-/* ── Protocol glow effect ────────────────────────────── */
+/* ── Protocol glow effect — Plasma Radiance ─────────── */
 .ax-glow {
-  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2), 0 0 40px rgba(168, 85, 247, 0.06);
 }
 
 body.body--light .ax-glow {
-  box-shadow: 0 0 10px rgba(0, 104, 118, 0.15);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.12), 0 0 30px rgba(124, 58, 237, 0.04);
 }
 
 /* ── Response / code blocks ──────────────────────────── */
@@ -1199,13 +1399,35 @@ body.body--light .ax-glow {
 /* ── Bento grid card ─────────────────────────────────── */
 .ax-bento-card {
   background: var(--ax-surface-mid);
+  background-image: var(--ax-gradient-surface);
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: background 0.15s;
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+  border: 1px solid var(--ax-border);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 8s ease infinite;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
 
   &:hover {
     background: var(--ax-surface-high);
+    box-shadow: 0 4px 24px rgba(168, 85, 247, 0.08);
+    border-color: var(--ax-border-hover);
+
+    &::before {
+      opacity: 0.6;
+    }
   }
 }
 
@@ -1215,10 +1437,11 @@ body.body--light .ax-bento-card {
 
   &:hover {
     border-color: var(--ax-outline-variant);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
   }
 }
 
-/* ── Trace timeline ──────────────────────────────────── */
+/* ── Trace timeline — Xeno Event Chain ───────────────── */
 .ax-trace-step {
   display: flex;
   gap: 16px;
@@ -1233,11 +1456,13 @@ body.body--light .ax-bento-card {
   background: var(--ax-primary);
   margin-top: 6px;
   flex-shrink: 0;
+  box-shadow: 0 0 6px var(--ax-primary);
 }
 
 .ax-trace-dot--inactive {
   background: transparent;
   border: 1px solid var(--ax-primary);
+  box-shadow: none;
 }
 
 .ax-trace-line {
@@ -1263,21 +1488,62 @@ body.body--light .ax-bento-card {
   background: var(--ax-bg) !important;
 }
 
-/* ── Studio Layout (SCSS only, no Tailwind) ─────────────── */
+/* ── Studio Layout — Xenocore Interface Shell ────────────── */
 .studio-layout {
   background: var(--ax-bg);
   color: var(--ax-on-surface);
 }
 
 .studio-header {
-  background: rgba(10, 12, 16, 0.86);
-  backdrop-filter: blur(10px);
+  background: rgba(3, 1, 8, 0.88);
+  backdrop-filter: blur(20px) saturate(1.4);
   border-bottom: 1px solid var(--ax-border);
+  position: relative;
+
+  /* Plasma edge */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ax-gradient-plasma);
+    background-size: 300% 100%;
+    animation: xeno-border-flow 8s ease infinite;
+    opacity: 0.5;
+  }
 }
 
 .studio-toolbar {
   min-height: 48px;
   padding: 0 12px;
+}
+
+.studio-toolbar .q-btn {
+  color: var(--ax-on-surface);
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.studio-toolbar .q-btn:not(.studio-connect-btn):hover {
+  color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+}
+
+.studio-header-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--ax-border);
+  background: var(--ax-plasma-muted);
+  color: var(--ax-plasma);
+  font-family: var(--ax-font-headline);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  animation: xeno-flicker 5s linear infinite;
 }
 
 .studio-search {
@@ -1286,11 +1552,21 @@ body.body--light .ax-bento-card {
   border-radius: var(--ax-radius);
   padding: 0 6px;
   background: var(--ax-surface-lowest);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: var(--ax-primary);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.1);
+  }
 
   .q-field__native,
   .q-field__input {
     font-family: var(--ax-font-mono);
     font-size: 12px;
+  }
+
+  .q-icon {
+    color: var(--ax-outline);
   }
 }
 
@@ -1303,9 +1579,9 @@ body.body--light .ax-bento-card {
     border: 0;
     background: transparent;
     color: var(--ax-on-surface);
-    opacity: 0.7;
-    font-family: var(--ax-font-mono);
-    font-size: 11px;
+    opacity: 0.6;
+    font-family: var(--ax-font-headline);
+    font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -1319,50 +1595,80 @@ body.body--light .ax-bento-card {
 }
 
 .studio-connect-btn {
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
 .studio-drawer {
   background: var(--ax-surface);
   color: var(--ax-on-surface);
+  position: relative;
+
+  /* Xeno: aurora gradient overlay */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ax-gradient-aurora);
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 .studio-brand {
   padding: 14px 16px;
   border-bottom: 1px solid var(--ax-border);
+  position: relative;
+  z-index: 1;
 }
 
 .studio-brand__title {
   font-family: var(--ax-font-headline);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  background: var(--ax-gradient-plasma);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: xeno-border-flow 6s ease infinite;
 }
 
 .studio-brand__version {
   margin-top: 4px;
   font-family: var(--ax-font-mono);
-  font-size: 10px;
-  opacity: 0.6;
+  font-size: 9px;
+  opacity: 0.4;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .studio-nav {
   padding: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .studio-nav-item {
   border-radius: var(--ax-radius);
   margin-bottom: 4px;
+  color: var(--ax-on-surface);
+  font-family: var(--ax-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
 }
 
 .studio-nav-item--active {
   background: var(--ax-primary-muted);
   color: var(--ax-primary);
+  box-shadow: inset -2px 0 16px rgba(168, 85, 247, 0.08);
 }
 
 .studio-drawer-footer {
@@ -1374,6 +1680,7 @@ body.body--light .ax-bento-card {
   border-top: 1px solid var(--ax-border);
   display: grid;
   gap: 6px;
+  z-index: 1;
 }
 
 .studio-drawer-action {
@@ -1417,6 +1724,22 @@ body.body--light .ax-bento-card {
   font-family: var(--ax-font-mono);
   font-size: 10px;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+  position: relative;
+
+  /* Plasma edge */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--ax-gradient-plasma);
+    background-size: 300% 100%;
+    animation: xeno-border-flow 10s ease infinite;
+    opacity: 0.3;
+  }
 }
 
 .studio-status-item {
@@ -1426,8 +1749,14 @@ body.body--light .ax-bento-card {
   color: var(--ax-outline);
 }
 
+.studio-status-item .q-icon,
+.studio-live-indicator .q-icon {
+  color: currentColor;
+}
+
 .studio-status-item--primary {
   color: var(--ax-primary);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
 }
 
 .studio-live-indicator {
@@ -1448,7 +1777,8 @@ body.body--light .ax-bento-card {
 
 .studio-live-dot--active {
   background: var(--ax-ok);
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.45);
+  box-shadow: 0 0 8px rgba(6, 255, 165, 0.5), 0 0 16px rgba(6, 255, 165, 0.2);
+  animation: ax-pulse 2s infinite;
 }
 
 .studio-conn-card {
@@ -1456,16 +1786,33 @@ body.body--light .ax-bento-card {
   max-width: 96vw;
   background: var(--ax-surface);
   border: 1px solid var(--ax-border);
+  box-shadow: 0 8px 48px rgba(168, 85, 247, 0.12), 0 0 0 1px rgba(168, 85, 247, 0.05);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 4s ease infinite;
+  }
 }
 
 .studio-conn-card__head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 14px 14px 12px;
   border-bottom: 1px solid var(--ax-border);
   font-family: var(--ax-font-headline);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
 }
 
 .studio-conn-card__body {
@@ -1522,14 +1869,17 @@ body.body--light .ax-bento-card {
 
 .sender-chip {
   border: 1px solid var(--ax-border);
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   color: var(--ax-outline);
   background: var(--ax-surface-low);
+  letter-spacing: 0.06em;
+  transition: all 0.15s;
 
   &:hover {
     color: var(--ax-primary);
-    border-color: rgba(0, 245, 255, 0.3);
+    border-color: rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.1);
   }
 }
 
@@ -1597,11 +1947,11 @@ body.body--light .ax-bento-card {
 }
 
 .sender-info-label {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
   color: var(--ax-outline);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .sender-info-value {
@@ -1615,6 +1965,11 @@ body.body--light .ax-bento-card {
 .sender-link {
   color: var(--ax-primary);
   text-decoration: none;
+  transition: text-shadow 0.2s;
+
+  &:hover {
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  }
 }
 
 .sender-note {
@@ -1659,8 +2014,9 @@ body.body--light .ax-bento-card {
   gap: 8px;
   color: var(--ax-outline);
   text-transform: uppercase;
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
 
 .sender-raw {
@@ -1705,15 +2061,19 @@ body.body--light .ax-bento-card {
   gap: 12px;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 14px;
+  position: relative;
+  overflow: hidden;
 }
 
 .registry-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .registry-header h1 {
@@ -1738,21 +2098,31 @@ body.body--light .ax-bento-card {
   min-width: 110px;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface-low);
+  background-image: var(--ax-gradient-surface);
   padding: 8px 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.06);
+  }
 }
 
 .registry-stat span {
   display: block;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
 }
 
 .registry-stat small {
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--ax-outline);
+  letter-spacing: 0.1em;
 }
 
 .registry-controls {
@@ -1769,6 +2139,14 @@ body.body--light .ax-bento-card {
 
 .registry-card {
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--ax-border);
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.06);
+  }
 }
 
 .registry-card-head {
@@ -1798,10 +2176,11 @@ body.body--light .ax-bento-card {
 
 .registry-card-meta small {
   display: block;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 8px;
   color: var(--ax-outline);
+  letter-spacing: 0.1em;
 }
 
 .registry-card-meta span {
@@ -1827,9 +2206,11 @@ body.body--light .ax-bento-card {
   gap: 8px;
   padding: 30px;
   text-transform: uppercase;
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
+
 
 /* ── Auth Page ───────────────────────────────────────────── */
 .auth-page {
@@ -1854,11 +2235,12 @@ body.body--light .ax-bento-card {
 }
 
 .auth-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   color: var(--ax-primary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .auth-stats {
@@ -1870,15 +2252,17 @@ body.body--light .ax-bento-card {
 .auth-stat {
   border: 1px solid var(--ax-border);
   background: var(--ax-surface-low);
+  background-image: var(--ax-gradient-surface);
   padding: 8px 10px;
 }
 
 .auth-stat small {
   display: block;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .auth-stat span {
@@ -1887,10 +2271,18 @@ body.body--light .ax-bento-card {
   font-family: var(--ax-font-mono);
   font-size: 12px;
   color: var(--ax-primary);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.2);
 }
 
 .auth-card {
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
+  border: 1px solid var(--ax-border);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--ax-border-hover);
+  }
 }
 
 .auth-card--active h2 {
@@ -1903,10 +2295,10 @@ body.body--light .ax-bento-card {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--ax-font-mono);
-  font-size: 12px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--ax-outline);
 }
 
@@ -1917,6 +2309,7 @@ body.body--light .ax-bento-card {
 .auth-key-item--active {
   background: var(--ax-primary-muted);
   color: var(--ax-primary);
+  box-shadow: inset 2px 0 0 var(--ax-primary);
 }
 
 .auth-empty {
@@ -1927,9 +2320,10 @@ body.body--light .ax-bento-card {
   gap: 8px;
   color: var(--ax-outline);
   padding: 20px;
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
 
 .auth-empty--large {
@@ -1939,9 +2333,10 @@ body.body--light .ax-bento-card {
 
 .auth-label {
   margin-bottom: 4px;
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--ax-outline);
 }
 
@@ -1981,6 +2376,7 @@ body.body--light .ax-bento-card {
 .history-head {
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 12px;
   display: flex;
   justify-content: space-between;
@@ -2043,10 +2439,12 @@ body.body--light .ax-bento-card {
 
 .history-dot--ok {
   background: var(--ax-ok);
+  box-shadow: 0 0 6px rgba(6, 255, 165, 0.4);
 }
 
 .history-dot--err {
   background: var(--ax-error);
+  box-shadow: 0 0 6px rgba(255, 92, 138, 0.4);
 }
 
 .history-detail {
@@ -2060,6 +2458,7 @@ body.body--light .ax-bento-card {
   min-height: 0;
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-surface);
   display: flex;
   flex-direction: column;
 }
@@ -2073,11 +2472,12 @@ body.body--light .ax-bento-card {
 }
 
 .history-eyebrow {
-  font-family: var(--ax-font-mono);
-  font-size: 10px;
+  font-family: var(--ax-font-headline);
+  font-size: 9px;
   text-transform: uppercase;
   color: var(--ax-primary);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
 }
 
 .history-detail-head h2 {
@@ -2096,9 +2496,10 @@ body.body--light .ax-bento-card {
 .history-kv small {
   display: block;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 8px;
+  letter-spacing: 0.1em;
 }
 
 .history-kv span {
@@ -2177,8 +2578,9 @@ body.body--light .ax-bento-card {
   justify-content: center;
   color: var(--ax-outline);
   text-transform: uppercase;
-  font-family: var(--ax-font-mono);
-  font-size: 11px;
+  font-family: var(--ax-font-headline);
+  font-size: 10px;
+  letter-spacing: 0.1em;
   padding: 24px;
 }
 
@@ -2199,8 +2601,23 @@ body.body--light .ax-bento-card {
   width: min(560px, 100%);
   border: 1px solid var(--ax-border);
   background: var(--ax-surface);
+  background-image: var(--ax-gradient-aurora);
   padding: 28px 22px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--ax-gradient-plasma);
+    background-size: 200% 100%;
+    animation: xeno-border-flow 4s ease infinite;
+  }
 }
 
 .notfound-card h1 {
@@ -2212,12 +2629,66 @@ body.body--light .ax-bento-card {
 
 .notfound-card h1 span {
   color: var(--ax-primary);
+  text-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
 }
 
 .notfound-card p {
   margin: 10px 0 18px;
   color: var(--ax-outline);
-  font-family: var(--ax-font-mono);
+  font-family: var(--ax-font-headline);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   XENOCORE — Ambient Effects
+   ═══════════════════════════════════════════════════════════ */
+
+/* Subtle scanline overlay on the entire app (dark mode only) */
+body.body--dark::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(168, 85, 247, 0.008) 2px,
+      rgba(168, 85, 247, 0.008) 4px
+    );
+  mix-blend-mode: overlay;
+}
+
+/* Ambient corner vignette */
+body.body--dark .studio-layout::before,
+body.body--dark .ax-page-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(3, 1, 8, 0.4) 100%);
+}
+
+/* Quasar dialog backdrop — dimensional */
+.q-dialog__backdrop {
+  background: rgba(3, 1, 8, 0.7) !important;
+  backdrop-filter: blur(8px) saturate(0.8) !important;
+}
+
+body.body--light .q-dialog__backdrop {
+  background: rgba(26, 5, 51, 0.3) !important;
+}
+
+/* Quasar menu popup — xeno glass */
+.q-menu {
+  background: var(--ax-surface) !important;
+  border: 1px solid var(--ax-border) !important;
+  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.12) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

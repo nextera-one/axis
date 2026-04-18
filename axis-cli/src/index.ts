@@ -4,6 +4,7 @@ import { nestflowDeviceCommand, nestflowIdentityCommand, nestflowQrCommand, nest
 import { streamCommand } from "./commands/stream";
 import { fileCommand } from "./commands/file";
 import { sendCommand } from "./commands/send";
+import { chainCommand } from "./commands/chain";
 
 const program = new Command();
 
@@ -15,6 +16,7 @@ program
 import { issueNodeCertCommand } from "./commands/issue-node-cert";
 
 program.addCommand(sendCommand);
+program.addCommand(chainCommand);
 program.addCommand(fileCommand);
 program.addCommand(streamCommand);
 program.addCommand(issueNodeCertCommand);

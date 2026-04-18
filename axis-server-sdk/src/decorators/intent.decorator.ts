@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 
+import type { ChainOptions } from '../engine/axis-chain.types';
+
 export const INTENT_METADATA_KEY = 'axis:intent';
 export const INTENT_ROUTES_KEY = 'axis:intent_routes';
 
@@ -35,6 +37,7 @@ export interface IntentRoute {
   absolute?: boolean;
   frame?: boolean;
   kind?: IntentKind;
+  chain?: boolean | ChainOptions;
   bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
   tlv?: IntentTlvField[];
   dto?: Function;
@@ -47,6 +50,8 @@ export interface IntentOptions {
   absolute?: boolean;
   /** If true, register as { handle: fn } for frame-based handlers */
   frame?: boolean;
+  /** Enables intent-chain semantics for this intent, optionally with chain defaults */
+  chain?: boolean | ChainOptions;
   /**
    * How the body is encoded. Drives TLVParseSensor behavior:
    * - `TLV_MAP`  — flat TLV map (canonical ordering enforced)
@@ -101,6 +106,7 @@ export function Intent(
       absolute: options?.absolute,
       frame: options?.frame,
       kind: options?.kind,
+      chain: options?.chain,
       bodyProfile: options?.bodyProfile,
       tlv: options?.tlv,
       dto: options?.dto,

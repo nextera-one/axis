@@ -25,6 +25,11 @@ export const useAuthStore = defineStore('auth', () => {
   );
   const actorId = ref(localStorage.getItem('axis_actor_id') || '');
   const capsuleId = ref(localStorage.getItem('axis_capsule_id') || '');
+  const secureIntentAliasMode = ref(
+    localStorage.getItem('axis_secure_intent_alias_mode') === '1',
+  );
+  /** base64url-encoded 32-byte AES-256-GCM secret issued by the server on capsule creation */
+  const intentSecret = ref(localStorage.getItem('axis_intent_secret') || '');
 
   function persist() {
     localStorage.setItem('axis_keys', JSON.stringify(keys.value));
@@ -57,6 +62,23 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('axis_capsule_id', v);
   }
 
+  function setIntentSecret(v: string) {
+    intentSecret.value = v;
+    if (v) {
+      localStorage.setItem('axis_intent_secret', v);
+    } else {
+      localStorage.removeItem('axis_intent_secret');
+    }
+  }
+
+  function setSecureIntentAliasMode(v: boolean) {
+    secureIntentAliasMode.value = Boolean(v);
+    localStorage.setItem(
+      'axis_secure_intent_alias_mode',
+      secureIntentAliasMode.value ? '1' : '0',
+    );
+  }
+
   function getActiveKey(): KeyEntry | null {
     return keys.value.find((k) => k.id === activeKeyId.value) || null;
   }
@@ -66,11 +88,15 @@ export const useAuthStore = defineStore('auth', () => {
     activeKeyId,
     actorId,
     capsuleId,
+    secureIntentAliasMode,
+    intentSecret,
     addKey,
     removeKey,
     setActive,
     setActorId,
     setCapsuleId,
+    setSecureIntentAliasMode,
+    setIntentSecret,
     getActiveKey,
   };
 });

@@ -17,5 +17,5 @@ import {Notify,Dialog,LocalStorage,SessionStorage,Loading} from 'quasar'
 
 
 
-export default { config: {"dark":true,"brand":{"primary":"#00F5FF","secondary":"#1A1C20","accent":"#00DCE5","dark":"#111318","dark-page":"#0A0C10","positive":"#4ADE80","negative":"#FFB4AB","info":"#00DCE5","warning":"#FFB875"}},plugins: {Notify,Dialog,LocalStorage,SessionStorage,Loading} }
+export default { config: {"dark":true,"brand":{"primary":"#A855F7","secondary":"#120C28","accent":"#06FFA5","dark":"#080414","dark-page":"#030108","positive":"#06FFA5","negative":"#FF5C8A","info":"#38BDF8","warning":"#FFB547"}},plugins: {Notify,Dialog,LocalStorage,SessionStorage,Loading} }
 
