@@ -41,6 +41,36 @@ export type {
 // QR auth compatibility helpers
 export * from "./qr-auth";
 
+// Intent chains
+export {
+  buildChainStep,
+  buildIntentChain,
+  buildIntentEnvelope,
+} from "./chain/intent-chain";
+export {
+  decodeChainEnvelope,
+  decodeChainRequest,
+  encodeChainEnvelope,
+  encodeChainRequest,
+} from "./chain/binary-chain";
+export type {
+  AxisCapsuleRef,
+  AxisChainEnvelope,
+  AxisChainEncryption,
+  AxisChainRequest,
+  AxisChainResult,
+  AxisChainStatus,
+  AxisChainStep,
+  AxisChainStepResult,
+  AxisChainStepStatus,
+  AxisExecutionMode,
+  AxisIntentEnvelope,
+  AxisKeyExchangeRef,
+  AxisObserverEvent,
+  BuildIntentChainOptions,
+  BuildIntentEnvelopeOptions,
+} from "./chain/intent-chain";
+
 // Encoding utilities
 export {
   canonicalJson,

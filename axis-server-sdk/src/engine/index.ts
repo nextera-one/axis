@@ -1,9 +1,16 @@
 export * from './axis-decoded';
+export * from './axis-chain.executor';
+export * from './axis-chain.types';
+export * from './axis-execution-context';
 export * from './axis-observation';
+export * from './axis-observer.interface';
 export * from './handler-discovery.service';
 export * from './intent.router';
 export * from './observation';
+export * from './observer-discovery.service';
+export * from './observer-dispatcher.service';
 export * from './sensor-bands';
 export * from './sensor-discovery.service';
+export * from './registry/observer.registry';
 export * from './registry/sensor.registry';
 export * as observation from './observation';

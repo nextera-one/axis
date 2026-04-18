@@ -38,37 +38,73 @@ The package also initializes `reflect-metadata` on import so decorator-backed DT
 
 ## Quick Start
 
+### Intent Chains
+
+```typescript
+import { buildIntentChain } from "@nextera.one/axis-client-sdk";
+
+const chain = buildIntentChain({
+  mode: "strict",
+  capsule: {
+    capsuleId: "cap_01",
+    scopeMode: "chain+step",
+  },
+  keyExchange: {
+    profile: "cce-v1",
+    sessionId: "sess_kx_01",
+    clientKid: "client_ed25519_01",
+    serverKid: "axis_x25519_01",
+  },
+  observerTags: ["openlogs", "billing"],
+  steps: [
+    {
+      stepId: "s1",
+      intent: "invoice.create",
+      input: { customerId: "cus_100", amount: 120.5 },
+      proofRequired: true,
+    },
+    {
+      stepId: "s2",
+      intent: "invoice.sign",
+      dependsOn: ["s1"],
+      input: { invoiceId: "$s1.output.invoiceId" },
+      proofRequired: true,
+    },
+  ],
+});
+```
+
 ### Basic Usage (JSON)
 
 ```typescript
-import { AxisClient } from '@nextera.one/axis-client-sdk';
+import { AxisClient } from "@nextera.one/axis-client-sdk";
 
 const client = new AxisClient({
-  baseUrl: 'http://localhost:3000/api/axis',
-  actorId: 'your-actor-uuid',
+  baseUrl: "http://localhost:3000/api/axis",
+  actorId: "your-actor-uuid",
 });
 
-const result = await client.send('public.ping', { message: 'Hello' });
+const result = await client.send("public.ping", { message: "Hello" });
 console.log(result.data);
 ```
 
 ### Binary Protocol with Signing
 
 ```typescript
-import { AxisClient, Ed25519Signer } from '@nextera.one/axis-client-sdk';
+import { AxisClient, Ed25519Signer } from "@nextera.one/axis-client-sdk";
 
 // Create signer from private key
-const privateKey = Buffer.from('your-32-byte-private-key');
+const privateKey = Buffer.from("your-32-byte-private-key");
 const signer = new Ed25519Signer(privateKey);
 
 const client = new AxisClient({
-  baseUrl: 'http://localhost:3000/api/axis',
-  actorId: 'your-actor-uuid',
+  baseUrl: "http://localhost:3000/api/axis",
+  actorId: "your-actor-uuid",
   useBinary: true,
   signer, // Frames will be automatically signed
 });
 
-const result = await client.send('schema.validate', {
+const result = await client.send("schema.validate", {
   data: {
     /* your data */
   },
@@ -84,17 +120,17 @@ import {
   generateNonce,
   uuidToBytes,
   ProofType,
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const builder = new AxisFrameBuilder()
   .setPid(generatePid())
   .setTimestamp(BigInt(Date.now()))
-  .setIntent('public.ping')
-  .setActorId(uuidToBytes('your-actor-uuid'))
+  .setIntent("public.ping")
+  .setActorId(uuidToBytes("your-actor-uuid"))
   .setProofType(ProofType.CAPSULE)
   .setProofRef(Buffer.alloc(16)) // Capsule ID or empty
   .setNonce(generateNonce())
-  .setBodyJSON({ message: 'Hello' });
+  .setBodyJSON({ message: "Hello" });
 
 // Build unsigned frame
 const unsignedFrame = builder.buildUnsigned();
@@ -107,7 +143,7 @@ const signedFrame = builder.buildSigned(signature);
 ### File Upload with Progress
 
 ```typescript
-const result = await client.uploadFile('./large-file.dat', {
+const result = await client.uploadFile("./large-file.dat", {
   chunkSize: 1024 * 1024, // 1MB chunks
   onProgress: (progress) => {
     console.log(`Uploading: ${progress.percent}%`);
@@ -120,7 +156,7 @@ console.log(`File uploaded: ${result.fileId}`);
 ### File Download
 
 ```typescript
-await client.downloadFile('file-id', './downloaded-file.dat', {
+await client.downloadFile("file-id", "./downloaded-file.dat", {
   onProgress: (progress) => {
     console.log(`Downloaded: ${progress.percent}%`);
   },
@@ -133,21 +169,21 @@ await client.downloadFile('file-id', './downloaded-file.dat', {
 import {
   buildDeviceTrustPromoteRequest,
   buildSessionRefreshRequest,
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const actor = {
-  deviceUid: 'dev_mobile_primary_01',
-  identityUid: 'id_abc123',
-  sessionUid: 'sess_xyz',
-  origin: 'nestflow-key://mobile-app',
+  deviceUid: "dev_mobile_primary_01",
+  identityUid: "id_abc123",
+  sessionUid: "sess_xyz",
+  origin: "nestflow-key://mobile-app",
 };
 
 const promoteReq = buildDeviceTrustPromoteRequest(
-  { target_device_uid: 'dev_web_01', label: 'Work Chrome' },
+  { target_device_uid: "dev_web_01", label: "Work Chrome" },
   actor,
 );
 
-const refreshReq = buildSessionRefreshRequest({ reason: 'keepalive' }, actor);
+const refreshReq = buildSessionRefreshRequest({ reason: "keepalive" }, actor);
 
 await client.send(promoteReq.intent, promoteReq.payload);
 await client.send(refreshReq.intent, refreshReq.payload);
@@ -167,14 +203,14 @@ import {
   ed25519PublicKeyToSpkiBase64Url,
   signBrowserProofMessage,
   signQrApprovalPayload,
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const browserSigner = new Ed25519Signer(browserSeed);
 const mobileSigner = new Ed25519Signer(mobileSeed);
 
 const challenge = await client.send(
   AxisQrAuthIntents.CHALLENGE,
-  buildAxisQrChallengeRequest({ origin: 'https://app.example.com' }),
+  buildAxisQrChallengeRequest({ origin: "https://app.example.com" }),
 );
 
 const browserPublicKey = ed25519PublicKeyToSpkiBase64Url(
@@ -191,7 +227,7 @@ await client.send(
   buildAxisQrAttachKeyRequest({
     challengeUid: challenge.data.challengeUid,
     browserPublicKey,
-    browserKeyAlgorithm: 'ed25519',
+    browserKeyAlgorithm: "ed25519",
     browserProofSignature,
     trustDeviceRequested: true,
   }),
@@ -201,11 +237,12 @@ const approvalPayload = buildQrApprovalPayload({
   challengeUid: challenge.data.challengeUid,
   browserPublicKey,
   nonce: challenge.data.nonce,
-  tickauthChallengeUid: JSON.parse(challenge.data.qrPayload).tickAuthChallengeUid,
+  tickauthChallengeUid: JSON.parse(challenge.data.qrPayload)
+    .tickAuthChallengeUid,
   expiresAt: challenge.data.expiresAt,
-  actorId: 'actor_123',
+  actorId: "actor_123",
   approvedAt: Date.now(),
-  scope: ['axis.auth.*', 'axis.files.*'],
+  scope: ["axis.auth.*", "axis.files.*"],
 });
 
 const { signedPayload, signature } = await signQrApprovalPayload(
@@ -217,11 +254,11 @@ await client.send(
   AxisQrAuthIntents.APPROVE,
   buildAxisQrApproveRequest({
     challengeUid: challenge.data.challengeUid,
-    actorId: 'actor_123',
-    mobileDeviceUid: 'dev_mobile_primary_01',
+    actorId: "actor_123",
+    mobileDeviceUid: "dev_mobile_primary_01",
     signedPayload,
     signature,
-    scope: ['axis.auth.*', 'axis.files.*'],
+    scope: ["axis.auth.*", "axis.files.*"],
   }),
 );
 
@@ -241,16 +278,16 @@ import {
   P256Signer,
   exportSignerPublicKeySpkiBase64Url,
   generateP256KeyPair,
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const keyPair = generateP256KeyPair();
 const signer = new P256Signer(keyPair.privateKeyPkcs8Der, {
-  format: 'der',
-  type: 'pkcs8',
+  format: "der",
+  type: "pkcs8",
 });
 
 const publicKey = await exportSignerPublicKeySpkiBase64Url(signer);
-const signature = await signer.sign(new TextEncoder().encode('hello'));
+const signature = await signer.sign(new TextEncoder().encode("hello"));
 ```
 
 ### High-Level QR Orchestration
@@ -262,23 +299,23 @@ import {
   approveAxisQrLogin,
   initiateAxisQrLogin,
   waitForAxisQrVerification,
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const browserSigner = new Ed25519Signer(browserSeed);
 const mobileSigner = new Ed25519Signer(mobileSeed);
 
 const browserClient = new AxisClient({
-  baseUrl: 'http://localhost:3000',
-  actorId: 'actor:web',
+  baseUrl: "http://localhost:3000",
+  actorId: "actor:web",
 });
 
 const mobileClient = new AxisClient({
-  baseUrl: 'http://localhost:3000',
-  actorId: 'actor:mobile',
+  baseUrl: "http://localhost:3000",
+  actorId: "actor:mobile",
 });
 
 const started = await initiateAxisQrLogin(browserClient, browserSigner, {
-  origin: 'https://app.example.com',
+  origin: "https://app.example.com",
   trustDeviceRequested: true,
 });
 
@@ -288,10 +325,10 @@ await approveAxisQrLogin(mobileClient, {
   nonce: started.challenge.nonce,
   tickAuthChallengeUid: started.qr.tickAuthChallengeUid,
   expiresAt: started.challenge.expiresAt,
-  actorId: 'actor_123',
-  mobileDeviceUid: 'dev_mobile_01',
+  actorId: "actor_123",
+  mobileDeviceUid: "dev_mobile_01",
   signer: mobileSigner,
-  scope: ['axis.auth.*', 'axis.files.*'],
+  scope: ["axis.auth.*", "axis.files.*"],
 });
 
 const verified = await waitForAxisQrVerification(browserClient, {
@@ -379,7 +416,7 @@ const signed = builder.buildSigned(signature);
 Sign frames with Ed25519 signatures.
 
 ```typescript
-import { Ed25519Signer } from '@nextera.one/axis-client-sdk';
+import { Ed25519Signer } from "@nextera.one/axis-client-sdk";
 
 const signer = new Ed25519Signer(privateKey); // 32-byte seed
 
@@ -395,11 +432,11 @@ import {
   generateNonce, // Generate random 16-32 byte nonce
   uuidToBytes, // Convert UUID string to bytes
   bytesToUuid, // Convert bytes to UUID string
-} from '@nextera.one/axis-client-sdk';
+} from "@nextera.one/axis-client-sdk";
 
 const pid = generatePid();
 const nonce = generateNonce(32);
-const bytes = uuidToBytes('550e8400-e29b-41d4-a716-446655440000');
+const bytes = uuidToBytes("550e8400-e29b-41d4-a716-446655440000");
 const uuid = bytesToUuid(bytes);
 ```
 
@@ -415,7 +452,7 @@ import {
   getSignTarget,
   signFrame,
   verifyFrameSignature,
-} from '@nextera.one/axis-client-sdk/core';
+} from "@nextera.one/axis-client-sdk/core";
 
 // Encode frame to binary
 const buffer = encodeFrame(frame);
@@ -494,7 +531,7 @@ MAX_VARINT_BYTES = 5        // LEB128 encoding
 ## Error Handling
 
 ```typescript
-const result = await client.send('public.ping', {});
+const result = await client.send("public.ping", {});
 
 if (!result.ok) {
   console.error(`Error: ${result.error}`);

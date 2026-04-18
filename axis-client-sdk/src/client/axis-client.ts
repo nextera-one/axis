@@ -15,6 +15,16 @@ import {
   uuidToBytes,
 } from '../binary/frame-builder';
 import { ProofType } from '../binary/binary-types';
+import {
+  encodeChainRequest,
+} from '../chain/binary-chain';
+import {
+  type AxisChainEnvelope,
+  type AxisChainRequest,
+  type AxisChainResult,
+} from '../chain/intent-chain';
+import type { Capsule, SerializedCapsule } from '../core/capsule';
+import { serializeCapsule } from '../core/capsule';
 import { canonicalJson, fromBase64Url, toBase64Url } from '../utils/encoding';
 import { decodeFrame } from '../core/axis-bin';
 import { Signer } from '../signer';
@@ -123,31 +133,7 @@ export class AxisClient {
    * Send an intent with automatic retry
    */
   async send<T = any>(intent: string, body?: any): Promise<IntentResult<T>> {
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
-      try {
-        const result = await this.doSend(intent, body);
-        return { ok: true, data: result };
-      } catch (error: any) {
-        lastError = error;
-
-        // Don't retry on client errors (4xx)
-        if (error.response?.status >= 400 && error.response?.status < 500) {
-          return {
-            ok: false,
-            error: error.response?.data?.error || error.message,
-          };
-        }
-
-        // Wait before retry
-        if (attempt < this.config.maxRetries - 1) {
-          await this.delay(this.config.retryDelayMs * (attempt + 1));
-        }
-      }
-    }
-
-    return { ok: false, error: lastError?.message || 'Unknown error' };
+    return this.withRetries(() => this.doSend(intent, body));
   }
 
   /**
@@ -176,6 +162,41 @@ export class AxisClient {
     }
 
     return this.send('INTENT.EXEC', payload);
+  }
+
+  /**
+   * Helper for CHAIN.EXEC
+   */
+  async chain<T = AxisChainResult>(
+    envelope: AxisChainEnvelope,
+    options?: {
+      capsule?: Capsule | SerializedCapsule | Record<string, unknown>;
+      actorId?: string;
+    },
+  ): Promise<IntentResult<T>> {
+    const request: AxisChainRequest<
+      unknown,
+      SerializedCapsule | Record<string, unknown>
+    > = {
+      envelope,
+      actorId: options?.actorId,
+      capsule: this.normalizeCapsulePayload(options?.capsule),
+    };
+
+    if (!this.config.useBinary) {
+      return this.send<T>('CHAIN.EXEC', request);
+    }
+
+    const body = encodeChainRequest(request);
+    const capsuleId =
+      this.extractCapsuleId(request.capsule) || this.config.capsuleId || undefined;
+
+    return this.withRetries(() =>
+      this.doSendBinaryRaw('CHAIN.EXEC', body, {
+        chainReq: true,
+        capsuleId,
+      }) as Promise<T>,
+    );
   }
 
   /**
@@ -428,6 +449,34 @@ export class AxisClient {
     return this.doSendJSON(intent, body);
   }
 
+  private async withRetries<T>(
+    operation: () => Promise<T>,
+  ): Promise<IntentResult<T>> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
+      try {
+        const result = await operation();
+        return { ok: true, data: result };
+      } catch (error: any) {
+        lastError = error;
+
+        if (error.response?.status >= 400 && error.response?.status < 500) {
+          return {
+            ok: false,
+            error: error.response?.data?.error || error.message,
+          };
+        }
+
+        if (attempt < this.config.maxRetries - 1) {
+          await this.delay(this.config.retryDelayMs * (attempt + 1));
+        }
+      }
+    }
+
+    return { ok: false, error: lastError?.message || 'Unknown error' };
+  }
+
   private async doSendJSON(intent: string, body?: any): Promise<any> {
     const frame = await this.buildJsonFrame(intent, body || {});
 
@@ -440,64 +489,80 @@ export class AxisClient {
   }
 
   private async doSendBinary(intent: string, body?: any): Promise<any> {
+    return this.doSendBinaryRaw(intent, this.encodeBody(body), {
+      chainReq: intent === 'CHAIN.EXEC' || intent === 'axis.chain.exec',
+      capsuleId: this.config.capsuleId || undefined,
+    });
+  }
+
+  private async doSendBinaryRaw(
+    intent: string,
+    body: Uint8Array,
+    options?: {
+      chainReq?: boolean;
+      capsuleId?: string;
+    },
+  ): Promise<any> {
+    const proofRef = this.resolveProofRef(options?.capsuleId);
     const builder = new AxisFrameBuilder()
       .setPid(generatePid())
       .setTimestamp(BigInt(Date.now()))
       .setIntent(intent)
       .setActorId(uuidToBytes(this.config.actorId))
       .setProofType(ProofType.CAPSULE)
-      .setProofRef(
-        this.config.capsuleId
-          ? uuidToBytes(this.config.capsuleId)
-          : new Uint8Array(16),
-      )
+      .setProofRef(proofRef)
       .setNonce(generateNonce())
-      .setBody(new TextEncoder().encode(JSON.stringify(body || {})));
+      .setBody(body)
+      .setFlags(false, options?.chainReq ?? false, false);
 
-    // Build frame and sign if signer is available
     let frame: Uint8Array;
     if (this.config.signer) {
-      // Get unsigned frame for signing
       const unsignedFrame = builder.buildUnsigned();
       const signature = await this.config.signer.sign(unsignedFrame);
       frame = builder.buildSigned(new Uint8Array(signature));
     } else {
-      // Send unsigned frame (sensor will DENY if signature required)
       frame = builder.buildUnsigned();
     }
-
-    console.log(`[AxisClient] doSendBinary: POST ${this.config.baseUrl}`);
-    console.log(`[AxisClient] Headers: ${JSON.stringify({ 'Content-Type': 'application/axis-bin' })}`);
 
     const response = await axios.post(this.config.baseUrl, frame, {
       headers: { 'Content-Type': 'application/axis-bin' },
       responseType: 'arraybuffer',
       timeout: this.config.timeout,
     });
-    console.log(`[AxisClient] Response Status: ${response.status}`);
 
-    // FIX: ChatGPT Audit Gap C - Decode binary frame response correctly
-    // Server returns AXIS1 frame, not JSON
+    return this.parseBinaryResponse(response.data);
+  }
+
+  private parseBinaryResponse(payload: ArrayBuffer | Uint8Array): any {
+    const responseBytes = payload instanceof Uint8Array
+      ? payload
+      : new Uint8Array(payload);
+
     try {
-      const respFrame = decodeFrame(new Uint8Array(response.data));
-
-      // Check if body is JSON (RAW flag not set)
+      const respFrame = decodeFrame(responseBytes);
       if (respFrame.body.length === 0) {
         return null;
       }
 
-      // Try to decode as JSON first
       try {
-        const jsonStr = new TextDecoder().decode(respFrame.body);
-        return JSON.parse(jsonStr);
+        return JSON.parse(new TextDecoder().decode(respFrame.body));
       } catch {
-        // Return raw bytes if not JSON
         return respFrame.body;
       }
-    } catch (decodeError) {
-      // Fallback for non-frame responses (backward compatibility)
-      return JSON.parse(new TextDecoder().decode(response.data));
+    } catch {
+      return JSON.parse(new TextDecoder().decode(responseBytes));
     }
+  }
+
+  private encodeBody(body?: any): Uint8Array {
+    return new TextEncoder().encode(JSON.stringify(body || {}));
+  }
+
+  private resolveProofRef(capsuleId?: string): Uint8Array {
+    if (capsuleId) {
+      return uuidToBytes(capsuleId);
+    }
+    return new Uint8Array(16);
   }
 
   private delay(ms: number): Promise<void> {
@@ -511,6 +576,37 @@ export class AxisClient {
   private generateExecNonce(): string {
     // 12 bytes -> 16 chars base64url-ish, meets backend minimum of 8
     return toBase64Url(randomBytes(12));
+  }
+
+  private normalizeCapsulePayload(
+    capsule?: Capsule | SerializedCapsule | Record<string, unknown>,
+  ): SerializedCapsule | Record<string, unknown> | undefined {
+    if (!capsule) {
+      return undefined;
+    }
+
+    if (capsule instanceof Uint8Array) {
+      return undefined;
+    }
+
+    if (this.isRawCapsule(capsule)) {
+      return serializeCapsule(capsule);
+    }
+
+    return capsule as SerializedCapsule | Record<string, unknown>;
+  }
+
+  private extractCapsuleId(
+    capsule?: SerializedCapsule | Record<string, unknown>,
+  ): string | undefined {
+    const id = capsule?.id;
+    return typeof id === 'string' && id.length > 0 ? id : undefined;
+  }
+
+  private isRawCapsule(
+    capsule: Capsule | SerializedCapsule | Record<string, unknown>,
+  ): capsule is Capsule {
+    return capsule.id instanceof Uint8Array;
   }
 
   private buildUnsignedFrame(opcode: string, body: any): AxisFrame {

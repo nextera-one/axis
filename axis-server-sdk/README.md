@@ -44,7 +44,7 @@ Root exports are split into two groups:
 You can also import the grouped namespaces directly from the package root:
 
 ```ts
-import { core, crypto, engine, sensors } from '@nextera.one/axis-server-sdk';
+import { core, crypto, engine, sensors } from "@nextera.one/axis-server-sdk";
 ```
 
 ## Shared Core API
@@ -62,7 +62,7 @@ import {
   getSignTarget,
   signFrame,
   verifyFrameSignature,
-} from '@nextera.one/axis-server-sdk/core';
+} from "@nextera.one/axis-server-sdk/core";
 ```
 
 Notes:
@@ -81,10 +81,10 @@ import {
   Intent,
   IntentRouter,
   AxisEffect,
-} from '@nextera.one/axis-server-sdk';
-import type { AxisBinaryFrame } from '@nextera.one/axis-server-sdk/core';
+} from "@nextera.one/axis-server-sdk";
+import type { AxisBinaryFrame } from "@nextera.one/axis-server-sdk/core";
 
-@Handler('system')
+@Handler("system")
 export class SystemHandler {
   constructor(private readonly router: IntentRouter) {}
 
@@ -92,16 +92,61 @@ export class SystemHandler {
     this.router.registerHandler(this);
   }
 
-  @Intent('ping', { frame: true })
+  @Intent("ping", { frame: true })
   async ping(frame: AxisBinaryFrame): Promise<AxisEffect> {
     return {
       ok: true,
-      effect: 'PONG',
+      effect: "PONG",
       body: frame.body,
     };
   }
 }
 ```
+
+## Intent Chains And Observers
+
+The server SDK now supports first-class chain metadata and decorator-driven observer discovery.
+
+```ts
+import {
+  AxisChainExecutor,
+  Chain,
+  Handler,
+  Intent,
+  Observer,
+  type AxisIntentObserver,
+  type AxisObserverContext,
+} from "@nextera.one/axis-server-sdk";
+
+@Observer({
+  name: "openlogs",
+  events: ["chain.completed", "step.failed"],
+})
+export class OpenLogsObserver implements AxisIntentObserver {
+  readonly name = "openlogs";
+
+  observe(context: AxisObserverContext) {
+    console.log(context.event, context.chainId, context.stepId);
+  }
+}
+
+@Handler("invoice")
+@Observer(OpenLogsObserver)
+export class InvoiceHandler {
+  @Intent("create")
+  @Chain({ mode: "strict", proofRequired: true })
+  async create(body: Uint8Array) {
+    return Buffer.from(body);
+  }
+}
+```
+
+Runtime helpers:
+
+- `ObserverDiscoveryService` registers all `@Observer({...})` providers at bootstrap.
+- `IntentRouter.getObservers(intent)` returns the observer bindings discovered for an intent.
+- `IntentRouter.getChainConfig(intent)` returns the normalized chain metadata for an intent.
+- `AxisChainExecutor.execute(chainEnvelope)` runs dependency-aware chains in `strict`, `best_effort`, `parallel`, or `atomic` mode.
 
 ## Versioning
 

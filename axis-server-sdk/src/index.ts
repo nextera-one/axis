@@ -1,4 +1,9 @@
 // Decorators
+export { Chain, CHAIN_METADATA_KEY } from "./decorators/chain.decorator";
+export {
+  CapsulePolicy,
+  CAPSULE_POLICY_METADATA_KEY,
+} from "./decorators/capsule-policy.decorator";
 export { Handler, HANDLER_METADATA_KEY } from "./decorators/handler.decorator";
 export {
   Intent,
@@ -17,6 +22,21 @@ export {
   IntentSensors,
   INTENT_SENSORS_KEY,
 } from "./decorators/intent-sensors.decorator";
+export {
+  Observer,
+  OBSERVER_BINDINGS_KEY,
+  OBSERVER_METADATA_KEY,
+} from "./decorators/observer.decorator";
+export type {
+  CapsulePolicyOptions,
+  CapsuleScopeMode,
+} from "./decorators/capsule-policy.decorator";
+export type {
+  AxisObserverBinding,
+  AxisObserverBindingOptions,
+  AxisObserverDefinition,
+  AxisObserverRef,
+} from "./decorators/observer.decorator";
 export {
   HandlerSensors,
   HANDLER_SENSORS_KEY,
@@ -64,6 +84,38 @@ export {
 } from "./base/axis-response.dto";
 
 // Engine
+export { AxisChainExecutor } from "./engine/axis-chain.executor";
+export type {
+  AxisCapsuleRef,
+  AxisChainEnvelope,
+  AxisChainEncryption,
+  AxisChainRequest,
+  AxisChainResult,
+  AxisChainStatus,
+  AxisChainStep,
+  AxisChainStepResult,
+  AxisChainStepStatus,
+  AxisExecutionMode,
+  AxisIntentEnvelope,
+  AxisKeyExchangeRef,
+  AxisObserverEvent,
+  ChainOptions,
+  RegisteredChainConfig,
+} from "./engine/axis-chain.types";
+export type {
+  AxisExecutionContext,
+} from "./engine/axis-execution-context";
+export {
+  AXIS_EXECUTION_CONTEXT_KEY,
+  getAxisExecutionContext,
+  mergeAxisExecutionContext,
+  withAxisExecutionContext,
+} from "./engine/axis-execution-context";
+export type {
+  AxisIntentObserver,
+  AxisObserverContext,
+  AxisObserverRegistration,
+} from "./engine/axis-observer.interface";
 export { IntentRouter, AxisEffect } from "./engine/intent.router";
 export { BAND, PRE_DECODE_BOUNDARY } from "./engine/sensor-bands";
 export type { SensorBand } from "./engine/sensor-bands";
@@ -239,8 +291,11 @@ export {
 } from "./decorators/axis-request.decorator";
 export type { AxisRequestData } from "./decorators/axis-request.decorator";
 export { AxisError } from "./core/axis-error";
+export { ObserverDiscoveryService } from "./engine/observer-discovery.service";
+export { ObserverDispatcherService } from "./engine/observer-dispatcher.service";
 export { HandlerDiscoveryService } from "./engine/handler-discovery.service";
 export { SensorDiscoveryService } from "./engine/sensor-discovery.service";
+export { ObserverRegistry } from "./engine/registry/observer.registry";
 export { SensorRegistry } from "./engine/registry/sensor.registry";
 export type { AxisDecoded } from "./engine/axis-decoded";
 export {
