@@ -1,11 +1,15 @@
 import { decodeFrame, encodeFrame, AxisFrame } from '../core/axis-bin';
+import { AxisMediaTypes } from '../core/constants';
 
 export interface AxisTransport {
   send(frame: AxisFrame): Promise<AxisFrame>;
 }
 
 export class HttpTransport implements AxisTransport {
-  constructor(private readonly endpoint: string, private readonly options: RequestInit = {}) {}
+  constructor(
+    private readonly endpoint: string,
+    private readonly options: RequestInit = {},
+  ) {}
 
   async send(frame: AxisFrame): Promise<AxisFrame> {
     const reqBytes = encodeFrame(frame);
@@ -14,7 +18,7 @@ export class HttpTransport implements AxisTransport {
       method: 'POST',
       ...this.options,
       headers: {
-        'Content-Type': 'application/axis-bin',
+        'Content-Type': AxisMediaTypes.BINARY,
         ...this.options.headers,
       },
       body: reqBytes as any,

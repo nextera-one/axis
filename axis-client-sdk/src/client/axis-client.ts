@@ -17,6 +17,7 @@ import {
 import { ProofType } from '../binary/binary-types';
 import { canonicalJson, fromBase64Url, toBase64Url } from '../utils/encoding';
 import { decodeFrame } from '../core/axis-bin';
+import { AxisMediaTypes } from '../core/constants';
 import { Signer } from '../signer';
 
 export interface AxisClientConfig {
@@ -467,10 +468,12 @@ export class AxisClient {
     }
 
     console.log(`[AxisClient] doSendBinary: POST ${this.config.baseUrl}`);
-    console.log(`[AxisClient] Headers: ${JSON.stringify({ 'Content-Type': 'application/axis-bin' })}`);
+    console.log(
+      `[AxisClient] Headers: ${JSON.stringify({ 'Content-Type': AxisMediaTypes.BINARY })}`,
+    );
 
     const response = await axios.post(this.config.baseUrl, frame, {
-      headers: { 'Content-Type': 'application/axis-bin' },
+      headers: { 'Content-Type': AxisMediaTypes.BINARY },
       responseType: 'arraybuffer',
       timeout: this.config.timeout,
     });

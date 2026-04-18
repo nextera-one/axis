@@ -74,19 +74,19 @@ export const PROOF_LOOM = 4;
 export const PROOF_WITNESS = 5;
 
 export enum ProofType {
-	NONE = 0,
-	CAPSULE = 1,
-	JWT = 2,
-	MTLS = 3,
-	LOOM = 4,
-	WITNESS = 5,
+  NONE = 0,
+  CAPSULE = 1,
+  JWT = 2,
+  MTLS = 3,
+  LOOM = 4,
+  WITNESS = 5,
 }
 
 export enum BodyProfile {
-	RAW = 0,
-	TLV_MAP = 1,
-	OBJ = 2,
-	ARR = 3,
+  RAW = 0,
+  TLV_MAP = 1,
+  OBJ = 2,
+  ARR = 3,
 }
 
 // Error Codes
@@ -94,3 +94,38 @@ export const ERR_INVALID_PACKET = 'INVALID_PACKET';
 export const ERR_BAD_SIGNATURE = 'BAD_SIGNATURE';
 export const ERR_REPLAY_DETECTED = 'REPLAY_DETECTED';
 export const ERR_CONTRACT_VIOLATION = 'CONTRACT_VIOLATION';
+
+export abstract class AxisMediaTypes {
+  static readonly BINARY = 'application/axis-bin';
+  static readonly OCTET_STREAM = 'application/octet-stream';
+  static readonly LEGACY_BINARY = 'application/x-axis';
+  static readonly JSON = 'application/json';
+  static readonly TEXT = 'text/plain';
+
+  static readonly CLIENT_ACCEPT = [
+    AxisMediaTypes.BINARY,
+    AxisMediaTypes.JSON,
+    AxisMediaTypes.TEXT,
+  ].join(', ');
+
+  static readonly VALID_AXIS_CONTENT_TYPES = [
+    AxisMediaTypes.BINARY,
+    AxisMediaTypes.OCTET_STREAM,
+    AxisMediaTypes.LEGACY_BINARY,
+  ] as const;
+
+  static normalize(value?: string | null): string | undefined {
+    if (!value) return undefined;
+    return value.split(';', 1)[0].trim().toLowerCase();
+  }
+
+  static isAxisContentType(value?: string | null): boolean {
+    const normalized = AxisMediaTypes.normalize(value);
+    return (
+      !!normalized &&
+      AxisMediaTypes.VALID_AXIS_CONTENT_TYPES.some(
+        (contentType) => contentType === normalized,
+      )
+    );
+  }
+}

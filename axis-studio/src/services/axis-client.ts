@@ -22,6 +22,7 @@ import {
 import * as ed from '@noble/ed25519';
 
 import { useAuthStore } from 'stores/auth';
+import { AxisMediaTypes } from './axis-media-types';
 import { useConnectionStore } from 'stores/connection';
 import { useHistoryStore } from 'stores/history';
 
@@ -192,9 +193,7 @@ async function resolveWireIntent(
 
   const capsuleId = options.capsuleId?.trim() || '';
   if (!capsuleId) {
-    throw new Error(
-      'Secure alias mode is enabled, but Capsule ID is missing',
-    );
+    throw new Error('Secure alias mode is enabled, but Capsule ID is missing');
   }
 
   const intentSecret = options.intentSecret?.trim();
@@ -966,8 +965,8 @@ export async function sendIntent(
   }
 
   const requestHeaders = {
-    'Content-Type': 'application/axis-bin',
-    Accept: 'application/axis-bin, application/json, text/plain',
+    'Content-Type': AxisMediaTypes.BINARY,
+    Accept: AxisMediaTypes.CLIENT_ACCEPT,
     ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
   };
   const requestSnapshot = buildRequestSnapshot(
