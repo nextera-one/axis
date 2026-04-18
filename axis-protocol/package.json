@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-protocol",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AXIS Protocol core — canonical TLV encoding, frame codec, and protocol constants shared by all AXIS SDKs",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
