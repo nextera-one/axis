@@ -2,6 +2,18 @@ import { Injectable, Logger, Optional } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
 
+import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import type { CceRequestEnvelope } from "../cce/cce.types";
+import { AxisFrame } from "../core/axis-bin";
+import { AxisError } from "../core/axis-error";
+import {
+  TLV_ACTOR_ID,
+  TLV_CAPSULE,
+  TLV_INTENT,
+  TLV_NODE,
+  TLV_PROOF_REF,
+  TLV_REALM
+} from "../core/constants";
 import {
   CAPSULE_POLICY_METADATA_KEY,
   type CapsulePolicyOptions,
@@ -9,32 +21,26 @@ import {
   normalizeCapsulePolicyOptions,
 } from "../decorators/capsule-policy.decorator";
 import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
+import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
+import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
+import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
+import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
 import {
   AxisObserverBinding,
   AxisObserverRef,
   OBSERVER_BINDINGS_KEY,
 } from "../decorators/observer.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
-import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
-import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
-import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
-import { type CceHandler, type CceHandlerContext, type CceHandlerResult, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
-import type { CceRequestEnvelope } from "../cce/cce.types";
-import { AxisError } from "../core/axis-error";
-import { AxisFrame } from "../core/axis-bin";
 import {
-  TLV_ACTOR_ID,
-  TLV_AUD,
-  TLV_CAPSULE,
-  TLV_INTENT,
-  TLV_NODE,
-  TLV_PROOF_REF,
-  TLV_REALM,
-} from "../core/constants";
+  inlineCapsuleAllowsIntent,
+  inlineCapsuleSatisfiesScopes,
+  isInlineCapsuleExpired,
+  normalizeInlineCapsule,
+  resolvePolicyScopes,
+} from "../security/inline-capsule";
+import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
 import {
   AxisChainEnvelope,
   AxisChainRequest,
@@ -47,13 +53,6 @@ import {
   withAxisExecutionContext,
 } from "./axis-execution-context";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
-import {
-  inlineCapsuleAllowsIntent,
-  inlineCapsuleSatisfiesScopes,
-  isInlineCapsuleExpired,
-  normalizeInlineCapsule,
-  resolvePolicyScopes,
-} from "../security/inline-capsule";
 
 function observerRefKey(ref: AxisObserverRef): string {
   return typeof ref === "string" ? ref : ref.name;
@@ -832,11 +831,12 @@ export class IntentRouter {
         stepId: executionContext?.chainStep?.stepId,
       });
     } catch (error: any) {
+      this.logger.error(`Scope template error for ${intent}: ${error.message}`);
       throw new AxisError(
         "CAPSULE_SCOPE_TEMPLATE_UNRESOLVED",
-        error.message,
+        "Scope policy validation failed",
         400,
-        { intent, requiredScopes },
+        { intent },
       );
     }
 
@@ -865,7 +865,19 @@ export class IntentRouter {
     request: AxisChainRequest<unknown, Record<string, unknown>>,
   ): Promise<AxisEffect> {
     const { AxisChainExecutor } = await import("./axis-chain.executor");
-    const actorId = request.actorId || this.getActorIdFromFrame(frame);
+    const headerActorId = this.getActorIdFromFrame(frame);
+    if (
+      request.actorId &&
+      headerActorId &&
+      !this.identifiersMatch(request.actorId, headerActorId)
+    ) {
+      throw new AxisError(
+        "ACTOR_MISMATCH",
+        "CHAIN.EXEC actorId conflicts with authenticated frame identity",
+        403,
+      );
+    }
+    const actorId = headerActorId || request.actorId;
     const inlineCapsule = this.toInlineCapsuleRecord(request.capsule);
     const capsuleId = this.extractInlineCapsuleId(inlineCapsule);
     const headers = new Map(frame.headers);
