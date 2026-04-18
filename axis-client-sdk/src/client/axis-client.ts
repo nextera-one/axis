@@ -15,9 +15,7 @@ import {
   uuidToBytes,
 } from '../binary/frame-builder';
 import { ProofType } from '../binary/binary-types';
-import {
-  encodeChainRequest,
-} from '../chain/binary-chain';
+import { encodeChainRequest } from '../chain/binary-chain';
 import {
   type AxisChainEnvelope,
   type AxisChainRequest,
@@ -27,6 +25,7 @@ import type { Capsule, SerializedCapsule } from '../core/capsule';
 import { serializeCapsule } from '../core/capsule';
 import { canonicalJson, fromBase64Url, toBase64Url } from '../utils/encoding';
 import { decodeFrame } from '../core/axis-bin';
+import { AxisMediaTypes } from '../core/constants';
 import { Signer } from '../signer';
 
 export interface AxisClientConfig {
@@ -189,13 +188,16 @@ export class AxisClient {
 
     const body = encodeChainRequest(request);
     const capsuleId =
-      this.extractCapsuleId(request.capsule) || this.config.capsuleId || undefined;
+      this.extractCapsuleId(request.capsule) ||
+      this.config.capsuleId ||
+      undefined;
 
-    return this.withRetries(() =>
-      this.doSendBinaryRaw('CHAIN.EXEC', body, {
-        chainReq: true,
-        capsuleId,
-      }) as Promise<T>,
+    return this.withRetries(
+      () =>
+        this.doSendBinaryRaw('CHAIN.EXEC', body, {
+          chainReq: true,
+          capsuleId,
+        }) as Promise<T>,
     );
   }
 
@@ -523,9 +525,8 @@ export class AxisClient {
     } else {
       frame = builder.buildUnsigned();
     }
-
     const response = await axios.post(this.config.baseUrl, frame, {
-      headers: { 'Content-Type': 'application/axis-bin' },
+      headers: { 'Content-Type': AxisMediaTypes.BINARY },
       responseType: 'arraybuffer',
       timeout: this.config.timeout,
     });
@@ -534,9 +535,8 @@ export class AxisClient {
   }
 
   private parseBinaryResponse(payload: ArrayBuffer | Uint8Array): any {
-    const responseBytes = payload instanceof Uint8Array
-      ? payload
-      : new Uint8Array(payload);
+    const responseBytes =
+      payload instanceof Uint8Array ? payload : new Uint8Array(payload);
 
     try {
       const respFrame = decodeFrame(responseBytes);

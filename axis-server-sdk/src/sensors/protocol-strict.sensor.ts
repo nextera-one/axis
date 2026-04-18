@@ -8,6 +8,7 @@ import { AxisSensor } from '../sensor/axis-sensor';
 import {
   AXIS_MAGIC,
   AXIS_VERSION,
+  AxisMediaTypes,
   FLAG_BODY_TLV,
   FLAG_CHAIN_REQ,
   FLAG_HAS_WITNESS,
@@ -299,12 +300,7 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
    * Check if Content-Type is valid for AXIS
    */
   private isValidContentType(contentType: string): boolean {
-    const valid = [
-      'application/axis-bin',
-      'application/octet-stream',
-      'application/x-axis',
-    ];
-    return valid.some((v) => contentType.toLowerCase().includes(v));
+    return AxisMediaTypes.isAxisContentType(contentType);
   }
 
   /**

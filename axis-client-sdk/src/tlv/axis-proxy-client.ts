@@ -4,9 +4,14 @@
  * Uses varint TLV encoding (compatible with backend).
  */
 
-import { AxisRestBridge, RestRequest, AxisBuildOptions } from './axis-rest-bridge';
+import {
+  AxisRestBridge,
+  RestRequest,
+  AxisBuildOptions,
+} from './axis-rest-bridge';
 import { signTlvFrame } from './axis-capsule-builder';
 import { encodeFrame } from '../core/axis-bin';
+import { AxisMediaTypes } from '../core/constants';
 import type { Signer } from '../signer';
 
 const dec = new TextDecoder();
@@ -45,7 +50,9 @@ export class AxisProxyClient {
     const buildOpts: AxisBuildOptions = {
       baseUrl: this.opts.baseUrl,
       actorId: this.opts.actorId,
-      capsuleId: this.opts.capsuleId ? hexToBytes(this.opts.capsuleId) : undefined,
+      capsuleId: this.opts.capsuleId
+        ? hexToBytes(this.opts.capsuleId)
+        : undefined,
     };
 
     // Build header and body TLVs
@@ -65,13 +72,13 @@ export class AxisProxyClient {
 
     // Build AXIS frame (AXIS1 format)
     const flags = bodyTLVs.length > 0 ? 0x01 : 0x00; // BODY_TLV flag
-    
+
     // Create headers Map with proper typing
     const headersMap = new Map<number, Uint8Array>();
     for (const t of headerTLVs) {
       headersMap.set(t.type, new Uint8Array(t.value));
     }
-    
+
     return encodeFrame({
       flags,
       headers: headersMap,
@@ -99,7 +106,7 @@ export class AxisProxyClient {
       const res = await fetch(this.opts.proxyUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/axis-bin',
+          'Content-Type': AxisMediaTypes.BINARY,
         },
         body: bodyBuffer,
         signal: controller?.signal,

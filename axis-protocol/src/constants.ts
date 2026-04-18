@@ -8,6 +8,41 @@ export const AXIS_MAGIC = new Uint8Array([0x41, 0x58, 0x49, 0x53, 0x31]);
  */
 export const AXIS_VERSION = 0x01;
 
+export abstract class AxisMediaTypes {
+  static readonly BINARY = 'application/axis-bin';
+  static readonly OCTET_STREAM = 'application/octet-stream';
+  static readonly LEGACY_BINARY = 'application/x-axis';
+  static readonly JSON = 'application/json';
+  static readonly TEXT = 'text/plain';
+
+  static readonly VALID_AXIS_CONTENT_TYPES = [
+    AxisMediaTypes.BINARY,
+    AxisMediaTypes.OCTET_STREAM,
+    AxisMediaTypes.LEGACY_BINARY,
+  ] as const;
+
+  static readonly CLIENT_ACCEPT = [
+    AxisMediaTypes.BINARY,
+    AxisMediaTypes.JSON,
+    AxisMediaTypes.TEXT,
+  ].join(', ');
+
+  static normalize(value?: string | null): string | undefined {
+    if (!value) return undefined;
+    return value.split(';', 1)[0].trim().toLowerCase();
+  }
+
+  static isAxisContentType(value?: string | null): boolean {
+    const normalized = AxisMediaTypes.normalize(value);
+    return (
+      !!normalized &&
+      AxisMediaTypes.VALID_AXIS_CONTENT_TYPES.some(
+        (contentType) => contentType === normalized,
+      )
+    );
+  }
+}
+
 /**
  * Maximum allowed size for the Header section in bytes.
  */
