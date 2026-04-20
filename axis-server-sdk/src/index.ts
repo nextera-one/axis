@@ -4,6 +4,28 @@ export {
   CapsulePolicy,
   CAPSULE_POLICY_METADATA_KEY,
 } from "./decorators/capsule-policy.decorator";
+export {
+  Axis,
+  AXIS_META_KEY,
+  AxisPublic,
+  AXIS_PUBLIC_KEY,
+  AxisAnonymous,
+  AXIS_ANONYMOUS_KEY,
+  AxisRateLimit,
+  AXIS_RATE_LIMIT_KEY,
+  Sensitivity,
+  SENSITIVITY_METADATA_KEY,
+  Contract,
+  CONTRACT_METADATA_KEY,
+  RequiredProof,
+  REQUIRED_PROOF_METADATA_KEY,
+  Capsule,
+  Witness,
+} from "./decorators/intent-policy.decorator";
+export type {
+  RequiredProofKind,
+  AxisRateLimitConfig,
+} from "./decorators/intent-policy.decorator";
 export { Handler, HANDLER_METADATA_KEY } from "./decorators/handler.decorator";
 export {
   Intent,
@@ -102,9 +124,7 @@ export type {
   ChainOptions,
   RegisteredChainConfig,
 } from "./engine/axis-chain.types";
-export type {
-  AxisExecutionContext,
-} from "./engine/axis-execution-context";
+export type { AxisExecutionContext } from "./engine/axis-execution-context";
 export {
   AXIS_EXECUTION_CONTEXT_KEY,
   getAxisExecutionContext,
