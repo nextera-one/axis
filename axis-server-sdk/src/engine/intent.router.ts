@@ -25,6 +25,16 @@ import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
+import {
+  AXIS_ANONYMOUS_KEY,
+  AXIS_PUBLIC_KEY,
+  AXIS_RATE_LIMIT_KEY,
+  type AxisRateLimitConfig,
+  CONTRACT_METADATA_KEY,
+  type RequiredProofKind,
+  REQUIRED_PROOF_METADATA_KEY,
+  SENSITIVITY_METADATA_KEY,
+} from "../decorators/intent-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
 import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
 import {
@@ -202,6 +212,24 @@ export class IntentRouter {
 
   /** Per-intent capsule policies */
   private intentCapsulePolicies = new Map<string, CapsulePolicyOptions>();
+
+  /** Per-intent sensitivity level */
+  private intentSensitivity = new Map<string, string>();
+
+  /** Per-intent execution contract overrides */
+  private intentContracts = new Map<string, Record<string, any>>();
+
+  /** Per-intent required proof kinds */
+  private intentRequiredProof = new Map<string, RequiredProofKind[]>();
+
+  /** Intents flagged as public (no auth required) */
+  private publicIntents = new Set<string>();
+
+  /** Intents flagged as anonymous-session accessible */
+  private anonymousIntents = new Set<string>();
+
+  /** Per-intent rate limit config */
+  private intentRateLimits = new Map<string, AxisRateLimitConfig>();
 
   /** CCE handler registry */
   private cceHandlers = new Map<string, CceHandler>();
@@ -616,9 +644,77 @@ export class IntentRouter {
         this.intentChains.set(intent, chainConfig);
       }
     }
+
+    // ── @Sensitivity ────────────────────────────────────────────────────────
+    const methodSensitivity: string | undefined = Reflect.getMetadata(SENSITIVITY_METADATA_KEY, proto, methodName);
+    const classSensitivity: string | undefined = Reflect.getMetadata(SENSITIVITY_METADATA_KEY, proto.constructor);
+    const sensitivity = methodSensitivity ?? classSensitivity;
+    if (sensitivity) {
+      this.intentSensitivity.set(intent, sensitivity);
+    }
+
+    // ── @Contract ───────────────────────────────────────────────────────────
+    const methodContract: Record<string, any> | undefined = Reflect.getMetadata(CONTRACT_METADATA_KEY, proto, methodName);
+    const classContract: Record<string, any> | undefined = Reflect.getMetadata(CONTRACT_METADATA_KEY, proto.constructor);
+    const contract = methodContract ?? classContract;
+    if (contract) {
+      this.intentContracts.set(intent, contract);
+    }
+
+    // ── @RequiredProof / @Capsule / @Witness ─────────────────────────────────
+    const methodProof: RequiredProofKind[] | undefined = Reflect.getMetadata(REQUIRED_PROOF_METADATA_KEY, proto, methodName);
+    const classProof: RequiredProofKind[] | undefined = Reflect.getMetadata(REQUIRED_PROOF_METADATA_KEY, proto.constructor);
+    const requiredProof = methodProof ?? classProof;
+    if (requiredProof && requiredProof.length > 0) {
+      this.intentRequiredProof.set(intent, requiredProof);
+    }
+
+    // ── @AxisPublic ──────────────────────────────────────────────────────────
+    const isPublicMethod: boolean | undefined = Reflect.getMetadata(AXIS_PUBLIC_KEY, proto, methodName);
+    const isPublicClass: boolean | undefined = Reflect.getMetadata(AXIS_PUBLIC_KEY, proto.constructor);
+    if (isPublicMethod || isPublicClass) {
+      this.publicIntents.add(intent);
+    }
+
+    // ── @AxisAnonymous ───────────────────────────────────────────────────────
+    const isAnonMethod: boolean | undefined = Reflect.getMetadata(AXIS_ANONYMOUS_KEY, proto, methodName);
+    const isAnonClass: boolean | undefined = Reflect.getMetadata(AXIS_ANONYMOUS_KEY, proto.constructor);
+    if (isAnonMethod || isAnonClass) {
+      this.anonymousIntents.add(intent);
+    }
+
+    // ── @AxisRateLimit ───────────────────────────────────────────────────────
+    const rateLimit: AxisRateLimitConfig | undefined = Reflect.getMetadata(AXIS_RATE_LIMIT_KEY, proto, methodName);
+    if (rateLimit) {
+      this.intentRateLimits.set(intent, rateLimit);
+    }
   }
 
-  private async emitIntentObservers(
+  // ─── Policy Getters ────────────────────────────────────────────────────────
+
+  getSensitivity(intent: string): string | undefined {
+    return this.intentSensitivity.get(intent);
+  }
+
+  getContract(intent: string): Record<string, any> | undefined {
+    return this.intentContracts.get(intent);
+  }
+
+  getRequiredProof(intent: string): RequiredProofKind[] | undefined {
+    return this.intentRequiredProof.get(intent);
+  }
+
+  isPublic(intent: string): boolean {
+    return this.publicIntents.has(intent);
+  }
+
+  isAnonymous(intent: string): boolean {
+    return this.anonymousIntents.has(intent);
+  }
+
+  getRateLimit(intent: string): AxisRateLimitConfig | undefined {
+    return this.intentRateLimits.get(intent);
+  }
     bindings: AxisObserverBinding[],
     context: Parameters<ObserverDispatcherService["dispatch"]>[1],
   ): Promise<void> {

@@ -222,3 +222,141 @@ export function Witness(): ClassDecorator & MethodDecorator {
     }
   }) as ClassDecorator & MethodDecorator;
 }
+
+// ─── @AxisPublic ──────────────────────────────────────────────────────────────
+
+/**
+ * Metadata key stamped on a class or method to mark it as public.
+ * Read by HandlerDiscoveryService and injected into SensorInput.metadata.isPublic.
+ */
+export const AXIS_PUBLIC_KEY = "axis:public";
+
+/**
+ * @AxisPublic — Marks a handler class or individual intent method as public.
+ *
+ * Public intents bypass signature verification and authentication sensors.
+ * Use for discovery/catalog endpoints, health checks, and registration flows.
+ *
+ * Applied at class level → all intents in the handler are public.
+ * Applied at method level → only that intent is public.
+ *
+ * @example
+ * ```typescript
+ * @AxisPublic()
+ * @Handler('catalog')
+ * export class CatalogHandler { ... }
+ *
+ * // Single public intent inside an authenticated handler:
+ * @Handler('axis.auth')
+ * export class AuthHandler {
+ *   @AxisPublic()
+ *   @Intent('axis.auth.register', { absolute: true, kind: 'action' })
+ *   async register(...) { ... }
+ * }
+ * ```
+ */
+export function AxisPublic(): ClassDecorator & MethodDecorator {
+  return (
+    target: any,
+    propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor,
+  ) => {
+    if (descriptor) {
+      Reflect.defineMetadata(AXIS_PUBLIC_KEY, true, target, propertyKey!);
+      return descriptor;
+    }
+    Reflect.defineMetadata(AXIS_PUBLIC_KEY, true, target);
+    return target;
+  };
+}
+
+// ─── @AxisAnonymous ───────────────────────────────────────────────────────────
+
+/**
+ * Metadata key stamped on a class or method to mark it as anonymous-accessible.
+ * Anonymous intents can be called with an anonymous-session capsule.
+ * Read by HandlerDiscoveryService and injected into SensorInput.metadata.isAnonymous.
+ */
+export const AXIS_ANONYMOUS_KEY = "axis:anonymous";
+
+/**
+ * @AxisAnonymous — Marks a handler class or individual intent method as
+ * accessible to anonymous sessions.
+ *
+ * Anonymous intents require an anonymous-session capsule (issued via
+ * `public.session.anonymous`) but do NOT require full actor authentication.
+ * A step above `@AxisPublic` (which needs no capsule at all).
+ *
+ * Applied at class level → all intents in the handler are anonymous-accessible.
+ * Applied at method level → only that intent is anonymous-accessible.
+ *
+ * @example
+ * ```typescript
+ * @Handler('catalog')
+ * export class CatalogHandler {
+ *   @AxisAnonymous()
+ *   @Intent('catalog.list', { absolute: true, kind: 'read' })
+ *   async list(body: Uint8Array) { ... }
+ * }
+ * ```
+ */
+export function AxisAnonymous(): ClassDecorator & MethodDecorator {
+  return (
+    target: any,
+    propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor,
+  ) => {
+    if (descriptor) {
+      Reflect.defineMetadata(AXIS_ANONYMOUS_KEY, true, target, propertyKey!);
+      return descriptor;
+    }
+    Reflect.defineMetadata(AXIS_ANONYMOUS_KEY, true, target);
+    return target;
+  };
+}
+
+// ─── @AxisRateLimit ───────────────────────────────────────────────────────────
+
+/**
+ * Metadata key for per-intent rate limit config.
+ * Stamped on a method by @AxisRateLimit.
+ * Read by HandlerDiscoveryService and consumed by RateLimitSensor at runtime.
+ */
+export const AXIS_RATE_LIMIT_KEY = "axis:rateLimit";
+
+export interface AxisRateLimitConfig {
+  /** Maximum requests allowed within the window. */
+  max: number;
+  /** Sliding window duration in seconds. */
+  windowSec: number;
+  /**
+   * Key strategy or named bucket.
+   * e.g. 'ip_fingerprint' | 'actor_capsule' | 'auth' | 'qr-scan'
+   */
+  key?: string;
+}
+
+/**
+ * @AxisRateLimit — Per-intent rate limit configuration.
+ *
+ * Overrides the handler-level or global default rate limit for a single intent.
+ * The config is read by HandlerDiscoveryService and injected into
+ * SensorInput.metadata.rateLimit, consumed by RateLimitSensor at runtime.
+ *
+ * @example
+ * ```typescript
+ * @AxisRateLimit({ max: 5, windowSec: 60, key: 'ip_fingerprint' })
+ * @Intent('axis.auth.login', { absolute: true, kind: 'action' })
+ * async login(body: Uint8Array) { ... }
+ * ```
+ */
+export function AxisRateLimit(config: AxisRateLimitConfig): MethodDecorator {
+  return (
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: PropertyDescriptor,
+  ) => {
+    Reflect.defineMetadata(AXIS_RATE_LIMIT_KEY, config, target, propertyKey);
+    return descriptor;
+  };
+}
