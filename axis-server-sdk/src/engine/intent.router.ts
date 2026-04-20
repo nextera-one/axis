@@ -1,8 +1,16 @@
 import { Injectable, Logger, Optional } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
-import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
+import {
+  decodeChainEnvelope,
+  decodeChainRequest,
+} from "@nextera.one/axis-protocol";
 
-import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import {
+  type CceHandler,
+  type CcePipelineConfig,
+  type CcePipelineResult,
+  executeCcePipeline,
+} from "../cce/cce-pipeline";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
 import { AxisError } from "../core/axis-error";
@@ -12,7 +20,7 @@ import {
   TLV_INTENT,
   TLV_NODE,
   TLV_PROOF_REF,
-  TLV_REALM
+  TLV_REALM,
 } from "../core/constants";
 import {
   CAPSULE_POLICY_METADATA_KEY,
@@ -21,7 +29,10 @@ import {
   normalizeCapsulePolicyOptions,
 } from "../decorators/capsule-policy.decorator";
 import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
-import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
+import {
+  buildDtoDecoder,
+  extractDtoSchema,
+} from "../decorators/dto-schema.util";
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
@@ -36,7 +47,13 @@ import {
   SENSITIVITY_METADATA_KEY,
 } from "../decorators/intent-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField } from "../decorators/intent.decorator";
+import {
+  INTENT_METADATA_KEY,
+  INTENT_ROUTES_KEY,
+  IntentKind,
+  IntentRoute,
+  IntentTlvField,
+} from "../decorators/intent.decorator";
 import {
   AxisObserverBinding,
   AxisObserverRef,
@@ -50,7 +67,11 @@ import {
   normalizeInlineCapsule,
   resolvePolicyScopes,
 } from "../security/inline-capsule";
-import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
+import {
+  AxisSensor,
+  normalizeSensorDecision,
+  SensorInput,
+} from "../sensor/axis-sensor";
 import {
   AxisChainEnvelope,
   AxisChainRequest,
@@ -321,7 +342,9 @@ export class IntentRouter {
 
     const routes: IntentRoute[] =
       Reflect.getMetadata(INTENT_ROUTES_KEY, instance.constructor) || [];
-    const routedMethods = new Set(routes.map((route) => String(route.methodName)));
+    const routedMethods = new Set(
+      routes.map((route) => String(route.methodName)),
+    );
 
     // Read @HandlerSensors from the class (if any)
     const handlerSensors: Function[] =
@@ -358,7 +381,9 @@ export class IntentRouter {
       const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, key);
       if (!meta?.intent) continue;
 
-      const intentName = meta.absolute ? meta.intent : `${prefix}.${meta.intent}`;
+      const intentName = meta.absolute
+        ? meta.intent
+        : `${prefix}.${meta.intent}`;
 
       if (!this.handlers.has(intentName)) {
         this.register(intentName, (instance as any)[key].bind(instance));
@@ -646,45 +671,84 @@ export class IntentRouter {
     }
 
     // ── @Sensitivity ────────────────────────────────────────────────────────
-    const methodSensitivity: string | undefined = Reflect.getMetadata(SENSITIVITY_METADATA_KEY, proto, methodName);
-    const classSensitivity: string | undefined = Reflect.getMetadata(SENSITIVITY_METADATA_KEY, proto.constructor);
+    const methodSensitivity: string | undefined = Reflect.getMetadata(
+      SENSITIVITY_METADATA_KEY,
+      proto,
+      methodName,
+    );
+    const classSensitivity: string | undefined = Reflect.getMetadata(
+      SENSITIVITY_METADATA_KEY,
+      proto.constructor,
+    );
     const sensitivity = methodSensitivity ?? classSensitivity;
     if (sensitivity) {
       this.intentSensitivity.set(intent, sensitivity);
     }
 
     // ── @Contract ───────────────────────────────────────────────────────────
-    const methodContract: Record<string, any> | undefined = Reflect.getMetadata(CONTRACT_METADATA_KEY, proto, methodName);
-    const classContract: Record<string, any> | undefined = Reflect.getMetadata(CONTRACT_METADATA_KEY, proto.constructor);
+    const methodContract: Record<string, any> | undefined = Reflect.getMetadata(
+      CONTRACT_METADATA_KEY,
+      proto,
+      methodName,
+    );
+    const classContract: Record<string, any> | undefined = Reflect.getMetadata(
+      CONTRACT_METADATA_KEY,
+      proto.constructor,
+    );
     const contract = methodContract ?? classContract;
     if (contract) {
       this.intentContracts.set(intent, contract);
     }
 
     // ── @RequiredProof / @Capsule / @Witness ─────────────────────────────────
-    const methodProof: RequiredProofKind[] | undefined = Reflect.getMetadata(REQUIRED_PROOF_METADATA_KEY, proto, methodName);
-    const classProof: RequiredProofKind[] | undefined = Reflect.getMetadata(REQUIRED_PROOF_METADATA_KEY, proto.constructor);
+    const methodProof: RequiredProofKind[] | undefined = Reflect.getMetadata(
+      REQUIRED_PROOF_METADATA_KEY,
+      proto,
+      methodName,
+    );
+    const classProof: RequiredProofKind[] | undefined = Reflect.getMetadata(
+      REQUIRED_PROOF_METADATA_KEY,
+      proto.constructor,
+    );
     const requiredProof = methodProof ?? classProof;
     if (requiredProof && requiredProof.length > 0) {
       this.intentRequiredProof.set(intent, requiredProof);
     }
 
     // ── @AxisPublic ──────────────────────────────────────────────────────────
-    const isPublicMethod: boolean | undefined = Reflect.getMetadata(AXIS_PUBLIC_KEY, proto, methodName);
-    const isPublicClass: boolean | undefined = Reflect.getMetadata(AXIS_PUBLIC_KEY, proto.constructor);
+    const isPublicMethod: boolean | undefined = Reflect.getMetadata(
+      AXIS_PUBLIC_KEY,
+      proto,
+      methodName,
+    );
+    const isPublicClass: boolean | undefined = Reflect.getMetadata(
+      AXIS_PUBLIC_KEY,
+      proto.constructor,
+    );
     if (isPublicMethod || isPublicClass) {
       this.publicIntents.add(intent);
     }
 
     // ── @AxisAnonymous ───────────────────────────────────────────────────────
-    const isAnonMethod: boolean | undefined = Reflect.getMetadata(AXIS_ANONYMOUS_KEY, proto, methodName);
-    const isAnonClass: boolean | undefined = Reflect.getMetadata(AXIS_ANONYMOUS_KEY, proto.constructor);
+    const isAnonMethod: boolean | undefined = Reflect.getMetadata(
+      AXIS_ANONYMOUS_KEY,
+      proto,
+      methodName,
+    );
+    const isAnonClass: boolean | undefined = Reflect.getMetadata(
+      AXIS_ANONYMOUS_KEY,
+      proto.constructor,
+    );
     if (isAnonMethod || isAnonClass) {
       this.anonymousIntents.add(intent);
     }
 
     // ── @AxisRateLimit ───────────────────────────────────────────────────────
-    const rateLimit: AxisRateLimitConfig | undefined = Reflect.getMetadata(AXIS_RATE_LIMIT_KEY, proto, methodName);
+    const rateLimit: AxisRateLimitConfig | undefined = Reflect.getMetadata(
+      AXIS_RATE_LIMIT_KEY,
+      proto,
+      methodName,
+    );
     if (rateLimit) {
       this.intentRateLimits.set(intent, rateLimit);
     }
@@ -715,6 +779,8 @@ export class IntentRouter {
   getRateLimit(intent: string): AxisRateLimitConfig | undefined {
     return this.intentRateLimits.get(intent);
   }
+
+  private async emitIntentObservers(
     bindings: AxisObserverBinding[],
     context: Parameters<ObserverDispatcherService["dispatch"]>[1],
   ): Promise<void> {
@@ -842,7 +908,8 @@ export class IntentRouter {
       );
     }
 
-    const actorId = this.getActorIdFromFrame(frame) || executionContext?.actorId;
+    const actorId =
+      this.getActorIdFromFrame(frame) || executionContext?.actorId;
     if (
       actorId &&
       inlineCapsule.actorId &&
@@ -899,7 +966,10 @@ export class IntentRouter {
     }
 
     const shouldCheckIntent = normalizedPolicy?.intentBound ?? true;
-    if (shouldCheckIntent && !inlineCapsuleAllowsIntent(inlineCapsule, intent)) {
+    if (
+      shouldCheckIntent &&
+      !inlineCapsuleAllowsIntent(inlineCapsule, intent)
+    ) {
       throw new AxisError(
         "CAPSULE_DENIED",
         `Capsule does not authorize ${intent}`,
@@ -1014,9 +1084,7 @@ export class IntentRouter {
     };
   }
 
-  private parseIntentExecBody(
-    bytes: Uint8Array,
-  ): {
+  private parseIntentExecBody(bytes: Uint8Array): {
     intent: string;
     args?: unknown;
     capsule?: Record<string, unknown>;
@@ -1040,7 +1108,8 @@ export class IntentRouter {
         return {
           envelope: parsed.envelope,
           capsule: this.toInlineCapsuleRecord(parsed.capsule),
-          actorId: typeof parsed.actorId === "string" ? parsed.actorId : undefined,
+          actorId:
+            typeof parsed.actorId === "string" ? parsed.actorId : undefined,
         };
       }
 
@@ -1052,7 +1121,9 @@ export class IntentRouter {
     }
 
     try {
-      const decoded = decodeChainRequest<unknown, Record<string, unknown>>(bytes);
+      const decoded = decodeChainRequest<unknown, Record<string, unknown>>(
+        bytes,
+      );
       return {
         envelope: decoded.envelope,
         capsule: this.toInlineCapsuleRecord(decoded.capsule),
@@ -1064,7 +1135,11 @@ export class IntentRouter {
           envelope: decodeChainEnvelope(bytes) as AxisChainEnvelope,
         };
       } catch (envelopeError: any) {
-        const reason = [jsonError?.message, requestError.message, envelopeError.message]
+        const reason = [
+          jsonError?.message,
+          requestError.message,
+          envelopeError.message,
+        ]
           .filter(Boolean)
           .join(" | ");
         throw new Error(`CHAIN.EXEC decode failed: ${reason}`);
@@ -1101,7 +1176,10 @@ export class IntentRouter {
   }
 
   private getProofRefFromFrame(frame: AxisFrame): string | undefined {
-    return this.getHeaderValue(frame, TLV_PROOF_REF) || this.getHeaderValue(frame, TLV_CAPSULE);
+    return (
+      this.getHeaderValue(frame, TLV_PROOF_REF) ||
+      this.getHeaderValue(frame, TLV_CAPSULE)
+    );
   }
 
   private hasCapsuleReference(frame: AxisFrame): boolean {
