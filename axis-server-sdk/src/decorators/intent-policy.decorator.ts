@@ -5,6 +5,9 @@ import type { ProofKind, SensitivityLevel } from "../schemas/axis-schemas";
 
 // ─── Metadata Keys ────────────────────────────────────────────────────────────
 
+/** Metadata key stamped by @Axis on the protocol entry class. */
+export const AXIS_META_KEY = "axis:axis";
+
 export const SENSITIVITY_METADATA_KEY = "axis:sensitivity";
 export const CONTRACT_METADATA_KEY = "axis:contract";
 export const REQUIRED_PROOF_METADATA_KEY = "axis:required_proof";
@@ -221,6 +224,28 @@ export function Witness(): ClassDecorator & MethodDecorator {
       );
     }
   }) as ClassDecorator & MethodDecorator;
+}
+
+// ─── @Axis ───────────────────────────────────────────────────────────────────
+
+/**
+ * @Axis — AXIS protocol entry point decorator.
+ *
+ * Marks a class as the single binary pipeline entry. The decorated class
+ * is auto-discovered by `AxisEngineModule` and wired to `POST /axis`.
+ * There must be exactly ONE `@Axis()` class in the application.
+ *
+ * @example
+ * ```typescript
+ * @Axis()
+ * @Injectable()
+ * export class AxisEntry implements NestMiddleware { ... }
+ * ```
+ */
+export function Axis(): ClassDecorator {
+  return (target: Function) => {
+    Reflect.defineMetadata(AXIS_META_KEY, { entry: true }, target);
+  };
 }
 
 // ─── @AxisPublic ──────────────────────────────────────────────────────────────
