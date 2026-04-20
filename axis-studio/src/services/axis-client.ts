@@ -18,33 +18,34 @@ import {
   generateNonce,
   generatePid,
   uuidToBytes,
-} from '@nextera.one/axis-client-sdk/browser';
-import * as ed from '@noble/ed25519';
+} from "@nextera.one/axis-client-sdk/browser";
+import * as ed from "@noble/ed25519";
 
-import { useAuthStore } from 'stores/auth';
-import { AxisMediaTypes } from './axis-media-types';
-import { useConnectionStore } from 'stores/connection';
-import { useHistoryStore } from 'stores/history';
+import { useAuthStore } from "stores/auth";
+import { AxisMediaTypes } from "./axis-media-types";
+import { useConnectionStore } from "stores/connection";
+import { useHistoryStore } from "stores/history";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const EMPTY_16 = new Uint8Array(16);
 const MAX_RAW_CHARS = 16_000;
-const DEV_PROXY_PATH = '/axis';
-const DEV_PROXY_TARGET_HEADER = 'X-AXIS-Proxy-Target';
+const DEV_PROXY_PATH = "/axis";
+const DEV_PROXY_TARGET_HEADER = "X-AXIS-Proxy-Target";
 
 // Intent prefixes that are always routed plain by the server (no decryption).
 // Must stay in sync with IntentAliasService.PASSTHROUGH_PREFIXES on the backend.
 const INTENT_PASSTHROUGH_PREFIXES = [
-  'public.',
-  'schema.',
-  'system.',
-  'health.',
+  "public.",
+  "schema.",
+  "system.",
+  "health.",
+  "catalog.",
 ];
 const CAPSULE_BOOTSTRAP_INTENTS = [
-  'axis.capsules.create',
-  'capsule.issue',
-  'capsule.create',
+  "axis.capsules.create",
+  "capsule.issue",
+  "capsule.create",
 ];
 
 function isPassthroughIntent(intent: string): boolean {
@@ -52,12 +53,12 @@ function isPassthroughIntent(intent: string): boolean {
 }
 
 type SnapshotTransport =
-  | 'axis-bin'
-  | 'json'
-  | 'cce-response'
-  | 'cce-error'
-  | 'text'
-  | 'binary';
+  | "axis-bin"
+  | "json"
+  | "cce-response"
+  | "cce-error"
+  | "text"
+  | "binary";
 
 export interface ProtocolSnapshot {
   transport: SnapshotTransport;
@@ -86,20 +87,20 @@ interface AxisFrameLike {
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function formatHex(bytes: Uint8Array, columns = 16): string {
-  if (!bytes.length) return '(empty)';
+  if (!bytes.length) return "(empty)";
   const lines: string[] = [];
   for (let i = 0; i < bytes.length; i += columns) {
     const row = Array.from(bytes.slice(i, i + columns))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(' ');
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(" ");
     lines.push(row);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function truncateRaw(raw: string, limit = MAX_RAW_CHARS): string {
@@ -108,8 +109,8 @@ function truncateRaw(raw: string, limit = MAX_RAW_CHARS): string {
 }
 
 function base64UrlDecode(input: string): Uint8Array {
-  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
-  const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
   const binary = atob(normalized + padding);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -119,14 +120,14 @@ function base64UrlDecode(input: string): Uint8Array {
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function concatBytes(parts: Uint8Array[]): Uint8Array {
@@ -147,21 +148,21 @@ async function encryptIntentToken(
 ): Promise<string> {
   const keyBytes = base64UrlDecode(intentSecret.trim());
   if (keyBytes.length !== 32) {
-    throw new Error('Intent Secret must decode to exactly 32 bytes');
+    throw new Error("Intent Secret must decode to exactly 32 bytes");
   }
 
   const cryptoKey = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     keyBytes.buffer as ArrayBuffer,
-    { name: 'AES-GCM' },
+    { name: "AES-GCM" },
     false,
-    ['encrypt'],
+    ["encrypt"],
   );
 
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipherBuf = await crypto.subtle.encrypt(
     {
-      name: 'AES-GCM',
+      name: "AES-GCM",
       iv,
       tagLength: 128,
       additionalData: textEncoder.encode(capsuleId),
@@ -191,15 +192,15 @@ async function resolveWireIntent(
     return intent;
   }
 
-  const capsuleId = options.capsuleId?.trim() || '';
+  const capsuleId = options.capsuleId?.trim() || "";
   if (!capsuleId) {
-    throw new Error('Secure alias mode is enabled, but Capsule ID is missing');
+    throw new Error("Secure alias mode is enabled, but Capsule ID is missing");
   }
 
   const intentSecret = options.intentSecret?.trim();
   if (!intentSecret) {
     throw new Error(
-      'Secure alias mode is enabled, but Intent Secret is missing',
+      "Secure alias mode is enabled, but Intent Secret is missing",
     );
   }
 
@@ -211,8 +212,8 @@ function resolveRequestUrl(targetUrl: string): {
   proxyTarget?: string;
 } {
   if (
-    typeof window === 'undefined' ||
-    typeof window.location === 'undefined' ||
+    typeof window === "undefined" ||
+    typeof window.location === "undefined" ||
     !import.meta.env.DEV
   ) {
     return { url: targetUrl };
@@ -241,8 +242,8 @@ function safeParseJson(text: string): unknown {
 }
 
 function safeStringify(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (value === undefined) return '';
+  if (typeof value === "string") return value;
+  if (value === undefined) return "";
   try {
     return JSON.stringify(value, null, 2);
   } catch {
@@ -263,9 +264,9 @@ function isProbablyText(text: string): boolean {
 }
 
 function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.trim().replace(/^0x/i, '').replace(/[\s-]/g, '');
+  const clean = hex.trim().replace(/^0x/i, "").replace(/[\s-]/g, "");
   if (!clean || clean.length % 2 !== 0 || /[^a-f0-9]/i.test(clean)) {
-    throw new Error('Invalid hex key');
+    throw new Error("Invalid hex key");
   }
   return new Uint8Array(
     clean.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)),
@@ -276,7 +277,7 @@ function parsePrivateKeyHex(hex: string): Uint8Array {
   const bytes = hexToBytes(hex);
   if (bytes.length === 32) return bytes;
   if (bytes.length > 32) return bytes.slice(-32);
-  throw new Error('Unsupported private key length');
+  throw new Error("Unsupported private key length");
 }
 
 function safeActorIdToBytes(input: string | null | undefined): Uint8Array {
@@ -308,7 +309,7 @@ function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
 }
 
 function normalizeFieldKey(key: string): string {
-  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return key.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function findStringFieldDeep(
@@ -322,10 +323,10 @@ function findStringFieldDeep(
     if (depth > maxDepth || value === null || value === undefined) {
       return undefined;
     }
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       return value.trim() ? value : undefined;
     }
-    if (typeof value !== 'object') {
+    if (typeof value !== "object") {
       return undefined;
     }
     if (seen.has(value as object)) {
@@ -365,11 +366,11 @@ function extractCapsuleBootstrapContext(response: unknown): {
 } {
   const capsuleId = findStringFieldDeep(
     response,
-    new Set(['capsuleid', 'capsuleuid']),
+    new Set(["capsuleid", "capsuleuid"]),
   );
   const intentSecret = findStringFieldDeep(
     response,
-    new Set(['intentsecret', 'capsulesecret']),
+    new Set(["intentsecret", "capsulesecret"]),
   );
 
   return {
@@ -392,15 +393,15 @@ function encodeIntentBody(body: unknown): {
       isTLV: true,
     };
   }
-  if (typeof body === 'object' && Object.keys(body).length === 0) {
+  if (typeof body === "object" && Object.keys(body).length === 0) {
     return {
       bytes: encodeTLVs([
-        { type: AXIS_TAG.JSON, value: textEncoder.encode('{}') },
+        { type: AXIS_TAG.JSON, value: textEncoder.encode("{}") },
       ]),
       isTLV: true,
     };
   }
-  const json = typeof body === 'string' ? body : JSON.stringify(body);
+  const json = typeof body === "string" ? body : JSON.stringify(body);
   return {
     bytes: encodeTLVs([
       { type: AXIS_TAG.JSON, value: textEncoder.encode(json) },
@@ -418,34 +419,34 @@ function readU64(bytes: Uint8Array): string {
 function proofTypeName(code: number | undefined): string {
   switch (code) {
     case ProofType.NONE:
-      return 'NONE';
+      return "NONE";
     case ProofType.CAPSULE:
-      return 'CAPSULE';
+      return "CAPSULE";
     case ProofType.JWT:
-      return 'JWT';
+      return "JWT";
     case ProofType.MTLS:
-      return 'MTLS';
+      return "MTLS";
     case ProofType.LOOM:
-      return 'LOOM';
+      return "LOOM";
     case ProofType.WITNESS:
-      return 'WITNESS';
+      return "WITNESS";
     default:
-      return `UNKNOWN_${code ?? 'NA'}`;
+      return `UNKNOWN_${code ?? "NA"}`;
   }
 }
 
 function flagNames(flags: number): string[] {
   const names: string[] = [];
-  if (flags & FrameFlags.BODY_IS_TLV) names.push('BODY_IS_TLV');
-  if (flags & FrameFlags.RECEIPT_CHAINING) names.push('RECEIPT_CHAINING');
-  if (flags & FrameFlags.WITNESS_INCLUDED) names.push('WITNESS_INCLUDED');
-  if (flags & FrameFlags.COMPRESSED) names.push('COMPRESSED');
+  if (flags & FrameFlags.BODY_IS_TLV) names.push("BODY_IS_TLV");
+  if (flags & FrameFlags.RECEIPT_CHAINING) names.push("RECEIPT_CHAINING");
+  if (flags & FrameFlags.WITNESS_INCLUDED) names.push("WITNESS_INCLUDED");
+  if (flags & FrameFlags.COMPRESSED) names.push("COMPRESSED");
   return names;
 }
 
 function headerName(tag: number): string {
   const name = TLVType[tag as unknown as keyof typeof TLVType];
-  return typeof name === 'string' ? name : `TAG_${tag}`;
+  return typeof name === "string" ? name : `TAG_${tag}`;
 }
 
 function decodeHeaderValue(tag: number, bytes: Uint8Array): unknown {
@@ -491,8 +492,8 @@ function decodeTlvCollection(bytes: Uint8Array) {
 
 function decodeAxisFrame(bytes: Uint8Array): AxisFrameLike {
   const magic = tryDecodeText(bytes.slice(0, 5));
-  if (magic !== 'AXIS1') {
-    throw new Error('Invalid AXIS frame magic');
+  if (magic !== "AXIS1") {
+    throw new Error("Invalid AXIS frame magic");
   }
 
   const version = bytes[5];
@@ -517,7 +518,7 @@ function decodeAxisFrame(bytes: Uint8Array): AxisFrameLike {
 
   const end = offset + hdrLen + bodyLen + sigLen;
   if (end > bytes.length) {
-    throw new Error('AXIS frame truncated');
+    throw new Error("AXIS frame truncated");
   }
 
   const headerBytes = bytes.slice(offset, offset + hdrLen);
@@ -538,21 +539,21 @@ function decodeAxisFrame(bytes: Uint8Array): AxisFrameLike {
 
 function decodeBody(bytes: Uint8Array, flags: number) {
   if (!bytes.length) {
-    return { format: 'empty', byteLength: 0, parsed: null };
+    return { format: "empty", byteLength: 0, parsed: null };
   }
 
   if (flags & FrameFlags.BODY_IS_TLV) {
     try {
       return {
-        format: 'tlv',
+        format: "tlv",
         byteLength: bytes.length,
         parsed: decodeTlvCollection(bytes),
       };
     } catch (error) {
       return {
-        format: 'tlv',
+        format: "tlv",
         byteLength: bytes.length,
-        error: error instanceof Error ? error.message : 'TLV decode failed',
+        error: error instanceof Error ? error.message : "TLV decode failed",
         rawHex: bytesToHex(bytes),
       };
     }
@@ -563,14 +564,14 @@ function decodeBody(bytes: Uint8Array, flags: number) {
     const json = safeParseJson(text);
     if (json !== undefined) {
       return {
-        format: 'json',
+        format: "json",
         byteLength: bytes.length,
         parsed: json,
         text,
       };
     }
     return {
-      format: 'text',
+      format: "text",
       byteLength: bytes.length,
       parsed: text,
       text,
@@ -578,7 +579,7 @@ function decodeBody(bytes: Uint8Array, flags: number) {
   }
 
   return {
-    format: 'binary',
+    format: "binary",
     byteLength: bytes.length,
     parsed: { hex: bytesToHex(bytes) },
     rawHex: bytesToHex(bytes),
@@ -598,7 +599,7 @@ function getHeaderText(
 function buildAxisFrameView(
   frameBytes: Uint8Array,
   options: {
-    direction: 'request' | 'response';
+    direction: "request" | "response";
     endpoint?: string;
     http?: Record<string, unknown>;
     fallbackIntent?: string;
@@ -608,11 +609,11 @@ function buildAxisFrameView(
   const body = decodeBody(frame.body, frame.flags);
 
   return {
-    transport: 'axis-bin',
+    transport: "axis-bin",
     raw: truncateRaw(formatHex(frameBytes)),
     tree: {
       direction: options.direction,
-      transport: 'axis-bin',
+      transport: "axis-bin",
       ...(options.endpoint ? { endpoint: options.endpoint } : {}),
       ...(options.http ? { http: options.http } : {}),
       intent:
@@ -652,11 +653,11 @@ function buildRequestSnapshot(
   requestHeaders: Record<string, string>,
 ): ProtocolSnapshot {
   const snapshot = buildAxisFrameView(frameBytes, {
-    direction: 'request',
+    direction: "request",
     endpoint: targetUrl,
     fallbackIntent: intent,
     http: {
-      method: 'POST',
+      method: "POST",
       url: targetUrl,
       headers: requestHeaders,
     },
@@ -674,10 +675,10 @@ function buildRequestSnapshot(
 function responseTransportForJson(
   json: Record<string, unknown>,
 ): SnapshotTransport {
-  if (json.ver === 'cce-v1' && 'response_id' in json) return 'cce-response';
-  if (json.ver === 'cce-v1' && 'request_id' in json && 'error' in json)
-    return 'cce-error';
-  return 'json';
+  if (json.ver === "cce-v1" && "response_id" in json) return "cce-response";
+  if (json.ver === "cce-v1" && "request_id" in json && "error" in json)
+    return "cce-error";
+  return "json";
 }
 
 function buildPlainResponseSnapshot(
@@ -694,7 +695,7 @@ function buildPlainResponseSnapshot(
 
   if (text !== null && isProbablyText(text)) {
     const json = safeParseJson(text);
-    if (json !== undefined && json && typeof json === 'object') {
+    if (json !== undefined && json && typeof json === "object") {
       const transport = responseTransportForJson(
         json as Record<string, unknown>,
       );
@@ -722,12 +723,12 @@ function buildPlainResponseSnapshot(
     return {
       body: text,
       raw: truncateRaw(text),
-      effect: status >= 400 ? 'ERROR' : 'COMPLETE',
+      effect: status >= 400 ? "ERROR" : "COMPLETE",
       snapshot: {
-        transport: 'text',
+        transport: "text",
         raw: truncateRaw(text),
         tree: {
-          transport: 'text',
+          transport: "text",
           http: {
             status,
             ok: status >= 200 && status < 300,
@@ -743,12 +744,12 @@ function buildPlainResponseSnapshot(
   return {
     body: { hex: bytesToHex(buffer) },
     raw: truncateRaw(rawHex),
-    effect: status >= 400 ? 'ERROR' : 'BINARY',
+    effect: status >= 400 ? "ERROR" : "BINARY",
     snapshot: {
-      transport: 'binary',
+      transport: "binary",
       raw: truncateRaw(rawHex),
       tree: {
-        transport: 'binary',
+        transport: "binary",
         http: {
           status,
           ok: status >= 200 && status < 300,
@@ -776,29 +777,29 @@ function extractEffect(
     : undefined;
   if (headerEffect) return headerEffect;
 
-  if (body && typeof body === 'object') {
+  if (body && typeof body === "object") {
     const objectBody = body as Record<string, any>;
-    if (typeof objectBody.effect === 'string') return objectBody.effect;
-    if (typeof objectBody.status === 'string') return objectBody.status;
-    if (typeof objectBody.code === 'string') return objectBody.code;
+    if (typeof objectBody.effect === "string") return objectBody.effect;
+    if (typeof objectBody.status === "string") return objectBody.status;
+    if (typeof objectBody.code === "string") return objectBody.code;
     if (
       objectBody.result &&
-      typeof objectBody.result === 'object' &&
-      typeof objectBody.result.effect === 'string'
+      typeof objectBody.result === "object" &&
+      typeof objectBody.result.effect === "string"
     ) {
       return objectBody.result.effect;
     }
     if (
       objectBody.error &&
-      typeof objectBody.error === 'object' &&
-      typeof objectBody.error.code === 'string'
+      typeof objectBody.error === "object" &&
+      typeof objectBody.error.code === "string"
     ) {
       return objectBody.error.code;
     }
   }
 
-  if (status !== undefined && status >= 400) return 'ERROR';
-  return 'COMPLETE';
+  if (status !== undefined && status >= 400) return "ERROR";
+  return "COMPLETE";
 }
 
 function decodeResponseBuffer(
@@ -813,7 +814,7 @@ function decodeResponseBuffer(
 } {
   if (buffer.length >= 5) {
     const magic = tryDecodeText(buffer.slice(0, 5));
-    if (magic === 'AXIS1') {
+    if (magic === "AXIS1") {
       const frame = decodeAxisFrame(buffer);
       const body = extractAxisBody(frame);
       return {
@@ -821,7 +822,7 @@ function decodeResponseBuffer(
         raw: truncateRaw(formatHex(buffer)),
         effect: extractEffect(body, status, frame),
         snapshot: buildAxisFrameView(buffer, {
-          direction: 'response',
+          direction: "response",
           http: {
             status,
             ok: status >= 200 && status < 300,
@@ -847,8 +848,8 @@ async function ensureCapsuleContext(
   targetUrl: string,
 ): Promise<{ capsuleId: string; intentSecret?: string }> {
   const auth = useAuthStore();
-  const existingCapsuleId = auth.capsuleId?.trim() || '';
-  const existingIntentSecret = auth.intentSecret?.trim() || '';
+  const existingCapsuleId = auth.capsuleId?.trim() || "";
+  const existingIntentSecret = auth.intentSecret?.trim() || "";
   if (existingCapsuleId && existingIntentSecret) {
     return {
       capsuleId: existingCapsuleId,
@@ -856,7 +857,7 @@ async function ensureCapsuleContext(
     };
   }
 
-  const actorId = auth.actorId?.trim() || '';
+  const actorId = auth.actorId?.trim() || "";
   const bootstrapBody = actorId
     ? {
         actor_id: actorId,
@@ -895,7 +896,7 @@ async function ensureCapsuleContext(
   }
 
   throw new Error(
-    `Secure alias bootstrap failed: ${errors[0] || 'unable to obtain capsule context'}`,
+    `Secure alias bootstrap failed: ${errors[0] || "unable to obtain capsule context"}`,
   );
 }
 
@@ -912,13 +913,13 @@ export async function sendIntent(
   const pid = generatePid();
   const nonce = generateNonce(32);
   const actorId = safeActorIdToBytes(auth.actorId);
-  const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, '');
+  const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, "");
   const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
   const secureAliasMode =
     auth.secureIntentAliasMode === true && options?.forcePlainIntent !== true;
 
-  let capsuleId = auth.capsuleId?.trim() || '';
-  let intentSecret = auth.intentSecret?.trim() || '';
+  let capsuleId = auth.capsuleId?.trim() || "";
+  let intentSecret = auth.intentSecret?.trim() || "";
 
   if (
     secureAliasMode &&
@@ -965,7 +966,7 @@ export async function sendIntent(
   }
 
   const requestHeaders = {
-    'Content-Type': AxisMediaTypes.BINARY,
+    "Content-Type": AxisMediaTypes.BINARY,
     Accept: AxisMediaTypes.CLIENT_ACCEPT,
     ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
   };
@@ -982,7 +983,7 @@ export async function sendIntent(
 
   try {
     const res = await fetch(requestUrl, {
-      method: 'POST',
+      method: "POST",
       headers: requestHeaders,
       body: frameBytes as BodyInit,
       signal: AbortSignal.timeout(30_000),
@@ -1010,20 +1011,20 @@ export async function sendIntent(
     };
   } catch (error: any) {
     const durationMs = Math.round(performance.now() - start);
-    const message = error?.message || 'Request failed';
+    const message = error?.message || "Request failed";
     result = {
       ok: false,
       status: 0,
       durationMs,
       response: { error: message },
       raw: message,
-      effect: 'ERROR',
+      effect: "ERROR",
       requestSnapshot,
       responseSnapshot: {
-        transport: 'text',
+        transport: "text",
         raw: message,
         tree: {
-          transport: 'text',
+          transport: "text",
           http: { status: 0, ok: false, headers: {} },
           error: message,
         },
@@ -1041,7 +1042,7 @@ export async function sendIntent(
       responseBody: safeStringify(result.response),
       responseEffect: result.effect,
       durationMs: result.durationMs,
-      status: result.ok ? 'ok' : 'error',
+      status: result.ok ? "ok" : "error",
       nodeUrl: targetUrl,
       httpStatus: result.status,
       requestSnapshot: {
@@ -1063,16 +1064,16 @@ export async function sendIntent(
 /* ── catalog helpers ─────────────────────────────────────── */
 
 export async function fetchCatalog(): Promise<any[]> {
-  const res = await sendIntent('catalog.list', {});
+  const res = await sendIntent("catalog.list", {});
   return res.ok ? res.response?.intents || [] : [];
 }
 
 export async function describeIntent(intent: string): Promise<any> {
-  const res = await sendIntent('catalog.describe', intent);
+  const res = await sendIntent("catalog.describe", intent);
   return res.ok ? res.response?.definition || null : null;
 }
 
 export async function searchCatalog(query: string): Promise<any[]> {
-  const res = await sendIntent('catalog.search', query);
+  const res = await sendIntent("catalog.search", query);
   return res.ok ? res.response?.intents || [] : [];
 }
