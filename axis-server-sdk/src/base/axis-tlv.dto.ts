@@ -5,6 +5,11 @@
  * should extend this class. This gives the CRUD handler interface
  * a type-safe union: `Uint8Array | AxisTlvDto`.
  *
- * The base is intentionally empty — it serves as a type marker.
+ * Subclasses may override `afterDecode()` to normalize decoded payloads
+ * without needing a custom decoder for every intent.
  */
-export abstract class AxisTlvDto {}
+export abstract class AxisTlvDto {
+  static afterDecode(_dto: Record<string, any>): void {
+    // Default no-op hook for subclasses.
+  }
+}

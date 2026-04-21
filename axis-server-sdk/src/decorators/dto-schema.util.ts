@@ -1,5 +1,6 @@
 import "reflect-metadata";
 
+import { AxisTlvDto } from "../base/axis-tlv.dto";
 import type { IntentTlvField } from "./intent.decorator";
 import {
   TLV_FIELDS_KEY,
@@ -109,6 +110,12 @@ export function buildDtoDecoder(
     tagMap.set(m.tag, { property: m.property, kind: m.options.kind });
   }
 
+  const dtoClass = dto as (typeof AxisTlvDto & Function);
+  const afterDecode =
+    typeof dtoClass.afterDecode === "function"
+      ? dtoClass.afterDecode.bind(dtoClass)
+      : undefined;
+
   return (bodyBytes: Buffer): Record<string, any> => {
     const tlvMap = decodeTLVs(new Uint8Array(bodyBytes));
     const result: Record<string, any> = {};
@@ -144,6 +151,8 @@ export function buildDtoDecoder(
           result[meta.property] = raw;
       }
     }
+
+    afterDecode?.(result);
 
     return result;
   };
