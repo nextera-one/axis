@@ -5,17 +5,6 @@
  * should extend this class. This gives the CRUD handler interface
  * a type-safe union: `Uint8Array | AxisTlvDto`.
  *
- * Subclasses may define a static `afterDecode(dto: any): void` method.
- * `buildDtoDecoder` will call it after TLV decoding so that defaults
- * or normalisation can be applied without a separate @IntentBody decorator.
+ * The base is intentionally empty — it serves as a type marker.
  */
-export abstract class AxisTlvDto {
-  /**
-   * Optional post-decode hook.  Override in a subclass to normalise
-   * the decoded plain object before it reaches the intent handler.
-   *
-   * Called by `buildDtoDecoder` with the mutable result object.
-   * Return value is ignored — mutate `dto` in place.
-   */
-  static afterDecode?(dto: Record<string, any>): void;
-}
+export abstract class AxisTlvDto {}

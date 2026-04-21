@@ -109,11 +109,6 @@ export function buildDtoDecoder(
     tagMap.set(m.tag, { property: m.property, kind: m.options.kind });
   }
 
-  // Capture optional post-decode hook defined on the DTO class
-  const afterDecode: ((dto: Record<string, any>) => void) | undefined = (
-    dto as any
-  ).afterDecode;
-
   return (bodyBytes: Buffer): Record<string, any> => {
     const tlvMap = decodeTLVs(new Uint8Array(bodyBytes));
     const result: Record<string, any> = {};
@@ -149,8 +144,6 @@ export function buildDtoDecoder(
           result[meta.property] = raw;
       }
     }
-
-    afterDecode?.(result);
 
     return result;
   };

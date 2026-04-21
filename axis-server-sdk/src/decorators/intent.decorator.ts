@@ -1,16 +1,17 @@
-import 'reflect-metadata';
+import "reflect-metadata";
 
-import type { ChainOptions } from '../engine/axis-chain.types';
-import type { SensitivityLevel } from '../schemas/axis-schemas';
-import { SENSITIVITY_METADATA_KEY } from './intent-policy.decorator';
+import type { ChainOptions } from "../engine/axis-chain.types";
+import type { SensitivityLevel } from "../schemas/axis-schemas";
+import { INTENT_BODY_KEY } from "./intent-body.decorator";
+import { SENSITIVITY_METADATA_KEY } from "./intent-policy.decorator";
 
-export const INTENT_METADATA_KEY = 'axis:intent';
-export const INTENT_ROUTES_KEY = 'axis:intent_routes';
+export const INTENT_METADATA_KEY = "axis:intent";
+export const INTENT_ROUTES_KEY = "axis:intent_routes";
 
 /**
  * CRUD + action classification for an intent.
  */
-export type IntentKind = 'create' | 'read' | 'update' | 'delete' | 'action';
+export type IntentKind = "create" | "read" | "update" | "delete" | "action";
 
 /**
  * A sensor reference declared on an intent.
@@ -38,7 +39,7 @@ export interface IntentTlvField {
   /** TLV tag number */
   tag: number;
   /** Value type for type-specific validation */
-  kind: 'utf8' | 'u64' | 'bytes' | 'bytes16' | 'bool' | 'obj' | 'arr';
+  kind: "utf8" | "u64" | "bytes" | "bytes16" | "bool" | "obj" | "arr";
   /** If true, sensor denies when this tag is missing */
   required?: boolean;
   /** Maximum byte length of the value */
@@ -46,7 +47,7 @@ export interface IntentTlvField {
   /** Maximum numeric value (string for bigint-safe limits) */
   max?: string;
   /** Which frame section contains this field (default: 'body') */
-  scope?: 'header' | 'body';
+  scope?: "header" | "body";
 }
 
 export interface IntentRoute extends AxisIntentSensorOptions {
@@ -57,7 +58,7 @@ export interface IntentRoute extends AxisIntentSensorOptions {
   kind?: IntentKind;
   sensitivity?: SensitivityLevel;
   chain?: boolean | ChainOptions;
-  bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+  bodyProfile?: "TLV_MAP" | "RAW" | "TLV_OBJ" | "TLV_ARR";
   tlv?: IntentTlvField[];
   dto?: Function;
 }
@@ -80,11 +81,21 @@ export interface IntentOptions extends AxisIntentSensorOptions {
    * - `TLV_OBJ`  — nested TLV object
    * - `TLV_ARR`  — TLV array container
    */
-  bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
+  bodyProfile?: "TLV_MAP" | "RAW" | "TLV_OBJ" | "TLV_ARR";
   /** Inline TLV field definitions for schema validation */
   tlv?: IntentTlvField[];
   /** DTO class decorated with @TlvField for schema extraction */
   dto?: Function;
+  /**
+   * Optional inline body decoder. Equivalent to applying @IntentBody(fn)
+   * on the same method. Takes the raw body Buffer and returns the decoded
+   * payload passed to the handler.
+   *
+   * When omitted, if `dto` is provided the router builds a default decoder
+   * via `buildDtoDecoder(dto)` which also invokes the DTO's optional
+   * `static afterDecode()` hook for normalisation.
+   */
+  decoder?: (buf: Buffer) => any;
 }
 
 /**
@@ -114,6 +125,17 @@ export function Intent(
 
     // Per-method metadata (backend-style)
     Reflect.defineMetadata(INTENT_METADATA_KEY, metadata, target, propertyKey);
+
+    // Inline decoder: equivalent to @IntentBody, written to the same key so
+    // the router resolves it through the existing path.
+    if (options?.decoder) {
+      Reflect.defineMetadata(
+        INTENT_BODY_KEY,
+        options.decoder,
+        target,
+        propertyKey,
+      );
+    }
 
     if (options?.sensitivity) {
       Reflect.defineMetadata(
