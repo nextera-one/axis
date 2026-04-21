@@ -11,6 +11,22 @@ export const INTENT_ROUTES_KEY = 'axis:intent_routes';
 export type IntentKind = 'create' | 'read' | 'update' | 'delete' | 'action';
 
 /**
+ * A sensor reference declared on an intent.
+ * - `string`: resolved from SensorRegistry by sensor name
+ * - `Function`: resolved from SensorRegistry by provider class, with DI fallback
+ */
+export type AxisIntentSensorRef = string | Function;
+
+/**
+ * Shared options for attaching intent-specific sensors.
+ * Kept separate so other decorators / route metadata can extend it cleanly.
+ */
+export interface AxisIntentSensorOptions {
+  /** Intent-specific sensors resolved before the handler executes */
+  is?: AxisIntentSensorRef[];
+}
+
+/**
  * Describes a single TLV field expected by an intent.
  * Used by SchemaValidationSensor to enforce field contracts.
  */
@@ -31,7 +47,7 @@ export interface IntentTlvField {
   scope?: 'header' | 'body';
 }
 
-export interface IntentRoute {
+export interface IntentRoute extends AxisIntentSensorOptions {
   action: string;
   methodName: string | symbol;
   absolute?: boolean;
@@ -43,7 +59,7 @@ export interface IntentRoute {
   dto?: Function;
 }
 
-export interface IntentOptions {
+export interface IntentOptions extends AxisIntentSensorOptions {
   /** Operation classification for this intent */
   kind?: IntentKind;
   /** If true, the action is the full intent name (not prefixed with handler name) */
@@ -110,6 +126,7 @@ export function Intent(
       bodyProfile: options?.bodyProfile,
       tlv: options?.tlv,
       dto: options?.dto,
+      is: options?.is,
     });
     Reflect.defineMetadata(INTENT_ROUTES_KEY, routes, target.constructor);
   };

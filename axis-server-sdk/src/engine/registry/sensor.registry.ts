@@ -6,6 +6,7 @@ import {
   AxisPreSensor,
   AxisPostSensor,
 } from '../../sensor/axis-sensor';
+import type { AxisIntentSensorRef } from '../../decorators/intent.decorator';
 
 /**
  * AxisSensor Registry
@@ -27,6 +28,8 @@ import {
 @Injectable()
 export class SensorRegistry {
   private sensors: AxisSensor[] = [];
+  private sensorsByName = new Map<string, AxisSensor>();
+  private sensorsByType = new Map<Function, AxisSensor>();
   private readonly logger = new Logger(SensorRegistry.name);
 
   constructor(private readonly configService: ConfigService) {}
@@ -91,6 +94,7 @@ export class SensorRegistry {
     }
 
     this.sensors.push(sensor);
+    this.indexSensor(sensor);
     const phaseLabel =
       typeof sensor.phase === 'string'
         ? sensor.phase
@@ -109,6 +113,24 @@ export class SensorRegistry {
     return [...this.sensors].sort(
       (a, b) => (a.order ?? 999) - (b.order ?? 999),
     );
+  }
+
+  /**
+   * Resolves a sensor by registry name or provider class.
+   */
+  resolve(ref: AxisIntentSensorRef): AxisSensor | undefined {
+    if (typeof ref === 'string') {
+      return this.sensorsByName.get(ref);
+    }
+
+    return this.sensorsByType.get(ref) ?? this.sensorsByName.get(ref.name);
+  }
+
+  /**
+   * Resolves a sensor by its declared registry name.
+   */
+  getByName(name: string): AxisSensor | undefined {
+    return this.sensorsByName.get(name);
   }
 
   /**
@@ -180,5 +202,21 @@ export class SensorRegistry {
    */
   clear(): void {
     this.sensors = [];
+    this.sensorsByName.clear();
+    this.sensorsByType.clear();
+  }
+
+  private indexSensor(sensor: AxisSensor): void {
+    this.sensorsByName.set(sensor.name, sensor);
+
+    const sensorType = sensor.constructor as Function | undefined;
+    if (!sensorType) return;
+
+    this.sensorsByType.set(sensorType, sensor);
+
+    // Allow lookup by class name when it differs from the declared sensor.name.
+    if (!this.sensorsByName.has(sensorType.name)) {
+      this.sensorsByName.set(sensorType.name, sensor);
+    }
   }
 }

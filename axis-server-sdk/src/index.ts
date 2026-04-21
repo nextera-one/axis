@@ -31,6 +31,8 @@ export {
   Intent,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
+  AxisIntentSensorOptions,
+  AxisIntentSensorRef,
   IntentRoute,
   IntentOptions,
   IntentTlvField,

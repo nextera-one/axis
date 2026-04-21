@@ -1,5 +1,7 @@
 import "reflect-metadata";
 
+import type { AxisIntentSensorRef } from "./intent.decorator";
+
 export const HANDLER_SENSORS_KEY = "axis:handler:sensors";
 
 /**
@@ -20,7 +22,7 @@ export const HANDLER_SENSORS_KEY = "axis:handler:sensors";
  * }
  * ```
  */
-export function HandlerSensors(sensors: Function[]): ClassDecorator {
+export function HandlerSensors(sensors: AxisIntentSensorRef[]): ClassDecorator {
   return (target: Function) => {
     Reflect.defineMetadata(HANDLER_SENSORS_KEY, sensors, target);
   };

@@ -48,6 +48,7 @@ import {
 } from "../decorators/intent-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
 import {
+  type AxisIntentSensorRef,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
   IntentKind,
@@ -72,6 +73,7 @@ import {
   normalizeSensorDecision,
   SensorInput,
 } from "../sensor/axis-sensor";
+import { SensorRegistry } from "./registry/sensor.registry";
 import {
   AxisChainEnvelope,
   AxisChainRequest,
@@ -87,6 +89,39 @@ import { ObserverDispatcherService } from "./observer-dispatcher.service";
 
 function observerRefKey(ref: AxisObserverRef): string {
   return typeof ref === "string" ? ref : ref.name;
+}
+
+function sensorRefKey(ref: AxisIntentSensorRef): string {
+  return typeof ref === "string" ? ref : ref.name;
+}
+
+function mergeIntentSensorRefs(
+  ...sensorGroups: Array<AxisIntentSensorRef[] | undefined>
+): AxisIntentSensorRef[] {
+  const merged = new Map<string, AxisIntentSensorRef>();
+
+  for (const group of sensorGroups) {
+    if (!Array.isArray(group)) continue;
+
+    for (const ref of group) {
+      const key = sensorRefKey(ref);
+      const existing = merged.get(key);
+
+      if (!existing || (typeof existing === "string" && typeof ref !== "string")) {
+        merged.set(key, ref);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+function isAxisSensorInstance(value: unknown): value is AxisSensor {
+  return (
+    !!value &&
+    typeof (value as AxisSensor).name === "string" &&
+    typeof (value as AxisSensor).run === "function"
+  );
 }
 
 function mergeObserverBindings(
@@ -210,8 +245,8 @@ export class IntentRouter {
   /** Internal registry of dynamic intent handlers */
   private handlers = new Map<string, any>();
 
-  /** Per-intent sensor classes (resolved at call time) */
-  private intentSensors = new Map<string, Function[]>();
+  /** Per-intent sensor refs (resolved through SensorRegistry at call time) */
+  private intentSensors = new Map<string, AxisIntentSensorRef[]>();
 
   /** Per-intent body decoders */
   private intentDecoders = new Map<string, (buf: Buffer) => any>();
@@ -262,6 +297,8 @@ export class IntentRouter {
     @Optional() private readonly moduleRef?: ModuleRef,
     @Optional()
     private readonly observerDispatcher?: ObserverDispatcherService,
+    @Optional()
+    private readonly sensorRegistry?: SensorRegistry,
   ) {}
 
   getSchema(intent: string): IntentSchema | undefined {
@@ -347,7 +384,7 @@ export class IntentRouter {
     );
 
     // Read @HandlerSensors from the class (if any)
-    const handlerSensors: Function[] =
+    const handlerSensors: AxisIntentSensorRef[] =
       Reflect.getMetadata(HANDLER_SENSORS_KEY, instance.constructor) || [];
     const handlerObservers: AxisObserverBinding[] =
       Reflect.getMetadata(OBSERVER_BINDINGS_KEY, instance.constructor) || [];
@@ -508,9 +545,9 @@ export class IntentRouter {
           throw new Error(`Intent not found: ${intent}`);
         }
 
-        const sensorClasses = this.intentSensors.get(intent);
-        if (sensorClasses && sensorClasses.length > 0) {
-          await this.runIntentSensors(sensorClasses, intent, frame);
+        const sensorRefs = this.intentSensors.get(intent);
+        if (sensorRefs && sensorRefs.length > 0) {
+          await this.runIntentSensors(sensorRefs, intent, frame);
         }
 
         const decoder = this.intentDecoders.get(intent);
@@ -604,7 +641,7 @@ export class IntentRouter {
     intent: string,
     proto: object,
     methodName: string,
-    handlerSensors?: Function[],
+    handlerSensors?: AxisIntentSensorRef[],
     handlerObservers?: AxisObserverBinding[],
   ): void {
     const decoder = Reflect.getMetadata(INTENT_BODY_KEY, proto, methodName);
@@ -617,10 +654,12 @@ export class IntentRouter {
       proto,
       methodName,
     );
-    const combined = [
-      ...(handlerSensors || []),
-      ...(Array.isArray(intentSensors) ? intentSensors : []),
-    ];
+    const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
+    const combined = mergeIntentSensorRefs(
+      handlerSensors,
+      Array.isArray(intentSensors) ? intentSensors : undefined,
+      Array.isArray(meta?.is) ? meta.is : undefined,
+    );
     if (combined.length > 0) {
       this.intentSensors.set(intent, combined);
     }
@@ -652,7 +691,6 @@ export class IntentRouter {
       this.intentCapsulePolicies.set(intent, capsulePolicy);
     }
 
-    const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
     if (meta) {
       this.storeSchema({ ...meta, intent });
       if (meta.kind) {
@@ -789,21 +827,19 @@ export class IntentRouter {
   }
 
   private async runIntentSensors(
-    sensorClasses: Function[],
+    sensorRefs: AxisIntentSensorRef[],
     intent: string,
     frame: AxisFrame,
   ): Promise<void> {
-    if (!this.moduleRef) return;
+    for (const sensorRef of sensorRefs) {
+      const sensor = this.resolveIntentSensor(sensorRef);
+      const sensorName = sensorRefKey(sensorRef);
 
-    for (const SensorClass of sensorClasses) {
-      let sensor: AxisSensor;
-      try {
-        sensor = this.moduleRef.get(SensorClass as any, { strict: false });
-      } catch {
-        this.logger.warn(
-          `@IntentSensors: could not resolve ${SensorClass.name} for ${intent}`,
+      if (!sensor) {
+        this.logger.error(
+          `Intent sensor ${sensorName} is not registered for ${intent}`,
         );
-        continue;
+        throw new Error(`SENSOR_MISSING:${sensorName}`);
       }
 
       const sensorInput: SensorInput = {
@@ -811,7 +847,13 @@ export class IntentRouter {
         intent,
         body: frame.body,
         headerTLVs: frame.headers as any,
-        metadata: { phase: "intent", intent },
+        frameBody: frame.body,
+        metadata: {
+          phase: "intent",
+          intent,
+          schema: this.getSchema(intent),
+          validators: this.getValidators(intent),
+        },
       };
 
       if (sensor.supports && !sensor.supports(sensorInput)) continue;
@@ -824,6 +866,24 @@ export class IntentRouter {
         );
         throw new Error(`SENSOR_DENY:${reason}`);
       }
+    }
+  }
+
+  private resolveIntentSensor(ref: AxisIntentSensorRef): AxisSensor | undefined {
+    const registered = this.sensorRegistry?.resolve(ref);
+    if (registered) {
+      return registered;
+    }
+
+    if (!this.moduleRef || typeof ref === "string") {
+      return undefined;
+    }
+
+    try {
+      const resolved = this.moduleRef.get(ref as any, { strict: false });
+      return isAxisSensorInstance(resolved) ? resolved : undefined;
+    } catch {
+      return undefined;
     }
   }
 

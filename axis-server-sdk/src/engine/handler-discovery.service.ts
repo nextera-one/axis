@@ -4,7 +4,12 @@ import { DiscoveryService, MetadataScanner } from "@nestjs/core";
 import { OBSERVER_BINDINGS_KEY, type AxisObserverBinding } from "../decorators/observer.decorator";
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentRoute } from "../decorators/intent.decorator";
+import {
+  type AxisIntentSensorRef,
+  INTENT_METADATA_KEY,
+  INTENT_ROUTES_KEY,
+  IntentRoute,
+} from "../decorators/intent.decorator";
 import { IntentRouter } from "./intent.router";
 
 /**
@@ -67,7 +72,7 @@ export class HandlerDiscoveryService implements OnModuleInit {
       let registered = 0;
 
       // Read @HandlerSensors from the class (if any)
-      const handlerSensors: Function[] =
+      const handlerSensors: AxisIntentSensorRef[] =
         Reflect.getMetadata(HANDLER_SENSORS_KEY, metatype) || [];
       const handlerObservers: AxisObserverBinding[] =
         Reflect.getMetadata(OBSERVER_BINDINGS_KEY, metatype) || [];
