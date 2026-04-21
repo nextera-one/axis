@@ -9,6 +9,7 @@ const {
   Intent,
   IntentRouter,
   IntentSensors,
+  Sensitivity,
   SensorDecisions,
   SensorRegistry,
   TLV_INTENT,
@@ -50,6 +51,18 @@ class LegacyDecoratorHandler {
   }
 }
 
+class IntentSensitivityHandler {
+  async inspect(body) {
+    return body;
+  }
+}
+
+class LegacySensitivityHandler {
+  async inspect(body) {
+    return body;
+  }
+}
+
 Intent("sdk.intent.option", {
   absolute: true,
   is: ["IntentNamedGate"],
@@ -62,6 +75,17 @@ IntentSensors([LegacyGateSensor])(
   LegacyDecoratorHandler.prototype,
   "inspect",
 );
+
+Sensitivity("LOW")(IntentSensitivityHandler);
+Intent("sdk.intent.sensitivity", {
+  absolute: true,
+  sensitivity: "CRITICAL",
+})(IntentSensitivityHandler.prototype, "inspect");
+
+Sensitivity("HIGH")(LegacySensitivityHandler.prototype, "inspect");
+Intent("sdk.intent.legacy-sensitivity", {
+  absolute: true,
+})(LegacySensitivityHandler.prototype, "inspect");
 
 function createFrame(intent, body = Buffer.from("payload")) {
   return {
@@ -105,4 +129,18 @@ test("Missing intent sensor refs fail closed", async () => {
     () => router.route(createFrame("sdk.intent.option")),
     /SENSOR_MISSING:IntentNamedGate/,
   );
+});
+
+test("Intent option `sensitivity` overrides class-level sensitivity metadata", () => {
+  const router = new IntentRouter();
+  router.registerHandler(new IntentSensitivityHandler());
+
+  assert.equal(router.getSensitivity("sdk.intent.sensitivity"), "CRITICAL");
+});
+
+test("Sensitivity decorator remains backward compatible", () => {
+  const router = new IntentRouter();
+  router.registerHandler(new LegacySensitivityHandler());
+
+  assert.equal(router.getSensitivity("sdk.intent.legacy-sensitivity"), "HIGH");
 });

@@ -61,6 +61,7 @@ import {
   OBSERVER_BINDINGS_KEY,
 } from "../decorators/observer.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
+import type { SensitivityLevel } from "../schemas/axis-schemas";
 import {
   inlineCapsuleAllowsIntent,
   inlineCapsuleSatisfiesScopes,
@@ -270,7 +271,7 @@ export class IntentRouter {
   private intentCapsulePolicies = new Map<string, CapsulePolicyOptions>();
 
   /** Per-intent sensitivity level */
-  private intentSensitivity = new Map<string, string>();
+  private intentSensitivity = new Map<string, SensitivityLevel>();
 
   /** Per-intent execution contract overrides */
   private intentContracts = new Map<string, Record<string, any>>();
@@ -709,16 +710,16 @@ export class IntentRouter {
     }
 
     // ── @Sensitivity ────────────────────────────────────────────────────────
-    const methodSensitivity: string | undefined = Reflect.getMetadata(
+    const methodSensitivity: SensitivityLevel | undefined = Reflect.getMetadata(
       SENSITIVITY_METADATA_KEY,
       proto,
       methodName,
     );
-    const classSensitivity: string | undefined = Reflect.getMetadata(
+    const classSensitivity: SensitivityLevel | undefined = Reflect.getMetadata(
       SENSITIVITY_METADATA_KEY,
       proto.constructor,
     );
-    const sensitivity = methodSensitivity ?? classSensitivity;
+    const sensitivity = meta?.sensitivity ?? methodSensitivity ?? classSensitivity;
     if (sensitivity) {
       this.intentSensitivity.set(intent, sensitivity);
     }
@@ -794,7 +795,7 @@ export class IntentRouter {
 
   // ─── Policy Getters ────────────────────────────────────────────────────────
 
-  getSensitivity(intent: string): string | undefined {
+  getSensitivity(intent: string): SensitivityLevel | undefined {
     return this.intentSensitivity.get(intent);
   }
 

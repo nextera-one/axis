@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 
 import type { ChainOptions } from '../engine/axis-chain.types';
+import type { SensitivityLevel } from '../schemas/axis-schemas';
+import { SENSITIVITY_METADATA_KEY } from './intent-policy.decorator';
 
 export const INTENT_METADATA_KEY = 'axis:intent';
 export const INTENT_ROUTES_KEY = 'axis:intent_routes';
@@ -53,6 +55,7 @@ export interface IntentRoute extends AxisIntentSensorOptions {
   absolute?: boolean;
   frame?: boolean;
   kind?: IntentKind;
+  sensitivity?: SensitivityLevel;
   chain?: boolean | ChainOptions;
   bodyProfile?: 'TLV_MAP' | 'RAW' | 'TLV_OBJ' | 'TLV_ARR';
   tlv?: IntentTlvField[];
@@ -62,6 +65,8 @@ export interface IntentRoute extends AxisIntentSensorOptions {
 export interface IntentOptions extends AxisIntentSensorOptions {
   /** Operation classification for this intent */
   kind?: IntentKind;
+  /** Risk tier applied to this intent for policy enforcement and audit */
+  sensitivity?: SensitivityLevel;
   /** If true, the action is the full intent name (not prefixed with handler name) */
   absolute?: boolean;
   /** If true, register as { handle: fn } for frame-based handlers */
@@ -105,13 +110,19 @@ export function Intent(
   options?: IntentOptions,
 ): MethodDecorator {
   return (target, propertyKey) => {
+    const metadata = { intent: action, ...options };
+
     // Per-method metadata (backend-style)
-    Reflect.defineMetadata(
-      INTENT_METADATA_KEY,
-      { intent: action, ...options },
-      target,
-      propertyKey,
-    );
+    Reflect.defineMetadata(INTENT_METADATA_KEY, metadata, target, propertyKey);
+
+    if (options?.sensitivity) {
+      Reflect.defineMetadata(
+        SENSITIVITY_METADATA_KEY,
+        options.sensitivity,
+        target,
+        propertyKey,
+      );
+    }
 
     // Route-collection metadata (SDK-style, backward compat)
     const routes: IntentRoute[] =
@@ -122,6 +133,7 @@ export function Intent(
       absolute: options?.absolute,
       frame: options?.frame,
       kind: options?.kind,
+      sensitivity: options?.sensitivity,
       chain: options?.chain,
       bodyProfile: options?.bodyProfile,
       tlv: options?.tlv,
