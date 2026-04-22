@@ -25,11 +25,13 @@ function assertOrderedNestMiddleware(
 export function resolvePriorityOrderedMiddlewares(
   middlewares?: Iterable<Function | null | undefined | false>,
 ): AxisNestMiddlewareClass[] {
-  const filtered = middlewares
-    ? Array.from(middlewares).filter(Boolean)
-    : getPriorityOrderedTargets();
-
-  const ordered = getPriorityOrderedTargets(filtered as Function[]);
+  const explicit = middlewares
+    ? (Array.from(middlewares).filter(Boolean) as Function[])
+    : [];
+  const ordered =
+    explicit.length > 0
+      ? getPriorityOrderedTargets(explicit)
+      : getPriorityOrderedTargets();
   return ordered.map((target) => {
     assertOrderedNestMiddleware(target);
     return target;
