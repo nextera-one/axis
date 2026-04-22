@@ -1,14 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
-
 import type { AxisObserverDefinition, AxisObserverRef } from "../../decorators/observer.decorator";
 import type {
   AxisIntentObserver,
   AxisObserverRegistration,
 } from "../axis-observer.interface";
+import { createAxisLogger } from "../../utils/axis-logger";
 
-@Injectable()
 export class ObserverRegistry {
-  private readonly logger = new Logger(ObserverRegistry.name);
+  private readonly logger = createAxisLogger(ObserverRegistry.name);
   private readonly byName = new Map<string, AxisObserverRegistration>();
   private readonly byType = new Map<Function, AxisObserverRegistration>();
 

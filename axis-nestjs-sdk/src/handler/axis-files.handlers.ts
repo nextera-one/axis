@@ -1,30 +1,32 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import * as crypto from 'crypto';
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 
-import { AxisFrame, encodeFrame, getSignTarget } from '../core/axis-bin';
-import { decodeVarint, encodeVarint } from '../core/varint';
-import { Handler } from '../decorators/handler.decorator';
-import { Intent } from '../decorators/intent.decorator';
-import { AxisHandler } from '../interfaces/axis-handler.interface';
 import {
+  AxisFrame,
+  encodeFrame,
+  getSignTarget,
+  decodeVarint,
+  encodeVarint,
+  Intent,
+  AxisHandler,
   AXIS_UPLOAD_FILE_STORE,
   AXIS_UPLOAD_RECEIPT_SIGNER,
   AXIS_UPLOAD_SESSION_STORE,
-} from './upload.tokens';
-import {
+} from "@nextera.one/axis-server-sdk";
+import type {
   UploadFileStore,
   UploadReceiptSigner,
   UploadSessionStore,
-} from './upload.types';
+} from "@nextera.one/axis-server-sdk";
+import { Handler } from "./handler.decorator";
 
-@Handler('axis.files.download')
+@Handler("axis.files.download")
 @Injectable()
 export class AxisFilesDownloadHandler implements AxisHandler {
   private readonly logger = new Logger(AxisFilesDownloadHandler.name);
 
-  readonly name = 'axis.files.download';
+  readonly name = "axis.files.download";
   readonly open = true;
-  readonly description = 'File download handler';
+  readonly description = "File download handler";
 
   constructor(
     @Inject(AXIS_UPLOAD_SESSION_STORE)
@@ -33,16 +35,16 @@ export class AxisFilesDownloadHandler implements AxisHandler {
     private readonly files: UploadFileStore,
   ) {}
 
-  @Intent('file.download', { absolute: true, kind: 'read' })
+  @Intent("file.download", { absolute: true, kind: "read" })
   async execute(
     body: Uint8Array,
     headers?: Map<number, Uint8Array>,
   ): Promise<any> {
     const h = headers;
-    if (!h) throw new Error('MISSING_HEADERS');
+    if (!h) throw new Error("MISSING_HEADERS");
 
     const uploadIdBytes = h.get(20);
-    if (!uploadIdBytes) throw new Error('MISSING_UPLOAD_ID');
+    if (!uploadIdBytes) throw new Error("MISSING_UPLOAD_ID");
     const uploadId = new TextDecoder().decode(uploadIdBytes);
 
     let rangeStart = 0;
@@ -65,18 +67,15 @@ export class AxisFilesDownloadHandler implements AxisHandler {
       throw new Error(`SESSION_NOT_FOUND: ${uploadId}`);
     }
 
-    if (session.status !== 'COMPLETE') {
+    if (session.status !== "COMPLETE") {
       throw new Error(`FILE_NOT_READY: Status is ${session.status}`);
     }
 
-    const stat = await this.files.statFinal(
-      uploadId,
-      session.filename,
-    );
+    const stat = await this.files.statFinal(uploadId, session.filename);
     const fileSize = stat.size;
 
     if (rangeStart < 0) rangeStart = 0;
-    if (rangeStart >= fileSize) throw new Error('RANGE_OUT_OF_BOUNDS');
+    if (rangeStart >= fileSize) throw new Error("RANGE_OUT_OF_BOUNDS");
 
     let end = fileSize;
     if (rangeLen >= 0) {
@@ -98,21 +97,21 @@ export class AxisFilesDownloadHandler implements AxisHandler {
 
     return {
       ok: true,
-      effect: 'FILE_PART',
+      effect: "FILE_PART",
       body: buffer,
       headers: responseHeaders,
     };
   }
 }
 
-@Handler('axis.files.finalize')
+@Handler("axis.files.finalize")
 @Injectable()
 export class AxisFilesFinalizeHandler implements AxisHandler {
   private readonly logger = new Logger(AxisFilesFinalizeHandler.name);
 
-  readonly name = 'axis.files.finalize';
+  readonly name = "axis.files.finalize";
   readonly open = false;
-  readonly description = 'File upload finalization handler';
+  readonly description = "File upload finalization handler";
 
   constructor(
     @Inject(AXIS_UPLOAD_SESSION_STORE)
@@ -124,7 +123,7 @@ export class AxisFilesFinalizeHandler implements AxisHandler {
     private readonly keyring?: UploadReceiptSigner,
   ) {}
 
-  @Intent('file.finalize', { absolute: true, kind: 'action' })
+  @Intent("file.finalize", { absolute: true, kind: "action" })
   async execute(
     body: Uint8Array,
     headers?: Map<number, Uint8Array>,
@@ -133,24 +132,25 @@ export class AxisFilesFinalizeHandler implements AxisHandler {
     const req = JSON.parse(bodyStr);
 
     const { fileId, expectedHash } = req;
-    if (!fileId) throw new Error('MISSING_FILE_ID');
+    if (!fileId) throw new Error("MISSING_FILE_ID");
 
     const session = await this.sessions.findByFileId(fileId);
-    if (!session) throw new Error('SESSION_NOT_FOUND');
+    if (!session) throw new Error("SESSION_NOT_FOUND");
 
     if (!(await this.files.hasTemp(fileId))) {
-      throw new Error('CHUNKS_NOT_FOUND');
+      throw new Error("CHUNKS_NOT_FOUND");
     }
 
-    const hash = crypto.createHash('sha256');
+    const crypto = await import("crypto");
+    const hash = crypto.createHash("sha256");
     const rs = this.files.createTempReadStream(fileId);
     for await (const chunk of rs) {
       hash.update(chunk as Buffer);
     }
-    const finalHash = hash.digest('hex');
+    const finalHash = hash.digest("hex");
 
     if (expectedHash && finalHash !== expectedHash) {
-      throw new Error('HASH_MISMATCH');
+      throw new Error("HASH_MISMATCH");
     }
 
     const finalPath = await this.files.moveTempToFinal(
@@ -158,13 +158,15 @@ export class AxisFilesFinalizeHandler implements AxisHandler {
       session.filename,
     );
 
-    await this.sessions.updateStatus(fileId, 'COMPLETE', null);
+    await this.sessions.updateStatus(fileId, "COMPLETE", null);
 
     if (!this.keyring) {
-      this.logger.warn('Receipt signer not configured; returning unsigned receipt');
+      this.logger.warn(
+        "Receipt signer not configured; returning unsigned receipt",
+      );
       return {
         ok: true,
-        effect: 'FILE_FINALIZED',
+        effect: "FILE_FINALIZED",
         body: new TextEncoder().encode(
           JSON.stringify({
             uploadId: fileId,
@@ -184,8 +186,7 @@ export class AxisFilesFinalizeHandler implements AxisHandler {
       tsMs: Date.now(),
     };
 
-    const receiptJson = JSON.stringify(receiptData);
-    const receiptBody = new TextEncoder().encode(receiptJson);
+    const receiptBody = new TextEncoder().encode(JSON.stringify(receiptData));
 
     const SIG_PRESENT = 0x01;
     const responseFrame: AxisFrame = {
@@ -201,7 +202,7 @@ export class AxisFilesFinalizeHandler implements AxisHandler {
 
     return {
       ok: true,
-      effect: 'FILE_FINALIZED',
+      effect: "FILE_FINALIZED",
       data: encodeFrame(responseFrame),
       headers: new Map([[1, new TextEncoder().encode(kid)]]),
     };

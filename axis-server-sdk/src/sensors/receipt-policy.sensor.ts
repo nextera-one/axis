@@ -1,10 +1,8 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
 import { AxisSensor, SensorDecision } from '../sensor/axis-sensor';
 
-@Injectable()
 @Sensor()
 export class ReceiptPolicySensor implements AxisSensor {
   readonly name = 'ReceiptPolicySensor';

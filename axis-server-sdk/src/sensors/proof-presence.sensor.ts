@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -10,7 +9,6 @@ import { AxisError } from '../core/axis-error';
 import { AxisSensor, SensorDecision } from '../sensor/axis-sensor';
 
 @Sensor()
-@Injectable()
 export class ProofPresenceSensor implements AxisSensor {
   readonly name = 'ProofPresenceSensor';
   readonly order = BAND.IDENTITY + 30;

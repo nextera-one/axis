@@ -1,16 +1,14 @@
-import { Injectable, Logger } from "@nestjs/common";
-
 import type { AxisObserverBinding } from "../decorators/observer.decorator";
 import type { AxisObserverContext } from "./axis-observer.interface";
 import { ObserverRegistry } from "./registry/observer.registry";
+import { createAxisLogger } from "../utils/axis-logger";
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-@Injectable()
 export class ObserverDispatcherService {
-  private readonly logger = new Logger(ObserverDispatcherService.name);
+  private readonly logger = createAxisLogger(ObserverDispatcherService.name);
 
   constructor(private readonly registry: ObserverRegistry) {}
 

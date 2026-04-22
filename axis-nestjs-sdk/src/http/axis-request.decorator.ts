@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
-import type { AxisDecoded } from '../engine/axis-decoded';
+import type { AxisDecoded } from '@nextera.one/axis-server-sdk';
 
 /**
  * Shape of the AXIS-specific data attached to the request by AxisSensorsMiddleware.
@@ -30,18 +30,6 @@ function resolveIp(req: Request): string | undefined {
 
 /**
  * @AxisRaw() — Extracts the raw binary Buffer from an AXIS request.
- *
- * Equivalent to NestJS `@Body()` but for the AXIS binary protocol.
- * The buffer has already passed streaming validation (magic bytes, size limits)
- * via AxisSensorsMiddleware before reaching the controller.
- *
- * @example
- * ```typescript
- * @Post()
- * async handle(@AxisRaw() raw: Buffer) {
- *   return this.axis.process(raw, { ... });
- * }
- * ```
  */
 export const AxisRaw = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): Buffer => {
@@ -52,14 +40,6 @@ export const AxisRaw = createParamDecorator(
 
 /**
  * @AxisIp() — Extracts the resolved client IP address.
- *
- * Checks `x-forwarded-for`, `x-real-ip`, and `socket.remoteAddress` in order.
- *
- * @example
- * ```typescript
- * @Post()
- * async handle(@AxisIp() ip: string | undefined) { ... }
- * ```
  */
 export const AxisIp = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string | undefined => {
@@ -70,18 +50,6 @@ export const AxisIp = createParamDecorator(
 
 /**
  * @AxisContext() — Extracts the full AXIS request context.
- *
- * Returns the pre-decode sensor input and frame metadata attached by
- * AxisSensorsMiddleware. Useful when a controller needs risk scores or
- * other pre-decode metadata.
- *
- * @example
- * ```typescript
- * @Post()
- * async handle(@AxisContext() ctx: AxisRequestData) {
- *   console.log(ctx.frameBytesCount, ctx.preDecodeInput.metadata.riskScore);
- * }
- * ```
  */
 export const AxisContext = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AxisRequestData => {
@@ -98,15 +66,6 @@ export const AxisContext = createParamDecorator(
 
 /**
  * @AxisDemoPubkey() — Extracts the demo public key header (development only).
- *
- * Returns `undefined` in non-development environments, blocking the header
- * at the decorator level.
- *
- * @example
- * ```typescript
- * @Post()
- * async handle(@AxisDemoPubkey() demoPubkeyHex: string | undefined) { ... }
- * ```
  */
 export const AxisDemoPubkey = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string | undefined => {
@@ -120,19 +79,6 @@ export const AxisDemoPubkey = createParamDecorator(
  * @AxisFrame() — Extracts the decoded + validated AXIS frame from the request.
  *
  * Requires `AxisDecodeInterceptor` to be applied to the route/controller.
- * The interceptor calls `AxisService.decode()` and attaches the result to `req.axisDecoded`.
- *
- * Returns the full `AxisDecoded` object containing the decoded frame, packet,
- * AxisContext, sensor input, and correlation IDs.
- *
- * @example
- * ```typescript
- * @Post('v1/decoded')
- * @UseInterceptors(AxisDecodeInterceptor)
- * async handle(@AxisFrame() decoded: AxisDecoded) {
- *   return this.axis.execute(decoded);
- * }
- * ```
  */
 export const AxisFrame = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AxisDecoded => {

@@ -1,6 +1,6 @@
-import { Injectable, SetMetadata } from '@nestjs/common';
+import "reflect-metadata";
 
-export const HANDLER_METADATA_KEY = 'axis:handler';
+export const HANDLER_METADATA_KEY = "axis:handler";
 
 /**
  * Decorator to mark a class as an Axis Handler.
@@ -9,7 +9,6 @@ export const HANDLER_METADATA_KEY = 'axis:handler';
  */
 export function Handler(intent?: string): ClassDecorator {
   return (target: Function) => {
-    SetMetadata(HANDLER_METADATA_KEY, { intent })(target);
-    Injectable()(target as any);
+    Reflect.defineMetadata(HANDLER_METADATA_KEY, { intent }, target);
   };
 }

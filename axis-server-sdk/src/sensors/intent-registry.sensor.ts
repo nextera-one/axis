@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import {
@@ -18,7 +17,6 @@ import { BAND } from '../engine/sensor-bands';
  *
  * Order: BAND.IDENTITY + 25 (65) — right after IntentAllowlistSensor (60).
  */
-@Injectable()
 @Sensor({ phase: 'POST_DECODE' })
 export class IntentRegistrySensor implements AxisSensor {
   readonly name = 'IntentRegistrySensor';

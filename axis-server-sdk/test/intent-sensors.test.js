@@ -3,8 +3,6 @@ require("reflect-metadata");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { ConfigService } = require("@nestjs/config");
-
 const {
   Intent,
   IntentRouter,
@@ -95,7 +93,7 @@ function createFrame(intent, body = Buffer.from("payload")) {
 }
 
 test("Intent option `is` resolves sensors by registry name", async () => {
-  const registry = new SensorRegistry(new ConfigService());
+  const registry = new SensorRegistry();
   registry.register(new NamedGateSensor());
 
   const router = new IntentRouter(undefined, undefined, registry);
@@ -108,7 +106,7 @@ test("Intent option `is` resolves sensors by registry name", async () => {
 });
 
 test("IntentSensors keeps backward compatibility with class refs", async () => {
-  const registry = new SensorRegistry(new ConfigService());
+  const registry = new SensorRegistry();
   registry.register(new LegacyGateSensor());
 
   const router = new IntentRouter(undefined, undefined, registry);
@@ -121,7 +119,7 @@ test("IntentSensors keeps backward compatibility with class refs", async () => {
 });
 
 test("Missing intent sensor refs fail closed", async () => {
-  const registry = new SensorRegistry(new ConfigService());
+  const registry = new SensorRegistry();
   const router = new IntentRouter(undefined, undefined, registry);
   router.registerHandler(new IntentOptionHandler());
 

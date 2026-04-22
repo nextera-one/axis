@@ -1,44 +1,25 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner } from "@nestjs/core";
 
-import { OBSERVER_BINDINGS_KEY, type AxisObserverBinding } from "../decorators/observer.decorator";
-import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
 import {
-  type AxisIntentSensorRef,
+  OBSERVER_BINDINGS_KEY,
+  HANDLER_SENSORS_KEY,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
+} from "@nextera.one/axis-server-sdk";
+import type {
+  AxisObserverBinding,
+  AxisIntentSensorRef,
   IntentRoute,
-} from "../decorators/intent.decorator";
-import { IntentRouter } from "./intent.router";
+} from "@nextera.one/axis-server-sdk";
+import { HANDLER_METADATA_KEY } from "./handler.decorator";
+import { IntentRouter } from "../engine/intent.router";
 
 /**
  * HandlerDiscoveryService
  *
  * Automatically discovers all `@Handler`-decorated classes at bootstrap
  * and registers their `@Intent`-decorated methods with the IntentRouter.
- *
- * This eliminates the need for every handler to inject IntentRouter and
- * manually call `router.register()` or `router.registerHandler()` in onModuleInit.
- *
- * **Before** (manual, per-handler boilerplate):
- * ```typescript
- * onModuleInit() {
- *   this.router.register('axis.capsules.create', this.create.bind(this));
- *   this.router.register('axis.capsules.list', this.findAll.bind(this));
- *   // ... repeated for every intent in every handler
- * }
- * ```
- *
- * **After** (zero-config):
- * ```typescript
- * @Handler('axis.capsules')
- * export class AxisCapsulesHandler {
- *   @Intent('axis.capsules.create', { absolute: true })
- *   async create(body: Uint8Array) { ... }
- * }
- * // That's it — no onModuleInit, no router injection
- * ```
  */
 @Injectable()
 export class HandlerDiscoveryService implements OnModuleInit {
@@ -58,7 +39,6 @@ export class HandlerDiscoveryService implements OnModuleInit {
       const { instance, metatype } = wrapper;
       if (!instance || !metatype) continue;
 
-      // Check if the class has @Handler metadata
       const handlerMeta = Reflect.getMetadata(HANDLER_METADATA_KEY, metatype);
       if (!handlerMeta) continue;
 
@@ -68,10 +48,11 @@ export class HandlerDiscoveryService implements OnModuleInit {
       const methods = this.scanner.getAllMethodNames(proto);
       const routes: IntentRoute[] =
         Reflect.getMetadata(INTENT_ROUTES_KEY, metatype) || [];
-      const routedMethods = new Set(routes.map((route) => String(route.methodName)));
+      const routedMethods = new Set(
+        routes.map((route) => String(route.methodName)),
+      );
       let registered = 0;
 
-      // Read @HandlerSensors from the class (if any)
       const handlerSensors: AxisIntentSensorRef[] =
         Reflect.getMetadata(HANDLER_SENSORS_KEY, metatype) || [];
       const handlerObservers: AxisObserverBinding[] =
@@ -83,7 +64,10 @@ export class HandlerDiscoveryService implements OnModuleInit {
           : `${prefix}.${route.action}`;
 
         if (!this.router.has(intentName)) {
-          this.router.register(intentName, (instance as any)[route.methodName].bind(instance));
+          this.router.register(
+            intentName,
+            (instance as any)[route.methodName].bind(instance),
+          );
           registered++;
           totalIntents++;
         }
@@ -107,10 +91,10 @@ export class HandlerDiscoveryService implements OnModuleInit {
         );
         if (!meta?.intent) continue;
 
-        const intentName = meta.absolute ? meta.intent : `${prefix}.${meta.intent}`;
+        const intentName = meta.absolute
+          ? meta.intent
+          : `${prefix}.${meta.intent}`;
 
-        // Only auto-register if the router doesn't already have this intent
-        // (allows manual registration in onModuleInit to take precedence)
         if (!this.router.has(intentName)) {
           this.router.register(
             intentName,
@@ -120,8 +104,6 @@ export class HandlerDiscoveryService implements OnModuleInit {
           totalIntents++;
         }
 
-        // Always register metadata (@IntentBody, @IntentSensors) —
-        // even for manually-registered intents
         this.router.registerIntentMeta(
           intentName,
           proto,

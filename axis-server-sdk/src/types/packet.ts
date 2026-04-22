@@ -38,10 +38,13 @@ export const T = {
 /**
  * AxisPacket
  *
- * A high-level representation of an AXIS message after TLV decoding.
- * Combines header metadata with the raw body and signature.
+ * Parsed binary-packet view of an AXIS request after TLV header extraction.
  *
- * @typedef {Object} AxisPacket
+ * This is intentionally different from the protocol `AxisFrame`:
+ * - `AxisFrame` is the wire envelope (`flags`, `headers`, `body`, `sig`)
+ * - `AxisPacket` is the semantic header projection used by the backend after
+ *   decoding raw header TLVs into strongly named fields like `intent`,
+ *   `actorId`, `pid`, and `tsMs`
  */
 export type AxisPacket = {
   /** The intent string */

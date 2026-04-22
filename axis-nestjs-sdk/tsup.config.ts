@@ -10,9 +10,11 @@ export default defineConfig({
   clean: true,
   external: [
     "@nestjs/common",
+    "@nestjs/config",
     "@nestjs/core",
     "@nestjs/websockets",
     "@nextera.one/axis-server-sdk",
+    "crypto",
     "express",
     "nestjs-cls",
     "reflect-metadata",

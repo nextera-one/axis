@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -57,7 +56,6 @@ const SEVERITY_WEIGHT: Record<RiskSignal['severity'], number> = {
  * sensors have already contributed their metadata.
  */
 @Sensor()
-@Injectable()
 export class RiskGateSensor implements AxisSensor {
   readonly name = 'RiskGateSensor';
   readonly order = BAND.BUSINESS + 10;

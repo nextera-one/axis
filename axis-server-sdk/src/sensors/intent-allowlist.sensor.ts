@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -13,7 +12,6 @@ const PUBLIC_INTENT_ALLOWLIST = [
   'system.',
 ];
 
-@Injectable()
 @Sensor()
 export class IntentAllowlistSensor implements AxisSensor {
   readonly name = 'IntentAllowlistSensor';

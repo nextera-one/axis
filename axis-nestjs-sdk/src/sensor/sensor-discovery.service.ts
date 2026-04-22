@@ -1,20 +1,14 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { DiscoveryService, Reflector } from '@nestjs/core';
+import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
+import { DiscoveryService, Reflector } from "@nestjs/core";
 
-import {
-  SENSOR_METADATA_KEY,
-  SensorOptions,
-} from '../decorators/sensor.decorator';
-import { SensorRegistry } from './registry/sensor.registry';
-import { AxisSensor } from '../sensor/axis-sensor';
-import { PRE_DECODE_BOUNDARY } from './sensor-bands';
+import { AxisSensor, PRE_DECODE_BOUNDARY } from "@nextera.one/axis-server-sdk";
+import type { SensorOptions } from "./sensor.decorator";
+import { SENSOR_METADATA_KEY } from "./sensor.decorator";
+import { SensorRegistry } from "./sensor.registry";
 
 /**
  * Discovers all providers decorated with @Sensor() and registers them
  * in the SensorRegistry at application bootstrap.
- *
- * Runs after all onModuleInit() calls, so config-reading sensors
- * have their settings loaded before registration.
  */
 @Injectable()
 export class SensorDiscoveryService implements OnApplicationBootstrap {
@@ -49,12 +43,11 @@ export class SensorDiscoveryService implements OnApplicationBootstrap {
         continue;
       }
 
-      // Phase priority: decorator option > instance property > auto-derive from order
       if (!sensor.phase) {
         const decoratorPhase = meta !== true ? meta.phase : undefined;
         (sensor as any).phase =
           decoratorPhase ??
-          (sensor.order < PRE_DECODE_BOUNDARY ? 'PRE_DECODE' : 'POST_DECODE');
+          (sensor.order < PRE_DECODE_BOUNDARY ? "PRE_DECODE" : "POST_DECODE");
       }
 
       this.registry.register(sensor);

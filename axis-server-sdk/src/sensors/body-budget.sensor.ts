@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { MAX_BODY_LEN, MAX_HDR_LEN } from '../core/constants';
 import { decodeVarint } from '../core/varint';
@@ -88,7 +87,6 @@ import {
  * @see {@link MAX_BODY_LEN} - Configurable body limit
  */
 @Sensor()
-@Injectable()
 export class BodyBudgetSensor implements AxisSensor {
   /** AxisSensor identifier */
   readonly name = 'BodyBudgetSensor';

@@ -1,13 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Frame Budget AxisSensor - Request Size Validation
@@ -81,11 +74,10 @@ import {
  * @todo Implement actual size checking against intent policy maxFrameBytes
  * @see {@link BodyBudgetSensor} - Body-specific size limiting
  */
-@Sensor({ phase: 'PRE_DECODE' })
-@Injectable()
+@Sensor({ phase: "PRE_DECODE" })
 export class FrameBudgetSensor implements AxisSensor {
   /** AxisSensor identifier for logging and registry */
-  readonly name = 'FrameBudgetSensor';
+  readonly name = "FrameBudgetSensor";
 
   /**
    * Execution order - runs after protocol validation
@@ -95,8 +87,6 @@ export class FrameBudgetSensor implements AxisSensor {
    * - Size checked before expensive processing
    */
   readonly order = BAND.WIRE + 20;
-
-  constructor(private readonly config: ConfigService) {}
 
   /**
    * Determines if this sensor should process the given input.
@@ -108,7 +98,7 @@ export class FrameBudgetSensor implements AxisSensor {
    * @returns {boolean} True if Content-Length is present
    */
   supports(input: SensorInput): boolean {
-    return typeof input.contentLength === 'number';
+    return typeof input.contentLength === "number";
   }
 
   /**
@@ -127,21 +117,21 @@ export class FrameBudgetSensor implements AxisSensor {
    */
   async run(input: SensorInput): Promise<SensorDecision> {
     const maxBytes =
-      this.config.get<number>('AXIS_MAX_FRAME_SIZE') || 50 * 1024 * 1024;
+      Number(process.env["AXIS_MAX_FRAME_SIZE"]) || 50 * 1024 * 1024;
     const contentLength = input.contentLength;
 
-    if (typeof contentLength !== 'number') {
-      return { action: 'ALLOW' };
+    if (typeof contentLength !== "number") {
+      return { action: "ALLOW" };
     }
 
     if (contentLength > maxBytes) {
       return {
-        action: 'DENY',
-        code: 'FRAME_TOO_LARGE',
+        action: "DENY",
+        code: "FRAME_TOO_LARGE",
         reason: `Frame size ${contentLength} exceeds limit ${maxBytes}`,
       };
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 }

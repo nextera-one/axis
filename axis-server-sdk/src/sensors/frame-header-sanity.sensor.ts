@@ -1,11 +1,9 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { AXIS_MAGIC, AXIS_VERSION, MAX_FRAME_LEN } from '../core/constants';
 import { BAND } from '../engine/sensor-bands';
 import { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
 
-@Injectable()
 @Sensor({ phase: 'PRE_DECODE' })
 export class FrameHeaderSanitySensor implements AxisSensor {
   readonly name = 'FrameHeaderSanitySensor';

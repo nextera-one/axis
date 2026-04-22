@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -30,7 +29,6 @@ import { decodeVarint } from '../core/varint';
  * @implements {OnModuleInit}
  */
 @Sensor()
-@Injectable()
 export class TLVParseSensor implements AxisSensor {
   readonly name = 'TLVParseSensor';
   readonly order = BAND.CONTENT + 20;

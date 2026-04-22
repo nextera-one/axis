@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
 import {
   AxisSensor,
   Capability,
@@ -9,7 +7,7 @@ import {
   PROOF_CAPABILITIES,
   SensorDecision,
   SensorInput,
-} from '../index';
+} from "../index";
 
 /**
  * Capability Enforcement AxisSensor - Authorization Based on Proof Type
@@ -74,12 +72,13 @@ import {
  */
 
 @Sensor()
-@Injectable()
 export class CapabilityEnforcementSensor implements AxisSensor {
-  private readonly logger = new Logger(CapabilityEnforcementSensor.name);
+  private readonly logger = {
+    warn: (msg: string) => console.warn(`[CapabilityEnforcementSensor] ${msg}`),
+  };
 
   /** AxisSensor identifier for logging and registry */
-  readonly name = 'CapabilityEnforcementSensor';
+  readonly name = "CapabilityEnforcementSensor";
 
   /**
    * Execution order - runs after authentication
@@ -121,7 +120,7 @@ export class CapabilityEnforcementSensor implements AxisSensor {
   async run(input: SensorInput): Promise<SensorDecision> {
     const { intent, packet } = input;
     if (!intent) {
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
 
     const proofType = packet?.proofType ?? 0;
@@ -137,7 +136,7 @@ export class CapabilityEnforcementSensor implements AxisSensor {
     // === STEP 3: Check Public Intents ===
     // No capabilities required = public access
     if (requiredCapabilities.length === 0) {
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
 
     // === STEP 4: Check Capability Match ===
@@ -149,17 +148,17 @@ export class CapabilityEnforcementSensor implements AxisSensor {
     if (missingCapabilities.length > 0) {
       // Capability mismatch - deny with details
       this.logger.warn(
-        `Capability denied for ${intent}: missing ${missingCapabilities.join(', ')} (has: ${grantedCapabilities.join(', ')})`,
+        `Capability denied for ${intent}: missing ${missingCapabilities.join(", ")} (has: ${grantedCapabilities.join(", ")})`,
       );
       return {
-        action: 'DENY',
-        code: 'CAPABILITY_DENIED',
-        reason: `Missing capabilities: ${missingCapabilities.join(', ')}`,
+        action: "DENY",
+        code: "CAPABILITY_DENIED",
+        reason: `Missing capabilities: ${missingCapabilities.join(", ")}`,
       };
     }
 
     // All required capabilities present
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 
   /**
@@ -182,7 +181,7 @@ export class CapabilityEnforcementSensor implements AxisSensor {
 
     // Check prefix patterns (e.g., 'admin.*' matches 'admin.users.delete')
     for (const [pattern, caps] of Object.entries(INTENT_REQUIREMENTS)) {
-      if (pattern.endsWith('.*')) {
+      if (pattern.endsWith(".*")) {
         const prefix = pattern.slice(0, -1); // Remove '*'
         if (intent.startsWith(prefix)) {
           return caps;
@@ -191,6 +190,6 @@ export class CapabilityEnforcementSensor implements AxisSensor {
     }
 
     // Default: require execute for unknown intents (safe default)
-    return ['execute'];
+    return ["execute"];
   }
 }

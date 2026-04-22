@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -52,7 +51,6 @@ function parseINotation(tps: string): number | null {
  *   - If the resolved timestamp drifts beyond maxDriftMs, DENY.
  */
 @Sensor()
-@Injectable()
 export class TpsSensor implements AxisSensor {
   readonly name = 'TpsSensor';
   readonly order = BAND.POLICY + 2; // runs early in POLICY band, before Law

@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 
 import { Sensor } from '../decorators/sensor.decorator';
@@ -78,7 +77,6 @@ import { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
  * @see {@link https://en.wikipedia.org/wiki/SHA-2 SHA-256}
  */
 @Sensor()
-@Injectable()
 export class ChunkHashSensor implements AxisSensor {
   /** Sensor identifier */
   readonly name = 'ChunkHashSensor';

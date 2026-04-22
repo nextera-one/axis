@@ -1,5 +1,3 @@
-import { Injectable, Logger } from "@nestjs/common";
-
 import { Sensor } from "../decorators/sensor.decorator";
 import { BAND } from "../engine/sensor-bands";
 import type {
@@ -9,11 +7,11 @@ import type {
 } from "../law";
 import { buildAxisLawEvaluationContext } from "../law";
 import type { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
+import { createAxisLogger } from "../utils/axis-logger";
 
 @Sensor()
-@Injectable()
 export class LawEvaluationSensor implements AxisSensor {
-  private readonly logger = new Logger(LawEvaluationSensor.name);
+  private readonly logger = createAxisLogger(LawEvaluationSensor.name);
 
   readonly name = "LawEvaluationSensor";
   readonly order = BAND.POLICY + 5;

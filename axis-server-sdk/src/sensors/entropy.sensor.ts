@@ -1,15 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
 
-import { TLV_NONCE, TLV_PID } from '../core/constants';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
+import { TLV_NONCE, TLV_PID } from "../core/constants";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Entropy AxisSensor - Randomness Quality Analysis
@@ -99,9 +94,10 @@ import {
  * @see {@link https://en.wikipedia.org/wiki/Entropy_(information_theory) Shannon Entropy}
  */
 @Sensor()
-@Injectable()
 export class EntropySensor implements AxisSensor {
-  private readonly logger = new Logger(EntropySensor.name);
+  private readonly logger = {
+    warn: (msg: string) => console.warn(`[EntropySensor] ${msg}`),
+  };
 
   /**
    * Minimum acceptable entropy in bits per byte.
@@ -114,7 +110,7 @@ export class EntropySensor implements AxisSensor {
   private readonly MIN_ENTROPY_THRESHOLD = 3.0;
 
   /** AxisSensor identifier */
-  readonly name = 'EntropySensor';
+  readonly name = "EntropySensor";
 
   /**
    * Execution order - anomaly detection phase
@@ -232,7 +228,7 @@ export class EntropySensor implements AxisSensor {
 
     // If no headers, allow (WebSocket handshake, etc.)
     if (!headers) {
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
 
     // Extract PID and nonce from headers
@@ -254,13 +250,13 @@ export class EntropySensor implements AxisSensor {
 
       // Check for sequential pattern
       if (this.hasSequentialPattern(pid)) {
-        issues.push('pid_sequential');
+        issues.push("pid_sequential");
         totalDelta -= 5;
       }
 
       // Check for repeated pattern
       if (this.hasRepeatedPattern(pid)) {
-        issues.push('pid_repeated');
+        issues.push("pid_repeated");
         totalDelta -= 5;
       }
     }
@@ -277,28 +273,28 @@ export class EntropySensor implements AxisSensor {
 
       // Check for sequential pattern
       if (this.hasSequentialPattern(nonce)) {
-        issues.push('nonce_sequential');
+        issues.push("nonce_sequential");
         totalDelta -= 5;
       }
 
       // Check for repeated pattern
       if (this.hasRepeatedPattern(nonce)) {
-        issues.push('nonce_repeated');
+        issues.push("nonce_repeated");
         totalDelta -= 5;
       }
     }
 
     // === Return Decision ===
     if (issues.length > 0) {
-      this.logger.warn(`Entropy issues from ${input.ip}: ${issues.join(', ')}`);
+      this.logger.warn(`Entropy issues from ${input.ip}: ${issues.join(", ")}`);
       return {
-        action: 'FLAG',
+        action: "FLAG",
         scoreDelta: totalDelta,
         reasons: issues,
       };
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 
   /**

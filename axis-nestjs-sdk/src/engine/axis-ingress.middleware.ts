@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { NextFunction, Request, Response } from "express";
+import { PriorityOrder } from "@nextera.one/axis-server-sdk";
 
 import { AxisMediaTypes } from "../http/media-types";
 import { wasResponseClosedEarly } from "../http/request-lifecycle";
@@ -18,6 +19,7 @@ import {
  * parser in front. Runs in demo mode when `NODE_ENV === 'development'`
  * to allow the `x-demo-pubkey` header.
  */
+@PriorityOrder("HIGH", 20)
 @Injectable()
 export class AxisIngressMiddleware implements NestMiddleware {
   private readonly logger = new Logger(AxisIngressMiddleware.name);

@@ -1,5 +1,3 @@
-import { Injectable, Logger, Optional } from "@nestjs/common";
-import { ModuleRef } from "@nestjs/core";
 import {
   decodeChainEnvelope,
   decodeChainRequest,
@@ -74,6 +72,7 @@ import {
   normalizeSensorDecision,
   SensorInput,
 } from "../sensor/axis-sensor";
+import type { AxisDependencyResolver } from "./axis-dependency-resolver";
 import { SensorRegistry } from "./registry/sensor.registry";
 import {
   AxisChainEnvelope,
@@ -87,6 +86,7 @@ import {
   withAxisExecutionContext,
 } from "./axis-execution-context";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
+import { createAxisLogger } from "../utils/axis-logger";
 
 function observerRefKey(ref: AxisObserverRef): string {
   return typeof ref === "string" ? ref : ref.name;
@@ -225,11 +225,13 @@ export interface AxisEffect {
  *
  * @class IntentRouter
  */
-@Injectable()
 export class IntentRouter {
-  private readonly logger = new Logger(IntentRouter.name);
+  private readonly logger = createAxisLogger(IntentRouter.name);
   private readonly decoder = new TextDecoder();
   private readonly encoder = new TextEncoder();
+  private readonly dependencyResolver?: AxisDependencyResolver;
+  private readonly observerDispatcher?: ObserverDispatcherService;
+  private readonly sensorRegistry?: SensorRegistry;
 
   /** Intents handled inline in route() — not in `handlers` map */
   private static readonly BUILTIN_INTENTS = new Set([
@@ -295,12 +297,14 @@ export class IntentRouter {
   private ccePipelineConfig: Omit<CcePipelineConfig, "handlers"> | null = null;
 
   constructor(
-    @Optional() private readonly moduleRef?: ModuleRef,
-    @Optional()
-    private readonly observerDispatcher?: ObserverDispatcherService,
-    @Optional()
-    private readonly sensorRegistry?: SensorRegistry,
-  ) {}
+    dependencyResolver?: AxisDependencyResolver,
+    observerDispatcher?: ObserverDispatcherService,
+    sensorRegistry?: SensorRegistry,
+  ) {
+    this.dependencyResolver = dependencyResolver;
+    this.observerDispatcher = observerDispatcher;
+    this.sensorRegistry = sensorRegistry;
+  }
 
   getSchema(intent: string): IntentSchema | undefined {
     return this.intentSchemas.get(intent);
@@ -876,16 +880,12 @@ export class IntentRouter {
       return registered;
     }
 
-    if (!this.moduleRef || typeof ref === "string") {
+    if (!this.dependencyResolver || typeof ref === "string") {
       return undefined;
     }
 
-    try {
-      const resolved = this.moduleRef.get(ref as any, { strict: false });
-      return isAxisSensorInstance(resolved) ? resolved : undefined;
-    } catch {
-      return undefined;
-    }
+    const resolved = this.dependencyResolver.resolve(ref);
+    return isAxisSensorInstance(resolved) ? resolved : undefined;
   }
 
   private getEffectiveCapsulePolicy(

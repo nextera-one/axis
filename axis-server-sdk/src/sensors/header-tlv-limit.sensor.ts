@@ -1,11 +1,9 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { MAX_HDR_LEN } from '../core/constants';
 import { BAND } from '../engine/sensor-bands';
 import { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
 
-@Injectable()
 @Sensor()
 export class HeaderTLVLimitSensor implements AxisSensor {
   readonly name = 'HeaderTLVLimitSensor';

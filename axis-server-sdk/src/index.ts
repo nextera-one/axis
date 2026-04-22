@@ -67,6 +67,20 @@ export {
 } from "./decorators/handler-sensors.decorator";
 export { Sensor, SENSOR_METADATA_KEY } from "./decorators/sensor.decorator";
 export type { SensorOptions, SensorPhase } from "./decorators/sensor.decorator";
+export {
+  PriorityOrder,
+  priorityOrder,
+  PRIORITY_ORDER_METADATA_KEY,
+  getPriorityOrder,
+  getPriorityOrderedTargets,
+  comparePriorityOrder,
+} from "./decorators/priority-order.decorator";
+export type {
+  AxisPriorityLevel,
+  AxisPriorityLevelInput,
+  PriorityOrderDefinition,
+  PriorityOrderOptions,
+} from "./decorators/priority-order.decorator";
 
 // TLV Field Decorators
 export {
@@ -264,6 +278,18 @@ export { AxisCrudHandler } from "./interfaces/axis-crud-handler.interface";
 // Security
 export * from "./security/scopes";
 export * from "./security/capabilities";
+export { ProofVerificationService } from "./crypto/proof-verification.service";
+export type {
+  DeviceSEContext,
+  MTLSContext,
+  ProofType,
+  ProofVerificationResult,
+} from "./crypto/proof-verification.service";
+export {
+  BodyProfile,
+  BodyProfileValidator,
+} from "./schemas/body-profile.validator";
+export type { BodyProfileValidation } from "./schemas/body-profile.validator";
 
 // Law
 export * from "./law";
@@ -297,11 +323,7 @@ export type {
   AxisAlg as AxisJsonAlg,
 } from "./types/axis-frame.types";
 
-// Upload handlers and stores
-export {
-  AxisFilesDownloadHandler,
-  AxisFilesFinalizeHandler,
-} from "./upload/axis-files.handlers";
+// Upload stores and tokens
 export {
   AXIS_UPLOAD_FILE_STORE,
   AXIS_UPLOAD_RECEIPT_SIGNER,
@@ -320,18 +342,8 @@ export { DiskUploadFileStore } from "./upload/disk-upload-file.store";
 // Types
 
 // Additional root exports for import ergonomics
-export {
-  AxisRaw,
-  AxisIp,
-  AxisContext,
-  AxisDemoPubkey,
-} from "./decorators/axis-request.decorator";
-export type { AxisRequestData } from "./decorators/axis-request.decorator";
 export { AxisError } from "./core/axis-error";
-export { ObserverDiscoveryService } from "./engine/observer-discovery.service";
 export { ObserverDispatcherService } from "./engine/observer-dispatcher.service";
-export { HandlerDiscoveryService } from "./engine/handler-discovery.service";
-export { SensorDiscoveryService } from "./engine/sensor-discovery.service";
 export { ObserverRegistry } from "./engine/registry/observer.registry";
 export { SensorRegistry } from "./engine/registry/sensor.registry";
 export type { AxisDecoded } from "./engine/axis-decoded";
@@ -554,20 +566,8 @@ export type {
   PatternConfidence,
 } from "./needle/pattern.types";
 
-// Sensors — Reality gates
-export { TpsSensor } from "./sensors/tps.sensor";
-export type { TpsSensorOptions } from "./sensors/tps.sensor";
-export { RiskGateSensor } from "./sensors/risk-gate.sensor";
-export type {
-  RiskGateSensorOptions,
-  RiskSignalCollector,
-} from "./sensors/risk-gate.sensor";
-export { TickAuthSensor } from "./sensors/tickauth.sensor";
-export type {
-  TickAuthSensorOptions,
-  TickAuthVerifier,
-  TickAuthCapsuleRef,
-} from "./sensors/tickauth.sensor";
+// Sensors — Reality gates (all sensors exported from barrel)
+export * from "./sensors/index";
 
 // Grouped namespaces were previously exported (`export * as cce`, etc.) but
 // all named exports above already cover the public surface used by consumers.

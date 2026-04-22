@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -105,7 +104,6 @@ function readU64be(b: Uint8Array): bigint {
  * @see {@link IntentSchema}
  */
 @Sensor()
-@Injectable()
 export class SchemaValidationSensor implements AxisSensor {
   /** Sensor identifier for logging and registry */
   readonly name = 'SchemaValidationSensor';

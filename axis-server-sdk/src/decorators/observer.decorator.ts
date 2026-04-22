@@ -1,7 +1,5 @@
 import "reflect-metadata";
 
-import { Injectable } from "@nestjs/common";
-
 import type { AxisObserverEvent } from "../engine/axis-chain.types";
 
 export const OBSERVER_METADATA_KEY = "axis:observer";
@@ -110,6 +108,5 @@ export function Observer(
 
     const definition = isDefinitionOptions(input) ? input : {};
     Reflect.defineMetadata(OBSERVER_METADATA_KEY, definition, target as Function);
-    Injectable()(target as any);
   }) as ClassDecorator & MethodDecorator;
 }

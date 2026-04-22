@@ -1,10 +1,7 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import { ProtocolStrictInputZ } from '../schemas/axis-schemas';
-import { AxisSensor } from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { ProtocolStrictInputZ } from "../schemas/axis-schemas";
+import { AxisSensor } from "../sensor/axis-sensor";
 import {
   AXIS_MAGIC,
   AXIS_VERSION,
@@ -12,9 +9,9 @@ import {
   FLAG_BODY_TLV,
   FLAG_CHAIN_REQ,
   FLAG_HAS_WITNESS,
-} from '../core/constants';
-import { decodeVarint } from '../core/varint';
-import { SensorDecision, SensorInput } from '../sensor/axis-sensor';
+} from "../core/constants";
+import { decodeVarint } from "../core/varint";
+import { SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Valid flag combinations for AXIS frames.
@@ -113,13 +110,17 @@ const VALID_FLAGS = [
  *
  * @see {@link https://axis-spec.example.com/wire-format AXIS Wire Format Spec}
  */
-@Sensor({ phase: 'PRE_DECODE' })
-@Injectable()
-export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
-  private readonly logger = new Logger(ProtocolStrictSensor.name);
+@Sensor({ phase: "PRE_DECODE" })
+export class ProtocolStrictSensor implements AxisSensor {
+  private readonly logger = {
+    error: (msg: string, ...args: unknown[]) =>
+      console.error(`[ProtocolStrictSensor] ${msg}`, ...args),
+    debug: (msg: string) => void 0,
+    warn: (msg: string) => console.warn(`[ProtocolStrictSensor] ${msg}`),
+  };
 
   /** Sensor identifier for logging and registry */
-  readonly name = 'ProtocolStrictSensor';
+  readonly name = "ProtocolStrictSensor";
 
   /**
    * Execution order - FIRST sensor in the chain
@@ -133,8 +134,6 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
 
   private protocolMagic: Uint8Array = AXIS_MAGIC;
   private protocolVersion = AXIS_VERSION;
-
-  constructor(private readonly config: ConfigService) {}
 
   /**
    * Static validation for streaming middleware (Fast Check)
@@ -157,13 +156,13 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
   }
 
   /**
-   * Lifecycle hook: Registers this sensor in the chain on module initialization.
+   * Lifecycle hook: Load config overrides on module initialization.
    */
   onModuleInit() {
-    const magicStr = this.config.get<string>('AXIS_PROTOCOL_MAGIC');
-    this.protocolMagic = magicStr ? Buffer.from(magicStr, 'ascii') : AXIS_MAGIC;
-    this.protocolVersion =
-      this.config.get<number>('AXIS_PROTOCOL_VERSION') || AXIS_VERSION;
+    const magicStr = process.env["AXIS_PROTOCOL_MAGIC"];
+    this.protocolMagic = magicStr ? Buffer.from(magicStr, "ascii") : AXIS_MAGIC;
+    const versionStr = process.env["AXIS_PROTOCOL_VERSION"];
+    this.protocolVersion = versionStr ? Number(versionStr) : AXIS_VERSION;
   }
 
   /**
@@ -177,9 +176,9 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
         validatedInput.error.issues,
       );
       return {
-        action: 'DENY',
-        code: 'INVALID_INPUT',
-        reason: 'Protocol validation input failed',
+        action: "DENY",
+        code: "INVALID_INPUT",
+        reason: "Protocol validation input failed",
       };
     }
 
@@ -188,7 +187,7 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
 
     // Debug: Log first 10 bytes
     if (peek.length >= 8) {
-      const hex = Buffer.from(peek.subarray(0, 10)).toString('hex');
+      const hex = Buffer.from(peek.subarray(0, 10)).toString("hex");
       this.logger.debug(`Raw Frame Header (Hex): ${hex} (IP: ${input.ip})`);
     }
 
@@ -202,9 +201,9 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
     // Need at least 9 bytes for basic frame header (Magic:5, Ver:1, Flags:1, HLen:1, BLen:1, SLen:1)
     if (peek.length < 9) {
       return {
-        action: 'DENY',
-        code: 'FRAME_TOO_SHORT',
-        reason: 'Frame too short for protocol header',
+        action: "DENY",
+        code: "FRAME_TOO_SHORT",
+        reason: "Frame too short for protocol header",
       };
     }
 
@@ -215,8 +214,8 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
     );
     if (!magicCheck.valid) {
       return {
-        action: 'DENY',
-        code: 'INVALID_MAGIC',
+        action: "DENY",
+        code: "INVALID_MAGIC",
         reason: `Expected ${new TextDecoder().decode(this.protocolMagic)} magic, got ${magicCheck.actual}`,
       };
     }
@@ -252,7 +251,7 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
       const hasClientVersion = await this.checkForClientVersion(peek);
       if (!hasClientVersion) {
         // Warn for now (Phase 7 Soft Rollout)
-        issues.push('missing_client_version');
+        issues.push("missing_client_version");
       }
     }
 
@@ -261,28 +260,28 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
       // Check for critical issues
       const critical = issues.some(
         (i) =>
-          i.startsWith('invalid_magic') || i.startsWith('unsupported_version'),
+          i.startsWith("invalid_magic") || i.startsWith("unsupported_version"),
       );
 
       if (critical) {
         return {
-          action: 'DENY',
-          code: 'PROTOCOL_VIOLATION',
-          reason: issues.join(', '),
+          action: "DENY",
+          code: "PROTOCOL_VIOLATION",
+          reason: issues.join(", "),
         };
       }
 
       this.logger.warn(
-        `Protocol issues from ${input.ip}: ${issues.join(', ')}`,
+        `Protocol issues from ${input.ip}: ${issues.join(", ")}`,
       );
       return {
-        action: 'FLAG',
+        action: "FLAG",
         scoreDelta: -issues.length * 2,
         reasons: issues,
       };
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 
   /**
@@ -323,15 +322,15 @@ export class ProtocolStrictSensor implements AxisSensor, OnModuleInit {
       // Check for non-minimal encoding
       // A varint should use the minimum number of bytes
       if (value < 128 && bytesRead > 1) {
-        return { valid: false, reason: 'non-minimal-small-value' };
+        return { valid: false, reason: "non-minimal-small-value" };
       }
       if (value < 16384 && bytesRead > 2) {
-        return { valid: false, reason: 'non-minimal-medium-value' };
+        return { valid: false, reason: "non-minimal-medium-value" };
       }
 
       return { valid: true };
     } catch {
-      return { valid: false, reason: 'varint-decode-error' };
+      return { valid: false, reason: "varint-decode-error" };
     }
   }
 

@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { DiscoveryService, Reflector } from "@nestjs/core";
-
 import {
-  AxisObserverDefinition,
   OBSERVER_METADATA_KEY,
-} from "../decorators/observer.decorator";
-import type { AxisIntentObserver } from "./axis-observer.interface";
-import { ObserverRegistry } from "./registry/observer.registry";
+  type AxisIntentObserver,
+  type AxisObserverDefinition,
+} from "@nextera.one/axis-server-sdk";
+
+import { ObserverRegistry } from "./observer.registry";
 
 @Injectable()
 export class ObserverDiscoveryService implements OnApplicationBootstrap {

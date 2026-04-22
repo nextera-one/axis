@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -87,7 +86,6 @@ import { AxisSensor, SensorDecision } from '../sensor/axis-sensor';
  * @see {@link CapabilityEnforcementSensor} - Request-level capabilities
  */
 @Sensor()
-@Injectable()
 export class StreamScopeSensor implements AxisSensor {
   /** Sensor identifier */
   readonly name = 'StreamScopeSensor';

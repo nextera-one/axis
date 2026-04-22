@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -69,7 +68,6 @@ export interface TickAuthSensorOptions {
  * Runs in the IDENTITY band after proof-presence.
  */
 @Sensor()
-@Injectable()
 export class TickAuthSensor implements AxisSensor {
   readonly name = 'TickAuthSensor';
   readonly order = BAND.IDENTITY + 40; // after ProofPresenceSensor (30)

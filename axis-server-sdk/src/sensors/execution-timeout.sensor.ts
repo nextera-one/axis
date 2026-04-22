@@ -1,13 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
-import { resolveTimeout } from '../core/timeouts';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
+import { resolveTimeout } from "../core/timeouts";
 
 /**
  * Execution Timeout AxisSensor - Intent-Based Deadline Enforcement
@@ -88,12 +82,11 @@ import { resolveTimeout } from '../core/timeouts';
  * @see {@link ExecutionContractSensor} - Resource limit enforcement
  */
 @Sensor()
-@Injectable()
 export class ExecutionTimeoutSensor implements AxisSensor {
-  private readonly logger = new Logger(ExecutionTimeoutSensor.name);
+  private readonly logger = { debug: (msg: string) => void 0 };
 
   /** AxisSensor identifier */
-  readonly name = 'ExecutionTimeoutSensor';
+  readonly name = "ExecutionTimeoutSensor";
 
   /**
    * Execution order - late, near handler execution
@@ -129,7 +122,7 @@ export class ExecutionTimeoutSensor implements AxisSensor {
   async run(input: SensorInput): Promise<SensorDecision> {
     const { intent, context } = input;
     if (!intent) {
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
 
     // Get timeout for this intent
@@ -150,7 +143,7 @@ export class ExecutionTimeoutSensor implements AxisSensor {
 
     // Actual timeout enforcement happens in the intent router/executor
     // This sensor just sets the deadline
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 
   /**

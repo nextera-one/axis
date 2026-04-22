@@ -1,7 +1,5 @@
 import { createHash } from "crypto";
 
-import { Injectable, Logger, Optional } from "@nestjs/common";
-
 import type { AxisFrame } from "../core/axis-bin";
 import { FLAG_CHAIN_REQ, TLV_ACTOR_ID, TLV_CAPSULE, TLV_INTENT, TLV_TRACE_ID } from "../core/constants";
 import type { AxisObserverBinding } from "../decorators/observer.decorator";
@@ -21,21 +19,20 @@ import {
 } from "./axis-execution-context";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
 import { AxisEffect, IntentRouter } from "./intent.router";
+import { createAxisLogger } from "../utils/axis-logger";
 
 export interface AxisChainExecutionOptions {
   actorId?: string;
   baseFrame?: Partial<AxisFrame>;
 }
 
-@Injectable()
 export class AxisChainExecutor {
-  private readonly logger = new Logger(AxisChainExecutor.name);
+  private readonly logger = createAxisLogger(AxisChainExecutor.name);
   private readonly encoder = new TextEncoder();
   private readonly decoder = new TextDecoder();
 
   constructor(
     private readonly router: IntentRouter,
-    @Optional()
     private readonly observerDispatcher?: ObserverDispatcherService,
   ) {}
 

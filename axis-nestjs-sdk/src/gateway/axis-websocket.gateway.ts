@@ -8,12 +8,12 @@ import {
 import type { IncomingMessage } from "http";
 import { Server, WebSocket } from "ws";
 import {
-  AxisSensorChainService,
   decodeFrame,
-  IntentRouter,
   normalizeSensorDecision,
   SensorInput,
 } from "@nextera.one/axis-server-sdk";
+import { IntentRouter } from "../engine/intent.router";
+import { AxisSensorChainService } from "../sensor/axis-sensor-chain.service";
 
 /**
  * AxisWebSocketGatewayBase — reusable base class for AXIS WebSocket servers.

@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -32,7 +31,6 @@ import {
  * @implements {OnModuleInit}
  */
 @Sensor()
-@Injectable()
 export class AccessProfileResolverSensor implements AxisSensor {
   /** AxisSensor identifier */
   readonly name = 'AccessProfileResolverSensor';

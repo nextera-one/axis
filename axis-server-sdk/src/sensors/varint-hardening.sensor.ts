@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
@@ -93,7 +92,6 @@ import {
  * @see {@link BodyBudgetSensor} - Uses varints for length parsing
  */
 @Sensor({ phase: 'PRE_DECODE' })
-@Injectable()
 export class VarintHardeningSensor implements AxisSensor {
   /** Sensor identifier */
   readonly name = 'VarintHardeningSensor';

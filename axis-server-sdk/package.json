@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-server-sdk",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Axis Protocol server-side SDK — decorators, interfaces, and routing primitives for building Axis handlers",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,6 +20,31 @@
       "types": "./dist/bin/generate-keys.d.ts",
       "import": "./dist/bin/generate-keys.mjs",
       "require": "./dist/bin/generate-keys.js"
+    },
+    "./sensors": {
+      "types": "./dist/sensors/index.d.ts",
+      "import": "./dist/sensors/index.mjs",
+      "require": "./dist/sensors/index.js"
+    },
+    "./timeline": {
+      "types": "./dist/timeline/index.d.ts",
+      "import": "./dist/timeline/index.mjs",
+      "require": "./dist/timeline/index.js"
+    },
+    "./idel": {
+      "types": "./dist/idel/index.d.ts",
+      "import": "./dist/idel/index.mjs",
+      "require": "./dist/idel/index.js"
+    },
+    "./needle": {
+      "types": "./dist/needle/index.d.ts",
+      "import": "./dist/needle/index.mjs",
+      "require": "./dist/needle/index.js"
+    },
+    "./cce": {
+      "types": "./dist/cce/index.d.ts",
+      "import": "./dist/cce/index.mjs",
+      "require": "./dist/cce/index.js"
     }
   },
   "bin": {
@@ -61,26 +86,19 @@
   "license": "Apache-2.0",
   "type": "commonjs",
   "peerDependencies": {
-    "@nestjs/common": ">=10.0.0",
-    "@nestjs/config": ">=3.0.0",
-    "@nestjs/core": ">=10.0.0",
     "reflect-metadata": ">=0.1.12"
   },
   "devDependencies": {
-    "@nestjs/common": "^11.1.17",
-    "@nestjs/config": "^4.0.2",
-    "@nestjs/core": "^11.1.17",
-    "@types/express": "^5.0.3",
     "@types/node": "^25.5.0",
     "esbuild-plugin-tsc": "^0.5.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tweetnacl": "^1.0.3"
   },
   "dependencies": {
     "@nextera.one/axis-protocol": "^1.0.0",
     "@noble/hashes": "^2.0.1",
-    "tweetnacl": "^1.0.3",
     "zod": "^4.3.6"
   }
 }
