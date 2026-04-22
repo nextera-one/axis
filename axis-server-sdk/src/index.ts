@@ -67,20 +67,6 @@ export {
 } from "./decorators/handler-sensors.decorator";
 export { Sensor, SENSOR_METADATA_KEY } from "./decorators/sensor.decorator";
 export type { SensorOptions, SensorPhase } from "./decorators/sensor.decorator";
-export {
-  PriorityOrder,
-  priorityOrder,
-  PRIORITY_ORDER_METADATA_KEY,
-  getPriorityOrder,
-  getPriorityOrderedTargets,
-  comparePriorityOrder,
-} from "./decorators/priority-order.decorator";
-export type {
-  AxisPriorityLevel,
-  AxisPriorityLevelInput,
-  PriorityOrderDefinition,
-  PriorityOrderOptions,
-} from "./decorators/priority-order.decorator";
 
 // TLV Field Decorators
 export {

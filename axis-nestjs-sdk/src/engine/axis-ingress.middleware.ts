@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { NextFunction, Request, Response } from "express";
-import { PriorityOrder } from "@nextera.one/axis-server-sdk";
+import { PriorityOrder } from "../decorators/priority-order.decorator";
 
 import { AxisMediaTypes } from "../http/media-types";
 import { wasResponseClosedEarly } from "../http/request-lifecycle";

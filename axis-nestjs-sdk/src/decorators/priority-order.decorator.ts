@@ -30,9 +30,15 @@ const PRIORITY_ORDER_WEIGHT: Record<AxisPriorityLevel, number> = {
 
 const priorityOrderRegistry = new Set<Function>();
 
-function normalizePriority(priority: AxisPriorityLevelInput): AxisPriorityLevel {
+function normalizePriority(
+  priority: AxisPriorityLevelInput,
+): AxisPriorityLevel {
   const normalized = String(priority).toUpperCase();
-  if (normalized === "HIGH" || normalized === "MEDIUM" || normalized === "LOW") {
+  if (
+    normalized === "HIGH" ||
+    normalized === "MEDIUM" ||
+    normalized === "LOW"
+  ) {
     return normalized;
   }
   throw new Error(
@@ -80,9 +86,7 @@ function resolvePriorityOrder(
 export function getPriorityOrder(
   target: Function,
 ): PriorityOrderDefinition | null {
-  return (
-    Reflect.getMetadata(PRIORITY_ORDER_METADATA_KEY, target) ?? null
-  );
+  return Reflect.getMetadata(PRIORITY_ORDER_METADATA_KEY, target) ?? null;
 }
 
 export function comparePriorityOrder(
@@ -90,7 +94,8 @@ export function comparePriorityOrder(
   right: PriorityOrderDefinition,
 ): number {
   const priorityDelta =
-    PRIORITY_ORDER_WEIGHT[left.priority] - PRIORITY_ORDER_WEIGHT[right.priority];
+    PRIORITY_ORDER_WEIGHT[left.priority] -
+    PRIORITY_ORDER_WEIGHT[right.priority];
   if (priorityDelta !== 0) {
     return priorityDelta;
   }
@@ -100,7 +105,9 @@ export function comparePriorityOrder(
 export function getPriorityOrderedTargets(
   targets?: Iterable<Function>,
 ): Function[] {
-  const pool = targets ? Array.from(targets) : Array.from(priorityOrderRegistry);
+  const pool = targets
+    ? Array.from(targets)
+    : Array.from(priorityOrderRegistry);
 
   return pool.sort((left, right) => {
     const leftMeta = getPriorityOrder(left);

@@ -1,12 +1,8 @@
-import type {
-  MiddlewareConsumer,
-  NestMiddleware,
-  Type,
-} from "@nestjs/common";
+import type { MiddlewareConsumer, NestMiddleware, Type } from "@nestjs/common";
 import {
   getPriorityOrder,
   getPriorityOrderedTargets,
-} from "@nextera.one/axis-server-sdk";
+} from "../decorators/priority-order.decorator";
 
 export type AxisNestMiddlewareClass = Type<NestMiddleware>;
 

@@ -34,13 +34,13 @@ export {
   getPriorityOrder,
   getPriorityOrderedTargets,
   comparePriorityOrder,
-} from "@nextera.one/axis-server-sdk";
+} from "./decorators/priority-order.decorator";
 export type {
   AxisPriorityLevel,
   AxisPriorityLevelInput,
   PriorityOrderDefinition,
   PriorityOrderOptions,
-} from "@nextera.one/axis-server-sdk";
+} from "./decorators/priority-order.decorator";
 export {
   applyPriorityOrderedMiddlewares,
   resolvePriorityOrderedMiddlewares,
@@ -56,7 +56,11 @@ export type { SensorOptions, SensorPhase } from "./sensor/sensor.decorator";
 export { SensorRegistry } from "./sensor/sensor.registry";
 export { SensorDiscoveryService } from "./sensor/sensor-discovery.service";
 export { AxisSensorChainService } from "./sensor/axis-sensor-chain.service";
-export type { ChainResult, SensorInput, SensorDecision } from "@nextera.one/axis-server-sdk";
+export type {
+  ChainResult,
+  SensorInput,
+  SensorDecision,
+} from "@nextera.one/axis-server-sdk";
 
 // Handler system
 export { Handler, HANDLER_METADATA_KEY } from "./handler/handler.decorator";
@@ -78,15 +82,9 @@ export type { AxisRequestData } from "./http/axis-request.decorator";
 
 // Observer system
 export { Observer } from "./observer/observer.decorator";
-export {
-  ObserverRegistry,
-} from "./observer/observer.registry";
-export {
-  ObserverDispatcherService,
-} from "./observer/observer-dispatcher.service";
-export {
-  ObserverDiscoveryService,
-} from "./observer/observer-discovery.service";
+export { ObserverRegistry } from "./observer/observer.registry";
+export { ObserverDispatcherService } from "./observer/observer-dispatcher.service";
+export { ObserverDiscoveryService } from "./observer/observer-discovery.service";
 
 // Crypto
 export { ProofVerificationService } from "./crypto/proof-verification.service";
