@@ -21,7 +21,7 @@ import {
 } from "@nextera.one/axis-client-sdk/browser";
 import * as ed from "@noble/ed25519";
 
-import { useAuthStore } from "stores/auth";
+import { useAuthStore, type AuthenticatedUser } from "stores/auth";
 import { AxisMediaTypes } from "./axis-media-types";
 import { useConnectionStore } from "stores/connection";
 import { useHistoryStore } from "stores/history";
@@ -377,6 +377,175 @@ function extractCapsuleBootstrapContext(response: unknown): {
     capsuleId: capsuleId?.trim() || undefined,
     intentSecret: intentSecret?.trim() || undefined,
   };
+}
+
+function findObjectFieldDeep(
+  root: unknown,
+  acceptedKeys: Set<string>,
+  maxDepth = 8,
+): Record<string, unknown> | undefined {
+  const seen = new WeakSet<object>();
+
+  const walk = (
+    value: unknown,
+    depth: number,
+  ): Record<string, unknown> | undefined => {
+    if (depth > maxDepth || value === null || value === undefined) {
+      return undefined;
+    }
+    if (typeof value !== "object") {
+      return undefined;
+    }
+    if (seen.has(value as object)) {
+      return undefined;
+    }
+    seen.add(value as object);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = walk(item, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+
+    for (const [key, entryValue] of Object.entries(value)) {
+      if (
+        acceptedKeys.has(normalizeFieldKey(key)) &&
+        entryValue &&
+        typeof entryValue === "object" &&
+        !Array.isArray(entryValue)
+      ) {
+        return entryValue as Record<string, unknown>;
+      }
+    }
+
+    for (const entryValue of Object.values(value)) {
+      const found = walk(entryValue, depth + 1);
+      if (found) return found;
+    }
+
+    return undefined;
+  };
+
+  return walk(root, 0);
+}
+
+function extractAnonSessionContext(response: unknown): {
+  sessionId?: string;
+  challenge?: string;
+  expiresAt?: string;
+} {
+  const sessionId = findStringFieldDeep(response, new Set(["sessionid"]));
+  const challenge = findStringFieldDeep(response, new Set(["challenge"]));
+  const expiresAt = findStringFieldDeep(response, new Set(["expiresat"]));
+
+  return {
+    sessionId: sessionId?.trim() || undefined,
+    challenge: challenge?.trim() || undefined,
+    expiresAt: expiresAt?.trim() || undefined,
+  };
+}
+
+function extractAuthenticatedUser(response: unknown): AuthenticatedUser | null {
+  const raw =
+    findObjectFieldDeep(response, new Set(["userdata"])) ||
+    findObjectFieldDeep(response, new Set(["user"]));
+  if (!raw) return null;
+
+  const id = raw.id;
+  if (typeof id !== "string" || !id.trim()) {
+    return null;
+  }
+
+  const read = (key: string): string | undefined =>
+    typeof raw[key] === "string" && String(raw[key]).trim()
+      ? String(raw[key]).trim()
+      : undefined;
+
+  return {
+    id: id.trim(),
+    username: read("username"),
+    email: read("email"),
+    full_name: read("full_name"),
+    first_name: read("first_name"),
+    last_name: read("last_name"),
+    is_new_user: raw.is_new_user === true,
+  };
+}
+
+function challengeToBytes(challenge: string): Uint8Array {
+  const raw = challenge.trim();
+  if (/^[0-9a-fA-F]+$/.test(raw) && raw.length % 2 === 0) {
+    return hexToBytes(raw);
+  }
+  return textEncoder.encode(raw);
+}
+
+function browserDeviceInfo() {
+  const nav = typeof navigator !== "undefined" ? navigator : undefined;
+  const navWithUA = nav as Navigator & {
+    userAgentData?: { brands?: Array<{ brand: string }> };
+  };
+  const brandLabel = navWithUA.userAgentData?.brands
+    ?.map((entry) => entry.brand)
+    .filter(Boolean)
+    .join(" ");
+  const screenInfo =
+    typeof window !== "undefined" ? window.screen : undefined;
+
+  return {
+    device_model: brandLabel || nav?.platform || "AXIS Studio Browser",
+    os_version: nav?.userAgent || "Unknown",
+    app_version: "AXIS_STUDIO_WEB",
+    platform: nav?.platform || "web",
+    screen_resolution: screenInfo
+      ? `${screenInfo.width}x${screenInfo.height}`
+      : "unknown",
+    device_id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : undefined,
+  };
+}
+
+async function digestToU64(input: string): Promise<string> {
+  const hash = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", textEncoder.encode(input)),
+  );
+  let out = 0n;
+  for (let i = 0; i < 8; i++) {
+    out = (out << 8n) | BigInt(hash[i] ?? 0);
+  }
+  return out.toString();
+}
+
+function sanitizeHistoryValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeHistoryValue(entry));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entryValue]) => {
+      const normalizedKey = normalizeFieldKey(key);
+      if (
+        typeof entryValue === "string" &&
+        (normalizedKey === "base64" ||
+          normalizedKey === "scriptfiletext" ||
+          normalizedKey === "scripttext")
+      ) {
+        return [
+          key,
+          `[omitted ${normalizedKey} ${entryValue.length} chars for history]`,
+        ];
+      }
+      return [key, sanitizeHistoryValue(entryValue)];
+    }),
+  );
 }
 
 function encodeIntentBody(body: unknown): {
@@ -842,6 +1011,17 @@ interface SendIntentOptions {
   recordHistory?: boolean;
   forcePlainIntent?: boolean;
   skipCapsuleBootstrap?: boolean;
+  headers?: Record<string, string>;
+}
+
+export interface BrowserLoginResult {
+  anonSession: unknown;
+  sessionId: string;
+  challenge: string;
+  fingerprint: string;
+  isAdminLogin: boolean;
+  user: AuthenticatedUser | null;
+  loginResponse: SendResult;
 }
 
 async function ensureCapsuleContext(
@@ -898,6 +1078,113 @@ async function ensureCapsuleContext(
   throw new Error(
     `Secure alias bootstrap failed: ${errors[0] || "unable to obtain capsule context"}`,
   );
+}
+
+export async function loginWithActiveKey(
+  username?: string,
+  nodeUrlOverride?: string,
+): Promise<BrowserLoginResult> {
+  const auth = useAuthStore();
+  const activeKey = auth.getActiveKey();
+  if (!activeKey?.privateKeyHex || !activeKey.publicKeyHex) {
+    throw new Error("Generate or select an active Ed25519 key first");
+  }
+
+  const deviceInfo = browserDeviceInfo();
+  const fingerprintSeed = [
+    deviceInfo.device_model,
+    deviceInfo.os_version,
+    deviceInfo.platform,
+    deviceInfo.screen_resolution,
+  ].join("|");
+  const fingerprint = await digestToU64(`axis-studio:${fingerprintSeed}`);
+
+  const anonSessionRes = await sendIntent(
+    "auth.anon-session",
+    {},
+    nodeUrlOverride,
+    {
+      forcePlainIntent: true,
+      skipCapsuleBootstrap: true,
+      headers: { "x-fingerprint": fingerprint },
+    },
+  );
+
+  if (!anonSessionRes.ok) {
+    throw new Error(
+      `auth.anon-session failed: ${anonSessionRes.effect || anonSessionRes.status}`,
+    );
+  }
+
+  const anonSession = extractAnonSessionContext(anonSessionRes.response);
+  if (!anonSession.sessionId || !anonSession.challenge) {
+    throw new Error("Anonymous session response is missing session data");
+  }
+
+  const signature = bytesToHex(
+    await ed.signAsync(
+      challengeToBytes(anonSession.challenge),
+      parsePrivateKeyHex(activeKey.privateKeyHex),
+    ),
+  );
+  const primaryFingerprint = await digestToU64(
+    `primary:${activeKey.publicKeyHex}:${fingerprintSeed}`,
+  );
+  const webFingerprint = await digestToU64(
+    `web:${activeKey.publicKeyHex}:${fingerprintSeed}`,
+  );
+  const trimmedUsername = username?.trim() || "";
+  const isAdminLogin = trimmedUsername.toLowerCase().endsWith("-admin");
+  const loginIntent = isAdminLogin
+    ? "auth.qr-login.login"
+    : "auth.qr-login.scan";
+  const loginBody: Record<string, unknown> = {
+    session_id: anonSession.sessionId,
+    device_fingerprint: primaryFingerprint,
+    web_device_fingerprint: webFingerprint,
+    device_public_key: activeKey.publicKeyHex,
+    primary_public_key: activeKey.publicKeyHex,
+    signature,
+    primary_device_info: deviceInfo,
+    web_device_info: deviceInfo,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+
+  if (isAdminLogin) {
+    loginBody.username = trimmedUsername;
+  }
+
+  const loginResponse = await sendIntent(
+    loginIntent,
+    loginBody,
+    nodeUrlOverride,
+    {
+      forcePlainIntent: true,
+      skipCapsuleBootstrap: true,
+    },
+  );
+
+  if (!loginResponse.ok) {
+    throw new Error(
+      `${loginIntent} failed: ${loginResponse.effect || loginResponse.status}`,
+    );
+  }
+
+  const user = extractAuthenticatedUser(loginResponse.response);
+  if (user?.id) {
+    auth.setAuthenticatedUser(user);
+    auth.setActorId(user.id);
+  }
+
+  return {
+    anonSession: anonSessionRes.response,
+    sessionId: anonSession.sessionId,
+    challenge: anonSession.challenge,
+    fingerprint,
+    isAdminLogin,
+    user,
+    loginResponse,
+  };
 }
 
 export async function sendIntent(
@@ -969,6 +1256,7 @@ export async function sendIntent(
     "Content-Type": AxisMediaTypes.BINARY,
     Accept: AxisMediaTypes.CLIENT_ACCEPT,
     ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
+    ...(options?.headers || {}),
   };
   const requestSnapshot = buildRequestSnapshot(
     frameBytes,
@@ -1038,7 +1326,7 @@ export async function sendIntent(
       id: bytesToHex(pid),
       ts: Date.now(),
       intent,
-      requestBody: safeStringify(body),
+      requestBody: safeStringify(sanitizeHistoryValue(body)),
       responseBody: safeStringify(result.response),
       responseEffect: result.effect,
       durationMs: result.durationMs,

@@ -426,9 +426,7 @@ export {
   isRevoked,
   executeLoomPipeline,
 } from "./loom/loom.engine";
-export type {
-  LoomExecutionResult,
-} from "./loom/loom.engine";
+export type { LoomExecutionResult } from "./loom/loom.engine";
 export type {
   PresenceDeclaration,
   PresenceChallenge,
@@ -473,7 +471,11 @@ export type {
 } from "./idel/idel.types";
 
 // Needle & Thread — Unified execution pipeline
-export { assembleNeedle, formStitch, runNeedlePipeline } from "./needle/needle.engine";
+export {
+  assembleNeedle,
+  formStitch,
+  runNeedlePipeline,
+} from "./needle/needle.engine";
 export type {
   Needle,
   NeedlePhase,
@@ -556,21 +558,18 @@ export type {
 export { TpsSensor } from "./sensors/tps.sensor";
 export type { TpsSensorOptions } from "./sensors/tps.sensor";
 export { RiskGateSensor } from "./sensors/risk-gate.sensor";
-export type { RiskGateSensorOptions, RiskSignalCollector } from "./sensors/risk-gate.sensor";
+export type {
+  RiskGateSensorOptions,
+  RiskSignalCollector,
+} from "./sensors/risk-gate.sensor";
 export { TickAuthSensor } from "./sensors/tickauth.sensor";
-export type { TickAuthSensorOptions, TickAuthVerifier, TickAuthCapsuleRef } from "./sensors/tickauth.sensor";
+export type {
+  TickAuthSensorOptions,
+  TickAuthVerifier,
+  TickAuthCapsuleRef,
+} from "./sensors/tickauth.sensor";
 
-// Grouped namespaces for the backend package merge surface
-export * as cce from "./cce";
-export * as core from "./core";
-export * as crypto from "./crypto";
-export * as decorators from "./decorators";
-export * as engine from "./engine";
-export * as idel from "./idel";
-export * as loom from "./loom";
-export * as needle from "./needle";
-export * as schemas from "./schemas";
-export * as security from "./security";
-export * as sensors from "./sensors";
-export * as timeline from "./timeline";
-export * as utils from "./utils";
+// Grouped namespaces were previously exported (`export * as cce`, etc.) but
+// all named exports above already cover the public surface used by consumers.
+// Grouped namespace re-exports removed to slim the bundle; import submodules
+// directly via `@nextera.one/axis-server-sdk/<path>` sub-paths if needed.

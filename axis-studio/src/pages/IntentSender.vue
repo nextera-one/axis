@@ -65,6 +65,26 @@
                 class="sender-editor"
                 :show-line-numbers="true"
               />
+              <q-card v-if="uploadSpec" flat bordered class="q-mt-md">
+                <q-card-section class="q-gutter-sm">
+                  <div class="sender-info-label">{{ uploadSpec.label }}</div>
+                  <div class="sender-info-value">
+                    {{ uploadSpec.help }}
+                  </div>
+                  <q-file
+                    v-model="selectedFile"
+                    dense
+                    outlined
+                    clearable
+                    :accept="uploadSpec.accept"
+                    :label="uploadSpec.fileLabel"
+                    hint="The JSON body stays active for metadata fields"
+                  />
+                  <div class="sender-info-value">
+                    {{ uploadStatus }}
+                  </div>
+                </q-card-section>
+              </q-card>
               <div class="sender-editor-status">
                 <span>Dispatch using Execute</span>
                 <span>Size: {{ bodyByteSize }}</span>
@@ -224,8 +244,53 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
+type UploadSpec = {
+  mode: 'base64' | 'typescript';
+  label: string;
+  fileLabel: string;
+  help: string;
+  accept: string;
+  required: boolean;
+};
+
+const INTENT_UPLOAD_SPECS: Record<string, UploadSpec> = {
+  'upload.uploadFile': {
+    mode: 'base64',
+    label: 'AXIS Upload Payload',
+    fileLabel: 'Select image file',
+    help: 'The studio encodes the selected file into the AXIS body as base64.',
+    accept: 'image/*,.svg,.heic,.heif,.avif,.bmp,.ico,.tiff',
+    required: true,
+  },
+  'node.types.create': {
+    mode: 'typescript',
+    label: 'Optional Script Attach',
+    fileLabel: 'Attach .ts script',
+    help: 'If provided, the script is embedded into the create DTO as text.',
+    accept: '.ts,text/plain,text/typescript,application/typescript',
+    required: false,
+  },
+  'node.types.script.swap': {
+    mode: 'typescript',
+    label: 'Node Type Script',
+    fileLabel: 'Select replacement .ts script',
+    help: 'The selected script is sent as AXIS body content, not multipart.',
+    accept: '.ts,text/plain,text/typescript,application/typescript',
+    required: true,
+  },
+  'node.type.engine.script.upload': {
+    mode: 'typescript',
+    label: 'Engine Script',
+    fileLabel: 'Select engine .ts script',
+    help: 'The selected script is sent as AXIS body content, not multipart.',
+    accept: '.ts,text/plain,text/typescript,application/typescript',
+    required: true,
+  },
+};
+
 const intent = ref<string>('catalog.list');
 const bodyText = ref('{\n  \n}');
+const selectedFile = ref<File | null>(null);
 const sending = ref(false);
 const lastResult = ref<SendResult | null>(null);
 const viewerTarget = ref<'response' | 'request'>('response');
@@ -272,6 +337,22 @@ const bodyByteSize = computed(() => {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`;
 });
 
+const uploadSpec = computed(() => INTENT_UPLOAD_SPECS[intent.value] || null);
+
+const uploadStatus = computed(() => {
+  if (!uploadSpec.value) return 'No upload adapter active';
+  if (!selectedFile.value) {
+    return uploadSpec.value.required
+      ? 'File required for this intent'
+      : 'File optional for this intent';
+  }
+
+  const bytes = selectedFile.value.size;
+  const sizeLabel =
+    bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`;
+  return `${selectedFile.value.name} • ${sizeLabel}`;
+});
+
 const activeSnapshot = computed(() => {
   if (!lastResult.value) return null;
   return viewerTarget.value === 'response'
@@ -282,8 +363,56 @@ const activeSnapshot = computed(() => {
 function clearForm() {
   intent.value = '';
   bodyText.value = '{\n  \n}';
+  selectedFile.value = null;
   lastResult.value = null;
   viewerTarget.value = 'response';
+}
+
+async function readFileAsBase64(file: File): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result || '');
+      const commaIndex = value.indexOf(',');
+      resolve(commaIndex >= 0 ? value.slice(commaIndex + 1) : value);
+    };
+    reader.onerror = () => reject(new Error('Unable to read selected file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function decorateUploadPayload(body: unknown): Promise<unknown> {
+  const spec = uploadSpec.value;
+  const file = selectedFile.value;
+  if (!spec) return body;
+
+  if (!file) {
+    if (spec.required) {
+      throw new Error('Select a file for this intent');
+    }
+    return body;
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error('Upload intents expect a JSON object body');
+  }
+
+  const payload = { ...(body as Record<string, unknown>) };
+
+  if (spec.mode === 'base64') {
+    payload.base64 = await readFileAsBase64(file);
+    payload.file_name = file.name;
+    payload.mime_type = file.type || 'application/octet-stream';
+    return payload;
+  }
+
+  if (!file.name.toLowerCase().endsWith('.ts')) {
+    throw new Error('Script uploads require a .ts file');
+  }
+
+  payload.script_file_name = file.name;
+  payload.script_file_text = await file.text();
+  return payload;
 }
 
 async function send() {
@@ -302,6 +431,9 @@ async function send() {
     }
     if (intent.value === 'catalog.describe' && body && typeof body === 'object') {
       payload = String((body as Record<string, unknown>).intent ?? '');
+    }
+    if (uploadSpec.value) {
+      payload = await decorateUploadPayload(body);
     }
 
     lastResult.value = await sendIntent(intent.value, payload);

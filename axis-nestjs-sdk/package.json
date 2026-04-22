@@ -1,0 +1,73 @@
+{
+  "name": "@nextera.one/axis-nestjs-sdk",
+  "version": "1.0.0",
+  "description": "NestJS-aware adapter for the AXIS Protocol — interceptors, middleware, WS gateway base, CLS-backed observation store, and generic page DTO",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/digital-pages-co/axis.git",
+    "directory": "axis-nestjs-sdk"
+  },
+  "homepage": "https://axisprotocol.io",
+  "keywords": [
+    "axis",
+    "nestjs",
+    "protocol",
+    "interceptor",
+    "middleware",
+    "websocket"
+  ],
+  "author": "NextEra.One",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "peerDependencies": {
+    "@nestjs/common": ">=10.0.0",
+    "@nestjs/websockets": ">=10.0.0",
+    "@nextera.one/axis-server-sdk": ">=2.2.0",
+    "express": ">=4.0.0",
+    "nestjs-cls": ">=4.0.0",
+    "reflect-metadata": ">=0.1.12",
+    "rxjs": ">=7.0.0",
+    "ws": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": { "optional": true },
+    "ws": { "optional": true },
+    "@nestjs/websockets": { "optional": true }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.1.17",
+    "@nestjs/websockets": "^11.1.17",
+    "@nextera.one/axis-server-sdk": "^2.2.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^25.5.0",
+    "@types/ws": "^8.5.10",
+    "esbuild-plugin-tsc": "^0.5.0",
+    "express": "^4.19.2",
+    "nestjs-cls": "^6.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.0"
+  }
+}

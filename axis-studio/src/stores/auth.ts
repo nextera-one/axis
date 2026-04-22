@@ -9,12 +9,31 @@ export interface KeyEntry {
   createdAt: number;
 }
 
+export interface AuthenticatedUser {
+  id: string;
+  username?: string;
+  email?: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  is_new_user?: boolean;
+}
+
 function loadKeys(): KeyEntry[] {
   try {
     const raw = localStorage.getItem('axis_keys');
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
+  }
+}
+
+function loadAuthenticatedUser(): AuthenticatedUser | null {
+  try {
+    const raw = localStorage.getItem('axis_authenticated_user');
+    return raw ? (JSON.parse(raw) as AuthenticatedUser) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -30,6 +49,9 @@ export const useAuthStore = defineStore('auth', () => {
   );
   /** base64url-encoded 32-byte AES-256-GCM secret issued by the server on capsule creation */
   const intentSecret = ref(localStorage.getItem('axis_intent_secret') || '');
+  const authenticatedUser = ref<AuthenticatedUser | null>(
+    loadAuthenticatedUser(),
+  );
 
   function persist() {
     localStorage.setItem('axis_keys', JSON.stringify(keys.value));
@@ -37,13 +59,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   function addKey(entry: KeyEntry) {
     keys.value.push(entry);
-    if (!activeKeyId.value) activeKeyId.value = entry.id;
+    if (!activeKeyId.value) {
+      activeKeyId.value = entry.id;
+      localStorage.setItem('axis_active_key', entry.id);
+    }
     persist();
   }
 
   function removeKey(id: string) {
     keys.value = keys.value.filter((k) => k.id !== id);
-    if (activeKeyId.value === id) activeKeyId.value = keys.value[0]?.id || null;
+    if (activeKeyId.value === id) {
+      activeKeyId.value = keys.value[0]?.id || null;
+      if (activeKeyId.value) {
+        localStorage.setItem('axis_active_key', activeKeyId.value);
+      } else {
+        localStorage.removeItem('axis_active_key');
+      }
+    }
     persist();
   }
 
@@ -79,6 +111,15 @@ export const useAuthStore = defineStore('auth', () => {
     );
   }
 
+  function setAuthenticatedUser(user: AuthenticatedUser | null) {
+    authenticatedUser.value = user;
+    if (user) {
+      localStorage.setItem('axis_authenticated_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('axis_authenticated_user');
+    }
+  }
+
   function getActiveKey(): KeyEntry | null {
     return keys.value.find((k) => k.id === activeKeyId.value) || null;
   }
@@ -90,6 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
     capsuleId,
     secureIntentAliasMode,
     intentSecret,
+    authenticatedUser,
     addKey,
     removeKey,
     setActive,
@@ -97,6 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
     setCapsuleId,
     setSecureIntentAliasMode,
     setIntentSecret,
+    setAuthenticatedUser,
     getActiveKey,
   };
 });

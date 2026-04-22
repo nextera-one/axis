@@ -61,6 +61,54 @@
           </q-card-section>
         </q-card>
 
+        <q-card flat bordered class="auth-card q-mb-md">
+          <q-card-section class="row items-center justify-between">
+            <div class="auth-card-title">
+              <q-icon name="login" size="16px" />
+              <span>Browser Login</span>
+            </div>
+            <q-btn
+              flat
+              no-caps
+              color="primary"
+              :loading="loggingIn"
+              label="Login With Active Key"
+              @click="login"
+            />
+          </q-card-section>
+          <q-separator />
+          <q-card-section class="q-gutter-md">
+            <q-input
+              v-model="loginUsername"
+              dense
+              outlined
+              label="Admin Username (optional)"
+              placeholder="Leave blank for regular user login"
+              hint="Use a username ending with -admin to trigger admin login"
+            />
+            <q-card flat bordered class="auth-mini-card">
+              <q-card-section>
+                <small>Login Route</small>
+                <div>
+                  {{
+                    loginUsername.trim().toLowerCase().endsWith('-admin')
+                      ? 'auth.qr-login.login'
+                      : 'auth.qr-login.scan'
+                  }}
+                </div>
+              </q-card-section>
+            </q-card>
+            <q-card v-if="loginMeta" flat bordered class="auth-mini-card">
+              <q-card-section>
+                <small>Last Session</small>
+                <div>{{ loginMeta.sessionId }}</div>
+                <small>Fingerprint</small>
+                <div>{{ loginMeta.fingerprint }}</div>
+              </q-card-section>
+            </q-card>
+          </q-card-section>
+        </q-card>
+
         <q-card flat bordered class="auth-card">
           <q-card-section class="row items-center justify-between">
             <div class="auth-card-title">
@@ -113,6 +161,47 @@
       </div>
 
       <div class="col-12 col-lg-7">
+        <q-card v-if="currentUser" flat bordered class="auth-card q-mb-md">
+          <q-card-section class="row items-center justify-between">
+            <div class="auth-card-title">
+              <q-icon name="verified_user" size="16px" />
+              <span>Authenticated Identity</span>
+            </div>
+            <q-btn flat no-caps color="primary" label="Clear" @click="clearSession" />
+          </q-card-section>
+          <q-separator />
+          <q-card-section class="q-gutter-md">
+            <div>
+              <div class="auth-label">Display Name</div>
+              <pre class="auth-key-box">{{
+                currentUser.full_name || currentUser.username || currentUser.email || currentUser.id
+              }}</pre>
+            </div>
+            <div>
+              <div class="auth-label">Actor ID</div>
+              <pre class="auth-key-box">{{ auth.actorId || currentUser.id }}</pre>
+            </div>
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-card flat bordered class="auth-mini-card">
+                  <q-card-section>
+                    <small>Username</small>
+                    <div>{{ currentUser.username || 'N/A' }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-card flat bordered class="auth-mini-card">
+                  <q-card-section>
+                    <small>Email</small>
+                    <div>{{ currentUser.email || 'N/A' }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
         <q-card v-if="activeKey" flat bordered class="auth-card auth-card--active">
           <q-card-section class="row items-center justify-between">
             <div>
@@ -181,18 +270,24 @@ import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'stores/auth';
 import * as ed from '@noble/ed25519';
+import { loginWithActiveKey } from 'src/services/axis-client';
 
 const $q = useQuasar();
 const auth = useAuthStore();
 
 const generating = ref(false);
 const showPrivate = ref(false);
+const loggingIn = ref(false);
+const loginUsername = ref('');
+const loginMeta = ref<{ sessionId: string; fingerprint: string } | null>(null);
 
 const activeKey = computed(() => auth.getActiveKey());
+const currentUser = computed(() => auth.authenticatedUser);
 
 const stats = computed(() => [
   { label: 'KEYS LOADED', value: auth.keys.length },
   { label: 'ACTIVE KEY', value: activeKey.value ? activeKey.value.label : 'NULL' },
+  { label: 'AUTH STATE', value: currentUser.value?.username || 'ANON' },
   { label: 'ACTOR ID', value: auth.actorId ? 'SET' : 'LOCAL_ANON' },
 ]);
 
@@ -245,6 +340,43 @@ async function copyPub() {
     });
   } catch {
     $q.notify({ message: 'CLIPBOARD_ACCESS_DENIED', color: 'negative', timeout: 1200 });
+  }
+}
+
+function clearSession() {
+  auth.setAuthenticatedUser(null);
+  auth.setActorId('');
+  loginMeta.value = null;
+}
+
+async function login() {
+  loggingIn.value = true;
+  try {
+    const result = await loginWithActiveKey(loginUsername.value);
+    loginMeta.value = {
+      sessionId: result.sessionId,
+      fingerprint: result.fingerprint,
+    };
+    if (result.user?.username) {
+      loginUsername.value = result.user.username;
+    }
+    $q.notify({
+      message: result.user?.is_new_user
+        ? 'NEW_USER_AUTHENTICATED'
+        : 'LOGIN_COMPLETED',
+      icon: 'verified_user',
+      color: 'positive',
+      timeout: 2200,
+    });
+  } catch (error: any) {
+    $q.notify({
+      message: error?.message || 'LOGIN_FAILED',
+      icon: 'error',
+      color: 'negative',
+      timeout: 2600,
+    });
+  } finally {
+    loggingIn.value = false;
   }
 }
 </script>
