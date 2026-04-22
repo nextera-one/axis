@@ -46,12 +46,15 @@ import {
 } from "../decorators/intent-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
 import {
+  type AxisIntentSensorBinding,
+  type AxisIntentSensorBindingInput,
   type AxisIntentSensorRef,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
   IntentKind,
   IntentRoute,
   IntentTlvField,
+  toIntentSensorBinding,
 } from "../decorators/intent.decorator";
 import {
   AxisObserverBinding,
@@ -96,20 +99,28 @@ function sensorRefKey(ref: AxisIntentSensorRef): string {
   return typeof ref === "string" ? ref : ref.name;
 }
 
-function mergeIntentSensorRefs(
-  ...sensorGroups: Array<AxisIntentSensorRef[] | undefined>
-): AxisIntentSensorRef[] {
-  const merged = new Map<string, AxisIntentSensorRef>();
+function sensorBindingKey(binding: AxisIntentSensorBinding): string {
+  return `${binding.when}:${sensorRefKey(binding.ref)}`;
+}
+
+function mergeIntentSensorBindings(
+  ...sensorGroups: Array<AxisIntentSensorBindingInput[] | undefined>
+): AxisIntentSensorBinding[] {
+  const merged = new Map<string, AxisIntentSensorBinding>();
 
   for (const group of sensorGroups) {
     if (!Array.isArray(group)) continue;
 
-    for (const ref of group) {
-      const key = sensorRefKey(ref);
+    for (const input of group) {
+      const binding = toIntentSensorBinding(input);
+      const key = sensorBindingKey(binding);
       const existing = merged.get(key);
 
-      if (!existing || (typeof existing === "string" && typeof ref !== "string")) {
-        merged.set(key, ref);
+      if (
+        !existing ||
+        (typeof existing.ref === "string" && typeof binding.ref !== "string")
+      ) {
+        merged.set(key, binding);
       }
     }
   }
@@ -249,7 +260,7 @@ export class IntentRouter {
   private handlers = new Map<string, any>();
 
   /** Per-intent sensor refs (resolved through SensorRegistry at call time) */
-  private intentSensors = new Map<string, AxisIntentSensorRef[]>();
+  private intentSensors = new Map<string, AxisIntentSensorBinding[]>();
 
   /** Per-intent body decoders */
   private intentDecoders = new Map<string, (buf: Buffer) => any>();
@@ -389,7 +400,7 @@ export class IntentRouter {
     );
 
     // Read @HandlerSensors from the class (if any)
-    const handlerSensors: AxisIntentSensorRef[] =
+    const handlerSensors: AxisIntentSensorBindingInput[] =
       Reflect.getMetadata(HANDLER_SENSORS_KEY, instance.constructor) || [];
     const handlerObservers: AxisObserverBinding[] =
       Reflect.getMetadata(OBSERVER_BINDINGS_KEY, instance.constructor) || [];
@@ -550,9 +561,9 @@ export class IntentRouter {
           throw new Error(`Intent not found: ${intent}`);
         }
 
-        const sensorRefs = this.intentSensors.get(intent);
-        if (sensorRefs && sensorRefs.length > 0) {
-          await this.runIntentSensors(sensorRefs, intent, frame);
+        const sensorBindings = this.intentSensors.get(intent);
+        if (sensorBindings && sensorBindings.length > 0) {
+          await this.runIntentSensors(sensorBindings, intent, frame, "before");
         }
 
         const decoder = this.intentDecoders.get(intent);
@@ -601,6 +612,13 @@ export class IntentRouter {
             );
           }
         }
+
+        if (sensorBindings && sensorBindings.length > 0) {
+          await this.runIntentSensors(sensorBindings, intent, frame, "after", {
+            decodedBody,
+            effect,
+          });
+        }
       }
 
       await this.emitIntentObservers(observerBindings, {
@@ -646,7 +664,7 @@ export class IntentRouter {
     intent: string,
     proto: object,
     methodName: string,
-    handlerSensors?: AxisIntentSensorRef[],
+    handlerSensors?: AxisIntentSensorBindingInput[],
     handlerObservers?: AxisObserverBinding[],
   ): void {
     const decoder = Reflect.getMetadata(INTENT_BODY_KEY, proto, methodName);
@@ -660,7 +678,7 @@ export class IntentRouter {
       methodName,
     );
     const meta = Reflect.getMetadata(INTENT_METADATA_KEY, proto, methodName);
-    const combined = mergeIntentSensorRefs(
+    const combined = mergeIntentSensorBindings(
       handlerSensors,
       Array.isArray(intentSensors) ? intentSensors : undefined,
       Array.isArray(meta?.is) ? meta.is : undefined,
@@ -832,11 +850,19 @@ export class IntentRouter {
   }
 
   private async runIntentSensors(
-    sensorRefs: AxisIntentSensorRef[],
+    sensorBindings: AxisIntentSensorBinding[],
     intent: string,
     frame: AxisFrame,
+    stage: "before" | "after",
+    extras?: {
+      decodedBody?: unknown;
+      effect?: AxisEffect;
+    },
   ): Promise<void> {
-    for (const sensorRef of sensorRefs) {
+    for (const binding of sensorBindings) {
+      if (binding.when !== stage && binding.when !== "both") continue;
+
+      const sensorRef = binding.ref;
       const sensor = this.resolveIntentSensor(sensorRef);
       const sensorName = sensorRefKey(sensorRef);
 
@@ -855,9 +881,12 @@ export class IntentRouter {
         frameBody: frame.body,
         metadata: {
           phase: "intent",
+          stage,
           intent,
           schema: this.getSchema(intent),
           validators: this.getValidators(intent),
+          decodedBody: extras?.decodedBody,
+          effect: extras?.effect,
         },
       };
 

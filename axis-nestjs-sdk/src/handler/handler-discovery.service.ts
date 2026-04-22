@@ -9,7 +9,7 @@ import {
 } from "@nextera.one/axis-server-sdk";
 import type {
   AxisObserverBinding,
-  AxisIntentSensorRef,
+  AxisIntentSensorBindingInput,
   IntentRoute,
 } from "@nextera.one/axis-server-sdk";
 import { HANDLER_METADATA_KEY } from "./handler.decorator";
@@ -53,7 +53,7 @@ export class HandlerDiscoveryService implements OnModuleInit {
       );
       let registered = 0;
 
-      const handlerSensors: AxisIntentSensorRef[] =
+      const handlerSensors: AxisIntentSensorBindingInput[] =
         Reflect.getMetadata(HANDLER_SENSORS_KEY, metatype) || [];
       const handlerObservers: AxisObserverBinding[] =
         Reflect.getMetadata(OBSERVER_BINDINGS_KEY, metatype) || [];

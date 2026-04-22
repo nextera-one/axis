@@ -64,6 +64,7 @@ export type {
 
 // Handler system
 export { Handler, HANDLER_METADATA_KEY } from "./handler/handler.decorator";
+export type { HandlerOptions } from "./handler/handler.decorator";
 export { HandlerDiscoveryService } from "./handler/handler-discovery.service";
 export {
   AxisFilesDownloadHandler,

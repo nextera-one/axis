@@ -27,6 +27,12 @@ export interface AxisObserverBindingOptions {
   events?: AxisObserverEvent[];
 }
 
+export type AxisObserverBindingInput =
+  | AxisObserverDefinition
+  | AxisObserverBindingOptions
+  | AxisObserverRef
+  | AxisObserverRef[];
+
 function isBindingOptions(
   value: unknown,
 ): value is AxisObserverBindingOptions {
@@ -42,12 +48,8 @@ function isDefinitionOptions(value: unknown): value is AxisObserverDefinition {
   );
 }
 
-function toBinding(
-  input?:
-    | AxisObserverDefinition
-    | AxisObserverBindingOptions
-    | AxisObserverRef
-    | AxisObserverRef[],
+export function toObserverBinding(
+  input?: AxisObserverBindingInput,
 ): AxisObserverBinding | null {
   if (!input) return null;
 
@@ -68,17 +70,13 @@ function toBinding(
 }
 
 export function Observer(
-  input?:
-    | AxisObserverDefinition
-    | AxisObserverBindingOptions
-    | AxisObserverRef
-    | AxisObserverRef[],
+  input?: AxisObserverBindingInput,
 ): ClassDecorator & MethodDecorator {
   return ((
     target: object | Function,
     propertyKey?: string | symbol,
   ) => {
-    const binding = toBinding(input);
+    const binding = toObserverBinding(input);
     if (binding) {
       if (propertyKey !== undefined) {
         const existing: AxisObserverBinding[] =

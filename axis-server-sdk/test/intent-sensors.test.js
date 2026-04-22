@@ -4,9 +4,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  Handler,
   Intent,
   IntentRouter,
   IntentSensors,
+  ObserverDispatcherService,
+  ObserverRegistry,
   Sensitivity,
   SensorDecisions,
   SensorRegistry,
@@ -37,6 +40,26 @@ class LegacyGateSensor {
   }
 }
 
+class AfterGateSensor {
+  constructor() {
+    this.name = "AfterGateSensor";
+    this.order = 97;
+    this.phase = "POST_DECODE";
+  }
+
+  supports(input) {
+    return input?.metadata?.stage === "after";
+  }
+
+  async run(input) {
+    if (input?.metadata?.effect?.effect === "complete") {
+      return SensorDecisions.deny("AFTER_BLOCKED");
+    }
+
+    return SensorDecisions.allow();
+  }
+}
+
 class IntentOptionHandler {
   async inspect(body) {
     return body;
@@ -58,6 +81,29 @@ class IntentSensitivityHandler {
 class LegacySensitivityHandler {
   async inspect(body) {
     return body;
+  }
+}
+
+class AfterStageHandler {
+  async inspect(body) {
+    return body;
+  }
+}
+
+class HandlerObserveHandler {
+  async inspect(body) {
+    return body;
+  }
+}
+
+class HandlerObserveProbe {
+  constructor(events) {
+    this.name = "HandlerObserveProbe";
+    this.events = events;
+  }
+
+  async observe(context) {
+    this.events.push(context.event);
   }
 }
 
@@ -84,6 +130,16 @@ Sensitivity("HIGH")(LegacySensitivityHandler.prototype, "inspect");
 Intent("sdk.intent.legacy-sensitivity", {
   absolute: true,
 })(LegacySensitivityHandler.prototype, "inspect");
+
+Handler("sdk.intent.after-handler")(AfterStageHandler);
+Intent("after", {
+  is: [{ use: AfterGateSensor, when: "after" }],
+})(AfterStageHandler.prototype, "inspect");
+
+Handler("sdk.handler.observe", {
+  observe: [HandlerObserveProbe],
+})(HandlerObserveHandler);
+Intent("inspect")(HandlerObserveHandler.prototype, "inspect");
 
 function createFrame(intent, body = Buffer.from("payload")) {
   return {
@@ -127,6 +183,33 @@ test("Missing intent sensor refs fail closed", async () => {
     () => router.route(createFrame("sdk.intent.option")),
     /SENSOR_MISSING:IntentNamedGate/,
   );
+});
+
+test("Intent option `is` supports after-stage sensors", async () => {
+  const registry = new SensorRegistry();
+  registry.register(new AfterGateSensor());
+
+  const router = new IntentRouter(undefined, undefined, registry);
+  router.registerHandler(new AfterStageHandler());
+
+  await assert.rejects(
+    () => router.route(createFrame("sdk.intent.after-handler.after")),
+    /SENSOR_DENY:AFTER_BLOCKED/,
+  );
+});
+
+test("Handler option `observe` binds handler-level observers", async () => {
+  const seen = [];
+  const observerRegistry = new ObserverRegistry();
+  observerRegistry.register(new HandlerObserveProbe(seen));
+  const dispatcher = new ObserverDispatcherService(observerRegistry);
+
+  const router = new IntentRouter(undefined, dispatcher);
+  router.registerHandler(new HandlerObserveHandler());
+
+  await router.route(createFrame("sdk.handler.observe.inspect"));
+
+  assert.deepEqual(seen, ["intent.received", "intent.completed"]);
 });
 
 test("Intent option `sensitivity` overrides class-level sensitivity metadata", () => {

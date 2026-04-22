@@ -26,17 +26,26 @@ export type {
   RequiredProofKind,
   AxisRateLimitConfig,
 } from "./decorators/intent-policy.decorator";
-export { Handler, HANDLER_METADATA_KEY } from "./decorators/handler.decorator";
+export {
+  Handler,
+  HANDLER_METADATA_KEY,
+} from "./decorators/handler.decorator";
+export type { HandlerOptions } from "./decorators/handler.decorator";
 export {
   Intent,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
+  AxisIntentSensorBindingOptions,
+  AxisIntentSensorBinding,
+  AxisIntentSensorBindingInput,
   AxisIntentSensorOptions,
   AxisIntentSensorRef,
+  AxisIntentSensorWhen,
   IntentRoute,
   IntentOptions,
   IntentTlvField,
   IntentKind,
+  toIntentSensorBinding,
 } from "./decorators/intent.decorator";
 export {
   IntentBody,
@@ -57,10 +66,12 @@ export type {
 } from "./decorators/capsule-policy.decorator";
 export type {
   AxisObserverBinding,
+  AxisObserverBindingInput,
   AxisObserverBindingOptions,
   AxisObserverDefinition,
   AxisObserverRef,
 } from "./decorators/observer.decorator";
+export { toObserverBinding } from "./decorators/observer.decorator";
 export {
   HandlerSensors,
   HANDLER_SENSORS_KEY,

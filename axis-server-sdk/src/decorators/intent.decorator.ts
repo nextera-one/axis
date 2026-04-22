@@ -20,13 +20,58 @@ export type IntentKind = "create" | "read" | "update" | "delete" | "action";
  */
 export type AxisIntentSensorRef = string | Function;
 
+export type AxisIntentSensorWhen = 'before' | 'after' | 'both';
+
+export interface AxisIntentSensorBindingOptions {
+  /** Sensor ref resolved from registry or DI */
+  use: AxisIntentSensorRef;
+  /** When the sensor should run relative to handler execution */
+  when?: AxisIntentSensorWhen;
+}
+
+export interface AxisIntentSensorBinding {
+  ref: AxisIntentSensorRef;
+  when: AxisIntentSensorWhen;
+}
+
+export type AxisIntentSensorBindingInput =
+  | AxisIntentSensorRef
+  | AxisIntentSensorBindingOptions;
+
+function isIntentSensorBindingOptions(
+  value: AxisIntentSensorBindingInput,
+): value is AxisIntentSensorBindingOptions {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    'use' in value
+  );
+}
+
+export function toIntentSensorBinding(
+  input: AxisIntentSensorBindingInput,
+): AxisIntentSensorBinding {
+  if (isIntentSensorBindingOptions(input)) {
+    return {
+      ref: input.use,
+      when: input.when || 'before',
+    };
+  }
+
+  return {
+    ref: input,
+    when: 'before',
+  };
+}
+
 /**
  * Shared options for attaching intent-specific sensors.
  * Kept separate so other decorators / route metadata can extend it cleanly.
  */
 export interface AxisIntentSensorOptions {
-  /** Intent-specific sensors resolved before the handler executes */
-  is?: AxisIntentSensorRef[];
+  /** Intent-specific sensors resolved before/after the handler executes */
+  is?: AxisIntentSensorBindingInput[];
 }
 
 /**
