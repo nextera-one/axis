@@ -3,6 +3,7 @@ import { DiscoveryService, MetadataScanner } from "@nestjs/core";
 
 import {
   OBSERVER_BINDINGS_KEY,
+  HANDLER_METADATA_KEY,
   HANDLER_SENSORS_KEY,
   INTENT_METADATA_KEY,
   INTENT_ROUTES_KEY,
@@ -12,7 +13,6 @@ import type {
   AxisIntentSensorBindingInput,
   IntentRoute,
 } from "@nextera.one/axis-server-sdk";
-import { HANDLER_METADATA_KEY } from "./handler.decorator";
 import { IntentRouter } from "../engine/intent.router";
 
 /**

@@ -3,6 +3,7 @@ import {
   Observer as CoreObserver,
   OBSERVER_BINDINGS_KEY,
   OBSERVER_METADATA_KEY,
+  type AxisObserverBindingInput,
 } from "@nextera.one/axis-server-sdk";
 import type {
   AxisObserverBinding,
@@ -14,6 +15,7 @@ import type {
 export { OBSERVER_BINDINGS_KEY, OBSERVER_METADATA_KEY };
 export type {
   AxisObserverBinding,
+  AxisObserverBindingInput,
   AxisObserverBindingOptions,
   AxisObserverDefinition,
   AxisObserverRef,
@@ -24,11 +26,7 @@ function isObserverDefinition(value: unknown): value is AxisObserverDefinition {
 }
 
 export function Observer(
-  input?:
-    | AxisObserverDefinition
-    | AxisObserverBindingOptions
-    | AxisObserverRef
-    | AxisObserverRef[],
+  input?: AxisObserverBindingInput,
 ): ClassDecorator & MethodDecorator {
   const applyCore = CoreObserver(input);
   const applyInjectable = Injectable();

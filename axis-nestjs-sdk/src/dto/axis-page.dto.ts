@@ -1,5 +1,4 @@
-import { AxisTlvDto } from "./axis-tlv.dto";
-import { TlvField } from "./tlv-field.decorator";
+import { AxisTlvDto, TlvField } from "@nextera.one/axis-server-sdk";
 
 /**
  * AxisPageDto — reusable paged-read DTO.

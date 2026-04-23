@@ -2,14 +2,11 @@ import { Injectable } from "@nestjs/common";
 import {
   Handler as CoreHandler,
   HANDLER_METADATA_KEY,
-  type AxisIntentSensorOptions,
-  type AxisObserverBindingInput,
+  type HandlerOptions,
 } from "@nextera.one/axis-server-sdk";
 
 export { HANDLER_METADATA_KEY };
-export interface HandlerOptions extends AxisIntentSensorOptions {
-  observe?: AxisObserverBindingInput[];
-}
+export type { HandlerOptions };
 
 /**
  * Decorator to mark a class as an Axis Handler.

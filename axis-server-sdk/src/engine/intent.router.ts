@@ -262,6 +262,9 @@ export class IntentRouter {
   /** Per-intent sensor refs (resolved through SensorRegistry at call time) */
   private intentSensors = new Map<string, AxisIntentSensorBinding[]>();
 
+  /** Per-intent handler identifier (e.g. UsersHandler.usersPage) */
+  private intentHandlerRefs = new Map<string, string>();
+
   /** Per-intent body decoders */
   private intentDecoders = new Map<string, (buf: Buffer) => any>();
 
@@ -376,6 +379,16 @@ export class IntentRouter {
    */
   register(intent: string, handler: any) {
     this.handlers.set(intent, handler);
+    if (typeof handler === "function" && handler.name) {
+      this.intentHandlerRefs.set(intent, handler.name);
+    } else if (handler && typeof handler === "object") {
+      const objectName = handler.constructor?.name;
+      if (objectName) {
+        this.intentHandlerRefs.set(intent, `${objectName}.handle`);
+      }
+    } else {
+      this.intentHandlerRefs.set(intent, `intent:${intent}`);
+    }
   }
 
   /**
@@ -418,6 +431,10 @@ export class IntentRouter {
       } else {
         this.register(intentName, fn);
       }
+      this.intentHandlerRefs.set(
+        intentName,
+        `${instance.constructor.name}.${String(route.methodName)}`,
+      );
 
       this.registerIntentMeta(
         intentName,
@@ -467,17 +484,20 @@ export class IntentRouter {
   async route(frame: AxisFrame): Promise<AxisEffect> {
     const start = process.hrtime();
     let intent = "unknown";
+    let handlerRef: string | undefined;
 
     try {
       const intentBytes = frame.headers.get(TLV_INTENT);
       if (!intentBytes) throw new Error("Missing intent");
       intent = this.decoder.decode(intentBytes);
+      handlerRef = this.intentHandlerRefs.get(intent);
       const observerBindings = this.getObservers(intent);
 
       await this.emitIntentObservers(observerBindings, {
         event: "intent.received",
         timestamp: Date.now(),
         intent,
+        handler: handlerRef,
         frame,
       });
 
@@ -625,6 +645,7 @@ export class IntentRouter {
         event: "intent.completed",
         timestamp: Date.now(),
         intent,
+        handler: handlerRef,
         frame,
         effect,
         metadata: effect.metadata,
@@ -637,6 +658,7 @@ export class IntentRouter {
         event: "intent.failed",
         timestamp: Date.now(),
         intent,
+        handler: handlerRef,
         frame,
         error: e.message,
       });

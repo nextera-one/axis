@@ -16,11 +16,25 @@ export class ObserverDispatcherService {
     bindings: AxisObserverBinding[] | undefined,
     context: AxisObserverContext,
   ): Promise<void> {
-    if (!bindings || bindings.length === 0) return;
+    const explicitBindings = bindings || [];
+    const implicitRegistrations = this.getImplicitRegistrations();
+
+    if (!explicitBindings.length && implicitRegistrations.length === 0) {
+      return;
+    }
 
     const invoked = new Set<string>();
 
-    for (const binding of bindings) {
+    const implicitBindings: AxisObserverBinding[] = implicitRegistrations.map(
+      (registration) => ({
+        refs: [registration.instance.constructor],
+        events: registration.events,
+      }),
+    );
+
+    const merged = mergeBindingRefs(explicitBindings, implicitBindings);
+
+    for (const binding of merged) {
       if (
         binding.events &&
         binding.events.length > 0 &&
@@ -37,6 +51,13 @@ export class ObserverDispatcherService {
         }
 
         if (invoked.has(registration.name)) continue;
+
+        if (
+          !matchesObserverIntent(registration.intents, context.intent) ||
+          !matchesObserverHandler(registration.handlers, context.handler)
+        ) {
+          continue;
+        }
 
         if (
           registration.events &&
@@ -73,4 +94,94 @@ export class ObserverDispatcherService {
       }
     }
   }
+
+  private getImplicitRegistrations() {
+    return this.registry.list();
+  }
+}
+
+function matchesObserverIntent(
+  intents: string[] | undefined,
+  intent?: string,
+): boolean {
+  if (!intents || intents.length === 0) {
+    return true;
+  }
+
+  if (!intent) {
+    return false;
+  }
+
+  return intents.includes(intent);
+}
+
+function normalizeHandlerToken(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function matchesObserverHandler(
+  handlers: string[] | undefined,
+  handler?: string,
+): boolean {
+  if (!handlers || handlers.length === 0) {
+    return true;
+  }
+
+  if (!handler) {
+    return false;
+  }
+
+  const normalizedHandler = normalizeHandlerToken(handler);
+  return handlers.some((candidate) => {
+    if (!candidate) {
+      return false;
+    }
+
+    const normalizedCandidate = normalizeHandlerToken(candidate);
+    return (
+      normalizedHandler === normalizedCandidate ||
+      normalizedHandler.endsWith(`.${normalizedCandidate}`) ||
+      normalizedHandler.startsWith(`${normalizedCandidate}.`) ||
+      normalizedCandidate.endsWith(`.${normalizedHandler}`) ||
+      normalizedCandidate.startsWith(`${normalizedHandler}.`)
+    );
+  });
+}
+
+function observerRefKey(ref: { name?: string } | string | Function): string {
+  return typeof ref === "string" ? ref : ref.name || "(anonymous)";
+}
+
+function mergeBindingRefs(
+  ...bindingGroups: AxisObserverBinding[][]
+): AxisObserverBinding[] {
+  const merged = new Map<string, AxisObserverBinding>();
+
+  for (const bindings of bindingGroups) {
+    for (const binding of bindings) {
+      for (const ref of binding.refs) {
+        const key = observerRefKey(ref);
+        const current = merged.get(key);
+
+        if (!current) {
+          merged.set(key, {
+            refs: [ref],
+            tags: binding.tags ? [...new Set(binding.tags)] : undefined,
+            events: binding.events ? [...new Set(binding.events)] : undefined,
+          });
+          continue;
+        }
+
+        current.tags = Array.from(
+          new Set([...(current.tags || []), ...(binding.tags || [])]),
+        );
+        current.events =
+          current.events === undefined || binding.events === undefined
+            ? undefined
+            : Array.from(new Set([...(current.events || []), ...binding.events]));
+      }
+    }
+  }
+
+  return Array.from(merged.values());
 }

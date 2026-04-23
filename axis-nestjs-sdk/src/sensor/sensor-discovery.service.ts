@@ -1,9 +1,12 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { DiscoveryService, Reflector } from "@nestjs/core";
 
-import { AxisSensor, PRE_DECODE_BOUNDARY } from "@nextera.one/axis-server-sdk";
-import type { SensorOptions } from "./sensor.decorator";
-import { SENSOR_METADATA_KEY } from "./sensor.decorator";
+import {
+  AxisSensor,
+  PRE_DECODE_BOUNDARY,
+  SENSOR_METADATA_KEY,
+  type SensorOptions,
+} from "@nextera.one/axis-server-sdk";
 import { SensorRegistry } from "./sensor.registry";
 
 /**

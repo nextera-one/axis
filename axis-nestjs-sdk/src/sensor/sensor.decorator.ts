@@ -2,16 +2,12 @@ import { Injectable } from "@nestjs/common";
 import {
   SENSOR_METADATA_KEY,
   Sensor as CoreSensor,
+  type SensorOptions,
+  type SensorPhase,
 } from "@nextera.one/axis-server-sdk";
 
 export { SENSOR_METADATA_KEY };
-
-export type SensorPhase = "PRE_DECODE" | "POST_DECODE";
-
-export interface SensorOptions {
-  /** Explicit phase override. If omitted, auto-derived from order at bootstrap. */
-  phase?: SensorPhase;
-}
+export type { SensorOptions, SensorPhase };
 
 /**
  * Marks a class as an AXIS sensor for auto-registration.

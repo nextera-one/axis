@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-nestjs-sdk",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "NestJS-aware adapter for the AXIS Protocol — interceptors, middleware, WS gateway base, CLS-backed observation store, and generic page DTO",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
