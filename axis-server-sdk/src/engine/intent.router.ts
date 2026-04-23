@@ -763,7 +763,8 @@ export class IntentRouter {
       SENSITIVITY_METADATA_KEY,
       proto.constructor,
     );
-    const sensitivity = meta?.sensitivity ?? methodSensitivity ?? classSensitivity;
+    const sensitivity =
+      meta?.sensitivity ?? methodSensitivity ?? classSensitivity;
     if (sensitivity) {
       this.intentSensitivity.set(intent, sensitivity);
     }
@@ -867,8 +868,11 @@ export class IntentRouter {
     bindings: AxisObserverBinding[],
     context: Parameters<ObserverDispatcherService["dispatch"]>[1],
   ): Promise<void> {
-    if (!this.observerDispatcher || bindings.length === 0) return;
-    await this.observerDispatcher.dispatch(bindings, context);
+    if (!this.observerDispatcher) return;
+    await this.observerDispatcher.dispatch(
+      bindings.length > 0 ? bindings : undefined,
+      context,
+    );
   }
 
   private async runIntentSensors(
@@ -925,7 +929,9 @@ export class IntentRouter {
     }
   }
 
-  private resolveIntentSensor(ref: AxisIntentSensorRef): AxisSensor | undefined {
+  private resolveIntentSensor(
+    ref: AxisIntentSensorRef,
+  ): AxisSensor | undefined {
     const registered = this.sensorRegistry?.resolve(ref);
     if (registered) {
       return registered;
