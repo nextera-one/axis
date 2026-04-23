@@ -113,6 +113,10 @@ export { Observer } from "./observer/observer.decorator";
 export { ObserverRegistry } from "./observer/observer.registry";
 export { ObserverDispatcherService } from "./observer/observer-dispatcher.service";
 export { ObserverDiscoveryService } from "./observer/observer-discovery.service";
+export {
+  compareObserverRegistrationsByPriority,
+  compareSensorsByPriority,
+} from "./registry/priority-ordered-registries";
 
 // Crypto
 export { ProofVerificationService } from "./crypto/proof-verification.service";

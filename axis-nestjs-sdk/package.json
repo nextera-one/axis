@@ -1,6 +1,6 @@
 {
   "name": "@nextera.one/axis-nestjs-sdk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "NestJS-aware adapter for the AXIS Protocol — interceptors, middleware, WS gateway base, CLS-backed observation store, and generic page DTO",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,6 +20,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "test": "node --import tsx --test src/**/*.spec.ts",
     "prepublishOnly": "npm run build"
   },
   "repository": {
@@ -73,7 +74,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.17",
     "@nestjs/websockets": "^11.1.17",
-    "@nextera.one/axis-server-sdk": "file:../axis-server-sdk/nextera.one-axis-server-sdk-2.2.2.tgz",
+    "@nextera.one/axis-server-sdk": "file:../axis-server-sdk",
     "@types/express": "^5.0.3",
     "@types/node": "^25.5.0",
     "@types/ws": "^8.5.10",
@@ -83,6 +84,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
     "tweetnacl": "^1.0.3",
     "typescript": "^5.9.3",
     "ws": "^8.18.0"
