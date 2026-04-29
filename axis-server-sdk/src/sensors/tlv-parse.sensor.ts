@@ -1,12 +1,7 @@
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
-import { decodeVarint } from '../core/varint';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
+import { decodeVarint } from "../core/varint";
 
 /**
  * TLV Parse AxisSensor - Type-Length-Value Parsing Verification
@@ -30,22 +25,28 @@ import { decodeVarint } from '../core/varint';
  */
 @Sensor()
 export class TLVParseSensor implements AxisSensor {
-  readonly name = 'TLVParseSensor';
+  readonly name = "TLVParseSensor";
   readonly order = BAND.CONTENT + 20;
 
-  supports(input: SensorInput): boolean {
-    return !!input.packet;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return !!input.packet
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Packet is not available",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {
     const packet = input.packet;
-    if (!packet) return { action: 'ALLOW' };
+    if (!packet) return { action: "ALLOW" };
 
     // Validate header TLVs if raw header bytes are available
     const hdrBytes: Uint8Array | Buffer | undefined =
       packet.hdrBytes ?? packet.headerBytes;
     if (hdrBytes && hdrBytes.length > 0) {
-      const result = this.validateCanonicalTLV(hdrBytes, 'header');
+      const result = this.validateCanonicalTLV(hdrBytes, "header");
       if (result) return result;
     }
 
@@ -57,14 +58,14 @@ export class TLVParseSensor implements AxisSensor {
 
     // @Intent({ bodyProfile: 'RAW' }) explicitly skips body TLV validation
     const bodyProfile = input.metadata?.schema?.bodyProfile;
-    const skipBody = bodyProfile === 'RAW';
+    const skipBody = bodyProfile === "RAW";
 
     if (!skipBody && bodyIsTlv && bodyBytes && bodyBytes.length > 0) {
-      const result = this.validateCanonicalTLV(bodyBytes, 'body');
+      const result = this.validateCanonicalTLV(bodyBytes, "body");
       if (result) return result;
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 
   /**
@@ -83,8 +84,8 @@ export class TLVParseSensor implements AxisSensor {
     while (offset < buf.length) {
       if (count >= maxItems) {
         return {
-          action: 'DENY',
-          code: 'TLV_LIMIT',
+          action: "DENY",
+          code: "TLV_LIMIT",
           reason: `Too many TLVs in ${section}`,
         };
       }
@@ -98,8 +99,8 @@ export class TLVParseSensor implements AxisSensor {
         typeLen = r.length;
       } catch {
         return {
-          action: 'DENY',
-          code: 'TLV_PARSE_ERROR',
+          action: "DENY",
+          code: "TLV_PARSE_ERROR",
           reason: `Malformed type varint in ${section} at offset ${offset}`,
         };
       }
@@ -108,8 +109,8 @@ export class TLVParseSensor implements AxisSensor {
       // Tag must be > 0
       if (type <= 0) {
         return {
-          action: 'DENY',
-          code: 'TLV_INVALID_TAG',
+          action: "DENY",
+          code: "TLV_INVALID_TAG",
           reason: `Invalid tag ${type} in ${section}`,
         };
       }
@@ -117,8 +118,8 @@ export class TLVParseSensor implements AxisSensor {
       // Canonical order: strictly ascending
       if (type <= lastType) {
         return {
-          action: 'DENY',
-          code: 'TLV_NOT_CANONICAL',
+          action: "DENY",
+          code: "TLV_NOT_CANONICAL",
           reason: `Non-canonical tag order in ${section}: ${type} after ${lastType}`,
         };
       }
@@ -133,8 +134,8 @@ export class TLVParseSensor implements AxisSensor {
         lenLen = r.length;
       } catch {
         return {
-          action: 'DENY',
-          code: 'TLV_PARSE_ERROR',
+          action: "DENY",
+          code: "TLV_PARSE_ERROR",
           reason: `Malformed length varint in ${section}`,
         };
       }
@@ -143,8 +144,8 @@ export class TLVParseSensor implements AxisSensor {
       // Bounds check
       if (offset + len > buf.length) {
         return {
-          action: 'DENY',
-          code: 'TLV_TRUNCATED',
+          action: "DENY",
+          code: "TLV_TRUNCATED",
           reason: `TLV value truncated in ${section}`,
         };
       }

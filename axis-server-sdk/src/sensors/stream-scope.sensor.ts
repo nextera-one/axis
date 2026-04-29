@@ -105,10 +105,10 @@ export class StreamScopeSensor implements AxisSensor {
    *
    * Currently processes all inputs.
    *
-   * @returns {boolean} Always true
+   * @returns {Promise<SensorDecision>} Always allow
    */
-  supports(): boolean {
-    return true;
+  async supports(): Promise<SensorDecision> {
+    return { action: 'ALLOW' };
   }
 
   /**

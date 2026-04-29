@@ -103,8 +103,8 @@ export class ExecutionTimeoutSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if intent is present
    */
-  supports(input: SensorInput): boolean {
-    return !!input.intent;
+  async supports(): Promise<SensorDecision> {
+    return Promise.resolve({ action: "ALLOW" });
   }
 
   /**

@@ -7,7 +7,11 @@
  * Step 7 from CCE verification order:
  * 7. Verify TPS window is current (not expired, not future)
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
 import { CCE_ERROR, type CceCapsuleClaims } from "../cce.types";
 
@@ -21,8 +25,14 @@ export class CceTpsWindowSensor implements AxisSensor {
 
   constructor(private readonly skewMs: number = DEFAULT_SKEW_MS) {}
 
-  supports(input: SensorInput): boolean {
-    return input.metadata?.cceCapsuleVerified === true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceCapsuleVerified === true
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "CCE capsule not verified",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

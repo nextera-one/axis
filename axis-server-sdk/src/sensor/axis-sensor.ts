@@ -1,4 +1,4 @@
-import type { AxisObservedContext } from '../types/axis-frame.types';
+import type { AxisObservedContext } from "../types/axis-frame.types";
 
 /**
  * Sensor Phase Metadata
@@ -10,7 +10,7 @@ import type { AxisObservedContext } from '../types/axis-frame.types';
  */
 export interface SensorPhaseMetadata {
   /** Execution phase: pre-decode (middleware) or post-decode (controller) */
-  phase: 'PRE_DECODE' | 'POST_DECODE';
+  phase: "PRE_DECODE" | "POST_DECODE";
 
   /** Other sensors that must run before this one */
   dependencies?: string[];
@@ -34,8 +34,8 @@ export interface AxisSensor {
   readonly name: string;
   readonly order?: number; // Lower runs first
   /** Execution phase hint */
-  phase?: SensorPhaseMetadata | 'PRE_DECODE' | 'POST_DECODE';
-  supports?(input: SensorInput): boolean;
+  phase?: SensorPhaseMetadata | "PRE_DECODE" | "POST_DECODE";
+  supports?(input: SensorInput): Promise<SensorDecision>;
   run(input: SensorInput): Promise<SensorDecision>;
 }
 
@@ -49,7 +49,7 @@ export interface AxisSensorInit extends AxisSensor {
  * They should be fast, avoid I/O, and fail fast on malformed traffic.
  */
 export interface AxisPreSensor extends AxisSensor {
-  phase: 'PRE_DECODE';
+  phase: "PRE_DECODE";
 }
 
 /**
@@ -57,7 +57,7 @@ export interface AxisPreSensor extends AxisSensor {
  * They may use full context (intent, actor, proofs) and can perform I/O.
  */
 export interface AxisPostSensor extends AxisSensor {
-  phase: 'POST_DECODE';
+  phase: "POST_DECODE";
 }
 
 /**
@@ -132,10 +132,10 @@ export interface SensorInput {
 }
 
 export enum Decision {
-  ALLOW = 'ALLOW',
-  DENY = 'DENY',
-  THROTTLE = 'THROTTLE',
-  FLAG = 'FLAG',
+  ALLOW = "ALLOW",
+  DENY = "DENY",
+  THROTTLE = "THROTTLE",
+  FLAG = "FLAG",
 }
 /**
  * Sensor Decision
@@ -174,16 +174,16 @@ export type SensorDecision =
       };
     }
   // Legacy action-based format (deprecated)
-  | { action: 'ALLOW'; meta?: any }
+  | { action: "ALLOW"; meta?: any }
   | {
-      action: 'DENY';
+      action: "DENY";
       code: string;
       reason?: string;
       retryAfterMs?: number;
       meta?: any;
     }
-  | { action: 'THROTTLE'; retryAfterMs: number; meta?: any }
-  | { action: 'FLAG'; scoreDelta: number; reasons: string[]; meta?: any };
+  | { action: "THROTTLE"; retryAfterMs: number; meta?: any }
+  | { action: "FLAG"; scoreDelta: number; reasons: string[]; meta?: any };
 
 export type SensorMinifiedDecision = {
   allow: boolean;
@@ -203,17 +203,17 @@ export function normalizeSensorDecision(
   sensorDecision: SensorDecision,
 ): SensorMinifiedDecision {
   // Check if it's a legacy action-based format
-  if ('action' in sensorDecision) {
+  if ("action" in sensorDecision) {
     // Convert legacy format to modern
     switch (sensorDecision.action) {
-      case 'ALLOW':
+      case "ALLOW":
         return {
           allow: true,
           riskScore: 0,
           reasons: [],
           meta: sensorDecision.meta,
         };
-      case 'DENY':
+      case "DENY":
         return {
           allow: false,
           riskScore: 100,
@@ -223,15 +223,15 @@ export function normalizeSensorDecision(
           meta: sensorDecision.meta,
           retryAfterMs: sensorDecision.retryAfterMs,
         };
-      case 'THROTTLE':
+      case "THROTTLE":
         return {
           allow: false,
           riskScore: 50,
-          reasons: ['RATE_LIMIT'],
+          reasons: ["RATE_LIMIT"],
           retryAfterMs: sensorDecision.retryAfterMs,
           meta: sensorDecision.meta,
         };
-      case 'FLAG':
+      case "FLAG":
         return {
           allow: true,
           riskScore: sensorDecision.scoreDelta,
@@ -285,8 +285,8 @@ export const SensorDecisions = {
       allow: false,
       riskScore: 50,
       retryAfterMs,
-      code: 'RATE_LIMIT',
-      reasons: ['RATE_LIMIT'],
+      code: "RATE_LIMIT",
+      reasons: ["RATE_LIMIT"],
       meta,
     };
   },

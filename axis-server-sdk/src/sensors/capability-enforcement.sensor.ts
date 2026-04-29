@@ -98,8 +98,9 @@ export class CapabilityEnforcementSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming AXIS request
    * @returns {boolean} True if intent is present
    */
-  supports(input: SensorInput): boolean {
-    return !!input.intent;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    void input;
+    return { action: "ALLOW" };
   }
 
   /**

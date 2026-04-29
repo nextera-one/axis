@@ -8,9 +8,17 @@
  * 10. Verify capsule not replayed (capsule_id not consumed if SINGLE_USE)
  * 11. Verify request nonce uniqueness
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
-import { CCE_ERROR, type CceCapsuleClaims, type CceRequestEnvelope } from "../cce.types";
+import {
+  CCE_ERROR,
+  type CceCapsuleClaims,
+  type CceRequestEnvelope,
+} from "../cce.types";
 
 /**
  * Replay store interface — implementations can use Redis, in-memory, etc.
@@ -88,8 +96,14 @@ export class CceReplayProtectionSensor implements AxisSensor {
     this.nonceTtlMs = options?.nonceTtlMs ?? 5 * 60 * 1000;
   }
 
-  supports(input: SensorInput): boolean {
-    return input.metadata?.cceCapsuleVerified === true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceCapsuleVerified === true
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "CCE capsule not verified",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

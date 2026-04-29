@@ -1,9 +1,9 @@
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import { AxisError } from '../core/axis-error';
-import { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisError } from "../core/axis-error";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Chunk Hash Sensor - Data Integrity Verification
@@ -79,7 +79,7 @@ import { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
 @Sensor()
 export class ChunkHashSensor implements AxisSensor {
   /** Sensor identifier */
-  readonly name = 'ChunkHashSensor';
+  readonly name = "ChunkHashSensor";
 
   /**
    * Execution order - after session validation
@@ -99,8 +99,14 @@ export class ChunkHashSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if intent is 'file.chunk'
    */
-  supports(input: SensorInput): boolean {
-    return input.intent === 'file.chunk';
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.intent === "file.chunk"
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Only file.chunk intent is supported",
+        };
   }
 
   /**
@@ -124,9 +130,9 @@ export class ChunkHashSensor implements AxisSensor {
     // Validate required inputs
     if (!headerTLVs || !bodyBytes) {
       return {
-        action: 'DENY',
-        code: 'SENSOR_INVALID_INPUT',
-        reason: 'Missing headerTLVs or body',
+        action: "DENY",
+        code: "SENSOR_INVALID_INPUT",
+        reason: "Missing headerTLVs or body",
       };
     }
 
@@ -138,25 +144,25 @@ export class ChunkHashSensor implements AxisSensor {
 
     if (!expected || expected.length !== 32) {
       return {
-        action: 'DENY',
-        code: 'FILE_CHUNK_HASH_MISSING',
-        reason: 'Missing sha256Chunk TLV in header',
+        action: "DENY",
+        code: "FILE_CHUNK_HASH_MISSING",
+        reason: "Missing sha256Chunk TLV in header",
       };
     }
 
     // === STEP 2: Compute Actual Hash ===
-    const actual = createHash('sha256').update(bodyBytes).digest();
+    const actual = createHash("sha256").update(bodyBytes).digest();
 
     // === STEP 3: Compare Hashes ===
     // Using Buffer.equals for comparison
     if (!Buffer.from(actual).equals(Buffer.from(expected))) {
       return {
-        action: 'DENY',
-        code: 'FILE_CHUNK_HASH_MISMATCH',
-        reason: 'Chunk hash mismatch - data corrupted',
+        action: "DENY",
+        code: "FILE_CHUNK_HASH_MISMATCH",
+        reason: "Chunk hash mismatch - data corrupted",
       };
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 }

@@ -10,9 +10,18 @@
  *
  * Fast-fails malformed CCE requests before any crypto work.
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
-import { CCE_ERROR, CCE_NONCE_BYTES, CCE_PROTOCOL_VERSION, type CceRequestEnvelope } from "../cce.types";
+import {
+  CCE_ERROR,
+  CCE_NONCE_BYTES,
+  CCE_PROTOCOL_VERSION,
+  type CceRequestEnvelope,
+} from "../cce.types";
 
 const REQUIRED_FIELDS: (keyof CceRequestEnvelope)[] = [
   "ver",
@@ -33,12 +42,16 @@ export class CceEnvelopeValidationSensor implements AxisSensor {
   readonly order = 5;
   readonly phase = "PRE_DECODE" as const;
 
-  supports(input: SensorInput): boolean {
+  async supports(input: SensorInput): Promise<SensorDecision> {
     // Only process CCE envelopes (detected by metadata flag or content type)
-    return (
-      input.metadata?.cce === true ||
+    return input.metadata?.cce === true ||
       input.metadata?.contentType === "application/axis-cce"
-    );
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Not a CCE envelope",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

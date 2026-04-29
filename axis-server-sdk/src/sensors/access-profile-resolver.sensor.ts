@@ -1,11 +1,6 @@
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Access Profile Resolver AxisSensor
@@ -33,7 +28,7 @@ import {
 @Sensor()
 export class AccessProfileResolverSensor implements AxisSensor {
   /** AxisSensor identifier */
-  readonly name = 'AccessProfileResolverSensor';
+  readonly name = "AccessProfileResolverSensor";
 
   /**
    * Execution order - runs early to establish the access profile
@@ -41,8 +36,9 @@ export class AccessProfileResolverSensor implements AxisSensor {
    */
   readonly order = BAND.IDENTITY + 10;
 
-  supports(): boolean {
-    return true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    void input;
+    return { action: "ALLOW" };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {
@@ -51,12 +47,12 @@ export class AccessProfileResolverSensor implements AxisSensor {
     const hasPassport = !!input.metadata?.passportSig;
     const hasMTLS = !!input.metadata?.mtlsId;
 
-    const profile = hasCapsule || hasPassport || hasMTLS ? 'GUARDED' : 'PUBLIC';
+    const profile = hasCapsule || hasPassport || hasMTLS ? "GUARDED" : "PUBLIC";
 
     // Store in metadata for downstream sensors
     if (!input.metadata) input.metadata = {};
     input.metadata.profile = profile;
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 }

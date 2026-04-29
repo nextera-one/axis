@@ -7,9 +7,17 @@
  * Step 6 from CCE verification order:
  * 6. Parse capsule, verify TickAuth signature, verify integrity
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
-import { CCE_ERROR, CCE_PROTOCOL_VERSION, type CceCapsuleClaims } from "../cce.types";
+import {
+  CCE_ERROR,
+  CCE_PROTOCOL_VERSION,
+  type CceCapsuleClaims,
+} from "../cce.types";
 
 /**
  * TickAuth issuer key resolver.
@@ -39,8 +47,14 @@ export class CceCapsuleVerificationSensor implements AxisSensor {
     private readonly capsuleVerifier: CceCapsuleSignatureVerifier,
   ) {}
 
-  supports(input: SensorInput): boolean {
-    return input.metadata?.cceEnvelopeValid === true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceEnvelopeValid === true
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: CCE_ERROR.CAPSULE_NOT_VERIFIED,
+          reason: "CCE capsule not verified",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

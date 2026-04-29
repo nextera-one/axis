@@ -12,7 +12,11 @@
  * It unwraps the AES transport key using the AXIS private key, then decrypts
  * the payload with AES-256-GCM.
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
 import { CCE_ERROR, type CceRequestEnvelope } from "../cce.types";
 
@@ -79,13 +83,17 @@ export class CcePayloadDecryptionSensor implements AxisSensor {
     private readonly payloadValidator?: CcePayloadValidator,
   ) {}
 
-  supports(input: SensorInput): boolean {
-    return (
-      input.metadata?.cceEnvelopeValid === true &&
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceEnvelopeValid === true &&
       input.metadata?.cceClientSigVerified === true &&
       input.metadata?.cceCapsuleVerified === true &&
       input.metadata?.cceReplayClean === true
-    );
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "CCE preconditions not met",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

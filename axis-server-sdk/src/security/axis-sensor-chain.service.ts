@@ -74,9 +74,40 @@ export class AxisSensorChainService {
     input: SensorInput,
     baseDecision?: SensorDecision,
   ): Promise<SensorDecision> {
-    const relevantSensors = sensors.filter(
-      (s) => !s.supports || s.supports(input),
-    );
+    const relevantSensors: AxisSensor[] = [];
+    for (const sensor of sensors) {
+      if (!sensor.supports) {
+        relevantSensors.push(sensor);
+        continue;
+      }
+
+      try {
+        const supportsDecision = normalizeSensorDecision(
+          await sensor.supports(input),
+        );
+        if (supportsDecision.allow) {
+          relevantSensors.push(sensor);
+        }
+      } catch (error) {
+        console.error(
+          `[AXIS][SENSOR] ${sensor.name} supports() failed:`,
+          error,
+        );
+
+        const obs = input.metadata?.observation as AxisObservation | undefined;
+        if (obs) {
+          recordSensor(obs, sensor.name, false, 100, 0, [
+            `sensor_support_error:${sensor.name}`,
+          ]);
+        }
+
+        return {
+          allow: false,
+          riskScore: 100,
+          reasons: [`sensor_support_error:${sensor.name}`],
+        };
+      }
+    }
 
     const normalizedBase = baseDecision
       ? normalizeSensorDecision(baseDecision)

@@ -1,11 +1,6 @@
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Varint Hardening Sensor - Variable-Length Integer Overflow Protection
@@ -91,10 +86,10 @@ import {
  *
  * @see {@link BodyBudgetSensor} - Uses varints for length parsing
  */
-@Sensor({ phase: 'PRE_DECODE' })
+@Sensor({ phase: "PRE_DECODE" })
 export class VarintHardeningSensor implements AxisSensor {
   /** Sensor identifier */
-  readonly name = 'VarintHardeningSensor';
+  readonly name = "VarintHardeningSensor";
 
   /**
    * Execution order - early detection
@@ -116,8 +111,14 @@ export class VarintHardeningSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if sufficient peek data
    */
-  supports(input: SensorInput): boolean {
-    return !!input.peek && input.peek.length >= 7;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return !!input.peek && input.peek.length >= 7
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Insufficient peek data for varint hardening",
+        };
   }
 
   /**
@@ -145,8 +146,8 @@ export class VarintHardeningSensor implements AxisSensor {
         continuationCount++;
         if (continuationCount > this.MAX_VARINT_BYTES) {
           return {
-            action: 'DENY',
-            code: 'VARINT_OVERFLOW',
+            action: "DENY",
+            code: "VARINT_OVERFLOW",
             reason: `Varint exceeds ${this.MAX_VARINT_BYTES} bytes`,
           };
         }
@@ -156,6 +157,6 @@ export class VarintHardeningSensor implements AxisSensor {
       }
     }
 
-    return { action: 'ALLOW' };
+    return { action: "ALLOW" };
   }
 }

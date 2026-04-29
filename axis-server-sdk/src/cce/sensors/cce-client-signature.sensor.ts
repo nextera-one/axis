@@ -8,7 +8,11 @@
  * 4. Resolve client public key
  * 5. Verify client signature over canonical envelope
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
 import { CCE_ERROR, type CceRequestEnvelope } from "../cce.types";
 
@@ -41,8 +45,14 @@ export class CceClientSignatureSensor implements AxisSensor {
     private readonly signatureVerifier: CceSignatureVerifier,
   ) {}
 
-  supports(input: SensorInput): boolean {
-    return input.metadata?.cceEnvelopeValid === true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceEnvelopeValid === true
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "CCE envelope not validated",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

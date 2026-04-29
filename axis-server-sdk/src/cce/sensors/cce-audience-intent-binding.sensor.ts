@@ -8,9 +8,17 @@
  * 8. Verify audience matches this AXIS instance
  * 9. Verify intent matches the capsule-bound intent
  */
-import type { AxisSensor, SensorDecision, SensorInput } from "../../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../../sensor/axis-sensor";
 import { Decision } from "../../sensor/axis-sensor";
-import { CCE_ERROR, type CceCapsuleClaims, type CceRequestEnvelope } from "../cce.types";
+import {
+  CCE_ERROR,
+  type CceCapsuleClaims,
+  type CceRequestEnvelope,
+} from "../cce.types";
 
 export class CceAudienceIntentBindingSensor implements AxisSensor {
   readonly name = "cce.audience.intent.binding";
@@ -22,8 +30,14 @@ export class CceAudienceIntentBindingSensor implements AxisSensor {
     private readonly axisAudience: string,
   ) {}
 
-  supports(input: SensorInput): boolean {
-    return input.metadata?.cceCapsuleVerified === true;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return input.metadata?.cceCapsuleVerified === true
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: CCE_ERROR.CAPSULE_NOT_VERIFIED,
+          reason: "CCE capsule not verified",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {

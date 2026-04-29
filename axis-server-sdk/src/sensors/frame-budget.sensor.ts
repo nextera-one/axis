@@ -97,8 +97,14 @@ export class FrameBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming AXIS request
    * @returns {boolean} True if Content-Length is present
    */
-  supports(input: SensorInput): boolean {
-    return typeof input.contentLength === "number";
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return typeof input.contentLength === "number"
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Content-Length not available",
+        };
   }
 
   /**

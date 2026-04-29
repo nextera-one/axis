@@ -1,7 +1,10 @@
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import type { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../sensor/axis-sensor";
 
 /**
  * A TickAuth capsule as provided by the transport layer
@@ -13,7 +16,13 @@ export interface TickAuthCapsuleRef {
   intent?: string;
   mode?: string;
   verification?: {
-    status: 'approved' | 'denied' | 'expired' | 'replay_rejected' | 'consumed' | 'revoked';
+    status:
+      | "approved"
+      | "denied"
+      | "expired"
+      | "replay_rejected"
+      | "consumed"
+      | "revoked";
     reason?: string;
   };
   scope?: string[];
@@ -69,7 +78,7 @@ export interface TickAuthSensorOptions {
  */
 @Sensor()
 export class TickAuthSensor implements AxisSensor {
-  readonly name = 'TickAuthSensor';
+  readonly name = "TickAuthSensor";
   readonly order = BAND.IDENTITY + 40; // after ProofPresenceSensor (30)
 
   private readonly verifier?: TickAuthVerifier;
@@ -84,13 +93,19 @@ export class TickAuthSensor implements AxisSensor {
       : null;
   }
 
-  supports(input: SensorInput): boolean {
+  async supports(input: SensorInput): Promise<SensorDecision> {
     // Only engage when a capsule reference is present
     return !!(
       input.metadata?.capsule ||
       input.metadata?.tickauthCapsule ||
       input.metadata?.cceEnvelope?.capsule
-    );
+    )
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "TickAuth capsule not found",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {
@@ -103,29 +118,29 @@ export class TickAuthSensor implements AxisSensor {
       return {
         allow: false,
         riskScore: 90,
-        reasons: ['TickAuth capsule not found'],
-        code: 'TICKAUTH_MISSING',
+        reasons: ["TickAuth capsule not found"],
+        code: "TICKAUTH_MISSING",
       };
     }
 
     // 1. Structural: capsule_id must be present
-    if (!capsule.capsule_id || typeof capsule.capsule_id !== 'string') {
+    if (!capsule.capsule_id || typeof capsule.capsule_id !== "string") {
       return {
         allow: false,
         riskScore: 100,
-        reasons: ['TickAuth capsule has no valid capsule_id'],
-        code: 'TICKAUTH_INVALID_ID',
+        reasons: ["TickAuth capsule has no valid capsule_id"],
+        code: "TICKAUTH_INVALID_ID",
       };
     }
 
     // 2. Status check
     const status = capsule.verification?.status;
-    if (status && status !== 'approved') {
+    if (status && status !== "approved") {
       return {
         allow: false,
         riskScore: 100,
         reasons: [
-          `TickAuth capsule status is '${status}'${capsule.verification?.reason ? `: ${capsule.verification.reason}` : ''}`,
+          `TickAuth capsule status is '${status}'${capsule.verification?.reason ? `: ${capsule.verification.reason}` : ""}`,
         ],
         code: `TICKAUTH_STATUS_${status.toUpperCase()}`,
       };
@@ -140,7 +155,7 @@ export class TickAuthSensor implements AxisSensor {
           reasons: [
             `TickAuth capsule type '${capsule.capsule_type}' is not in accept list`,
           ],
-          code: 'TICKAUTH_TYPE_REJECTED',
+          code: "TICKAUTH_TYPE_REJECTED",
         };
       }
     }
@@ -154,7 +169,7 @@ export class TickAuthSensor implements AxisSensor {
           reasons: [
             `TickAuth capsule intent '${capsule.intent}' does not match AXIS intent '${input.intent}'`,
           ],
-          code: 'TICKAUTH_INTENT_MISMATCH',
+          code: "TICKAUTH_INTENT_MISMATCH",
         };
       }
     }
@@ -167,7 +182,7 @@ export class TickAuthSensor implements AxisSensor {
           allow: false,
           riskScore: 90,
           reasons: [`TickAuth verification failed: ${error}`],
-          code: 'TICKAUTH_VERIFY_FAILED',
+          code: "TICKAUTH_VERIFY_FAILED",
         };
       }
     }

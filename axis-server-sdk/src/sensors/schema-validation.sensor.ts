@@ -2,7 +2,7 @@
 import { Sensor } from '../decorators/sensor.decorator';
 import { BAND } from '../engine/sensor-bands';
 import { IntentSchema, IntentSchemaZ } from '../schemas/axis-schemas';
-import { AxisSensor } from '../sensor/axis-sensor';
+import { AxisSensor, SensorDecision } from '../sensor/axis-sensor';
 import { AxisError } from '../core/axis-error';
 import type { TlvValidatorFn } from '../decorators/tlv-field.decorator';
 
@@ -124,11 +124,14 @@ export class SchemaValidationSensor implements AxisSensor {
    * Only activates when a schema is provided for the intent (post-decode phase).
    *
    * @param {any} input - Sensor input
-   * @returns {boolean} True if schema exists in metadata
+   * @returns {Promise<SensorDecision>} Allow when a schema exists, deny otherwise
    */
-  supports(input: any): boolean {
+  async supports(input: any): Promise<SensorDecision> {
     // Only run in post-decode phase when schema is provided
-    return !!input.metadata?.schema;
+    if (input.metadata?.schema) {
+      return { action: 'ALLOW' };
+    }
+    return { action: 'DENY', code: 'SCHEMA_NOT_CONFIGURED' };
   }
 
   /**

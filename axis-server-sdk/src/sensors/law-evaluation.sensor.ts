@@ -6,7 +6,11 @@ import type {
   LawEvaluationSensorOptions,
 } from "../law";
 import { buildAxisLawEvaluationContext } from "../law";
-import type { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../sensor/axis-sensor";
 import { createAxisLogger } from "../utils/axis-logger";
 
 @Sensor()
@@ -16,12 +20,16 @@ export class LawEvaluationSensor implements AxisSensor {
   readonly name = "LawEvaluationSensor";
   readonly order = BAND.POLICY + 5;
 
-  constructor(
-    private readonly options: LawEvaluationSensorOptions = {},
-  ) {}
+  constructor(private readonly options: LawEvaluationSensorOptions = {}) {}
 
-  supports(input: SensorInput): boolean {
-    return !!this.options.evaluator && !!input.intent;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return !!this.options.evaluator && !!input.intent
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Law evaluator or intent missing",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {
@@ -38,7 +46,9 @@ export class LawEvaluationSensor implements AxisSensor {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown law evaluation error";
-      this.logger.error(`Law evaluation failed for ${input.intent}: ${message}`);
+      this.logger.error(
+        `Law evaluation failed for ${input.intent}: ${message}`,
+      );
       input.metadata = {
         ...(input.metadata ?? {}),
         lawEvaluation: {
@@ -70,7 +80,9 @@ export class LawEvaluationSensor implements AxisSensor {
         reasons: result.reason ? [result.reason] : [],
         tags: {
           lawDecision: "allow",
-          ...(result.applicable ? { lawApplicableArticles: result.applicable.length } : {}),
+          ...(result.applicable
+            ? { lawApplicableArticles: result.applicable.length }
+            : {}),
         },
         meta: result,
       };
@@ -78,7 +90,9 @@ export class LawEvaluationSensor implements AxisSensor {
 
     if (result.decision === "conditional") {
       const mode = this.options.conditionalDecision ?? "deny";
-      const reasons = [result.reason, result.explanation].filter(Boolean) as string[];
+      const reasons = [result.reason, result.explanation].filter(
+        Boolean,
+      ) as string[];
 
       if (mode === "allow") {
         return {
@@ -99,7 +113,9 @@ export class LawEvaluationSensor implements AxisSensor {
           reasons:
             reasons.length > 0
               ? reasons
-              : ["Execution is conditionally permitted pending additional requirements"],
+              : [
+                  "Execution is conditionally permitted pending additional requirements",
+                ],
           meta: result,
         };
       }

@@ -1,13 +1,8 @@
-
-import { MAX_BODY_LEN, MAX_HDR_LEN } from '../core/constants';
-import { decodeVarint } from '../core/varint';
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import {
-  AxisSensor,
-  SensorDecision,
-  SensorInput,
-} from '../sensor/axis-sensor';
+import { MAX_BODY_LEN, MAX_HDR_LEN } from "../core/constants";
+import { decodeVarint } from "../core/varint";
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import { AxisSensor, SensorDecision, SensorInput } from "../sensor/axis-sensor";
 
 /**
  * Body Budget AxisSensor - Section Size Limit Enforcement
@@ -89,7 +84,7 @@ import {
 @Sensor()
 export class BodyBudgetSensor implements AxisSensor {
   /** AxisSensor identifier */
-  readonly name = 'BodyBudgetSensor';
+  readonly name = "BodyBudgetSensor";
 
   /**
    * Execution order - after authentication
@@ -109,8 +104,14 @@ export class BodyBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if sufficient peek data available
    */
-  supports(input: SensorInput): boolean {
-    return !!input.peek && input.peek.length >= 8;
+  async supports(input: SensorInput): Promise<SensorDecision> {
+    return !!input.peek && input.peek.length >= 8
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "Insufficient peek data to read headers",
+        };
   }
 
   /**
@@ -132,7 +133,7 @@ export class BodyBudgetSensor implements AxisSensor {
 
     // Should be caught by ProtocolStrict, but defensive check
     if (!peek || peek.length < 8) {
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
 
     try {
@@ -156,8 +157,8 @@ export class BodyBudgetSensor implements AxisSensor {
       // === Check Header Limit ===
       if (hdrLen > MAX_HDR_LEN) {
         return {
-          action: 'DENY',
-          code: 'HEADER_TOO_LARGE',
+          action: "DENY",
+          code: "HEADER_TOO_LARGE",
           reason: `Header size ${hdrLen} exceeds limit ${MAX_HDR_LEN}`,
         };
       }
@@ -165,17 +166,17 @@ export class BodyBudgetSensor implements AxisSensor {
       // === Check Body Limit ===
       if (bodyLen > MAX_BODY_LEN) {
         return {
-          action: 'DENY',
-          code: 'BODY_TOO_LARGE',
+          action: "DENY",
+          code: "BODY_TOO_LARGE",
           reason: `Body size ${bodyLen} exceeds limit ${MAX_BODY_LEN}`,
         };
       }
 
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     } catch (e) {
       // Parse errors are likely malformed frames
       // ProtocolStrict will handle them
-      return { action: 'ALLOW' };
+      return { action: "ALLOW" };
     }
   }
 }

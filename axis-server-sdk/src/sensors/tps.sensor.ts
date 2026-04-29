@@ -1,7 +1,10 @@
-
-import { Sensor } from '../decorators/sensor.decorator';
-import { BAND } from '../engine/sensor-bands';
-import type { AxisSensor, SensorDecision, SensorInput } from '../sensor/axis-sensor';
+import { Sensor } from "../decorators/sensor.decorator";
+import { BAND } from "../engine/sensor-bands";
+import type {
+  AxisSensor,
+  SensorDecision,
+  SensorInput,
+} from "../sensor/axis-sensor";
 
 /**
  * Configuration for the TPS Sensor.
@@ -30,7 +33,7 @@ const TPS_EPOCH_MS = 934354800000;
  * into a UTC epoch milliseconds value.
  */
 function parseINotation(tps: string): number | null {
-  if (!tps.startsWith('i')) return null;
+  if (!tps.startsWith("i")) return null;
   const num = Number(tps.slice(1));
   if (!Number.isFinite(num)) return null;
   // i-notation is milliseconds since TPS epoch
@@ -52,7 +55,7 @@ function parseINotation(tps: string): number | null {
  */
 @Sensor()
 export class TpsSensor implements AxisSensor {
-  readonly name = 'TpsSensor';
+  readonly name = "TpsSensor";
   readonly order = BAND.POLICY + 2; // runs early in POLICY band, before Law
 
   private readonly maxDriftMs: number;
@@ -63,13 +66,19 @@ export class TpsSensor implements AxisSensor {
     this.resolver = options.resolver ?? parseINotation;
   }
 
-  supports(input: SensorInput): boolean {
+  async supports(input: SensorInput): Promise<SensorDecision> {
     // Only run when a TPS coordinate is present
     const tps =
       input.metadata?.tps_coordinate ??
       input.metadata?.tps ??
       input.packet?.tps;
-    return typeof tps === 'string' && tps.length > 0;
+    return typeof tps === "string" && tps.length > 0
+      ? { action: "ALLOW" }
+      : {
+          action: "DENY",
+          code: "SENSOR_NOT_APPLICABLE",
+          reason: "TPS coordinate not available",
+        };
   }
 
   async run(input: SensorInput): Promise<SensorDecision> {
@@ -86,7 +95,7 @@ export class TpsSensor implements AxisSensor {
         allow: false,
         riskScore: 80,
         reasons: [`TPS coordinate '${tps}' is structurally invalid`],
-        code: 'TPS_INVALID_FORMAT',
+        code: "TPS_INVALID_FORMAT",
       };
     }
 
@@ -95,14 +104,14 @@ export class TpsSensor implements AxisSensor {
     const drift = Math.abs(now - resolved);
 
     if (drift > this.maxDriftMs) {
-      const direction = resolved > now ? 'future' : 'past';
+      const direction = resolved > now ? "future" : "past";
       return {
         allow: false,
         riskScore: 70,
         reasons: [
           `TPS drift ${drift}ms exceeds max ${this.maxDriftMs}ms (${direction})`,
         ],
-        code: 'TPS_DRIFT_EXCEEDED',
+        code: "TPS_DRIFT_EXCEEDED",
         tags: { tpsDriftMs: drift, tpsDirection: direction },
       };
     }

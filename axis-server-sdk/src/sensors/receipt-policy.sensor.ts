@@ -8,8 +8,8 @@ export class ReceiptPolicySensor implements AxisSensor {
   readonly name = 'ReceiptPolicySensor';
   readonly order = BAND.BUSINESS + 20;
 
-  supports(): boolean {
-    return true;
+  async supports(): Promise<SensorDecision> {
+    return { action: 'ALLOW' };
   }
 
   async run(): Promise<SensorDecision> {
