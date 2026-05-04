@@ -284,6 +284,10 @@ export class IntentRouter {
   private handlerIntents = new Map<string, string[]>();
   /** Handler class name → intent namespace prefix (from @Handler('auth')) */
   private handlerPrefixes = new Map<string, string>();
+  /** Handler namespace prefix → handler class name, used by `handler...intent` lookup. */
+  private handlerByPrefix = new Map<string, string>();
+  /** Intent → handler class name, avoids scanning handlerIntents for normal lookups. */
+  private handlerByIntent = new Map<string, string>();
   /** Handler class name → class-level sensor bindings (from @HandlerSensors) */
   private handlerClassSensors = new Map<string, AxisIntentSensorBinding[]>();
   /** Handler class name → class-level observer bindings (from @Handler({ observe: [...] })) */
@@ -300,16 +304,17 @@ export class IntentRouter {
   }
 
   getSchema(intent: string): IntentSchema | undefined {
-    return this.intentSchemas.get(intent);
+    return this.intentSchemas.get(this.resolveIntentAlias(intent));
   }
 
   getValidators(intent: string): Map<number, TlvValidatorFn[]> | undefined {
-    return this.intentValidators.get(intent);
+    return this.intentValidators.get(this.resolveIntentAlias(intent));
   }
 
   has(intent: string): boolean {
+    const resolved = this.resolveIntentAlias(intent);
     return (
-      this.handlers.has(intent) || IntentRouter.BUILTIN_INTENTS.has(intent)
+      this.handlers.has(resolved) || IntentRouter.BUILTIN_INTENTS.has(resolved)
     );
   }
 
@@ -327,25 +332,26 @@ export class IntentRouter {
     capsulePolicy?: CapsulePolicyOptions;
     observerCount: number;
   } | null {
-    if (!this.has(intent)) return null;
+    const resolved = this.resolveIntentAlias(intent);
+    if (!this.has(resolved)) return null;
     return {
-      schema: this.intentSchemas.get(intent),
-      validators: this.intentValidators.get(intent),
-      hasSensors: this.intentSensors.has(intent),
-      builtin: IntentRouter.BUILTIN_INTENTS.has(intent),
-      kind: this.intentKinds.get(intent),
-      chain: this.intentChains.get(intent),
-      capsulePolicy: this.intentCapsulePolicies.get(intent),
-      observerCount: this.getObservers(intent).length,
+      schema: this.intentSchemas.get(resolved),
+      validators: this.intentValidators.get(resolved),
+      hasSensors: this.intentSensors.has(resolved),
+      builtin: IntentRouter.BUILTIN_INTENTS.has(resolved),
+      kind: this.intentKinds.get(resolved),
+      chain: this.intentChains.get(resolved),
+      capsulePolicy: this.intentCapsulePolicies.get(resolved),
+      observerCount: this.getObservers(resolved).length,
     };
   }
 
   getChainConfig(intent: string): RegisteredChainConfig | undefined {
-    return this.intentChains.get(intent);
+    return this.intentChains.get(this.resolveIntentAlias(intent));
   }
 
   getObservers(intent: string): AxisObserverBinding[] {
-    return this.intentObservers.get(intent) || [];
+    return this.intentObservers.get(this.resolveIntentAlias(intent)) || [];
   }
 
   /**
@@ -396,6 +402,14 @@ export class IntentRouter {
       Reflect.getMetadata(HANDLER_SENSORS_KEY, instance.constructor) || [];
     const handlerObservers: AxisObserverBinding[] =
       Reflect.getMetadata(OBSERVER_BINDINGS_KEY, instance.constructor) || [];
+    if (prefix) {
+      this.trackHandlerMeta(
+        instance.constructor.name,
+        prefix,
+        handlerSensors,
+        handlerObservers,
+      );
+    }
 
     const proto = Object.getPrototypeOf(instance);
 
@@ -470,7 +484,7 @@ export class IntentRouter {
     try {
       const intentBytes = frame.headers.get(TLV_INTENT);
       if (!intentBytes) throw new Error("Missing intent");
-      intent = this.decoder.decode(intentBytes);
+      intent = this.resolveIntentAlias(this.decoder.decode(intentBytes));
       handlerRef = this.intentHandlerRefs.get(intent);
       const observerBindings = this.getObservers(intent);
 
@@ -838,31 +852,31 @@ export class IntentRouter {
   // ─── Policy Getters ────────────────────────────────────────────────────────
 
   getSensitivity(intent: string): SensitivityLevel | undefined {
-    return this.intentSensitivity.get(intent);
+    return this.intentSensitivity.get(this.resolveIntentAlias(intent));
   }
 
   getContract(intent: string): Record<string, any> | undefined {
-    return this.intentContracts.get(intent);
+    return this.intentContracts.get(this.resolveIntentAlias(intent));
   }
 
   getRequiredProof(intent: string): RequiredProofKind[] | undefined {
-    return this.intentRequiredProof.get(intent);
+    return this.intentRequiredProof.get(this.resolveIntentAlias(intent));
   }
 
   isPublic(intent: string): boolean {
-    return this.publicIntents.has(intent);
+    return this.publicIntents.has(this.resolveIntentAlias(intent));
   }
 
   isAnonymous(intent: string): boolean {
-    return this.anonymousIntents.has(intent);
+    return this.anonymousIntents.has(this.resolveIntentAlias(intent));
   }
 
   isAuthorized(intent: string): boolean {
-    return this.authorizedIntents.has(intent);
+    return this.authorizedIntents.has(this.resolveIntentAlias(intent));
   }
 
   getRateLimit(intent: string): AxisRateLimitConfig | undefined {
-    return this.intentRateLimits.get(intent);
+    return this.intentRateLimits.get(this.resolveIntentAlias(intent));
   }
 
   // ─── Handler-level Getters ─────────────────────────────────────────────────
@@ -874,10 +888,8 @@ export class IntentRouter {
 
   /** Returns the handler class name that owns the given intent, or undefined if not found. */
   getHandlerByIntent(intent: string): string | undefined {
-    for (const [handlerName, intents] of this.handlerIntents) {
-      if (intents.includes(intent)) return handlerName;
-    }
-    return undefined;
+    const resolved = this.resolveIntentAlias(intent);
+    return this.handlerByIntent.get(resolved);
   }
 
   /** All registered handler class names. */
@@ -971,6 +983,42 @@ export class IntentRouter {
     handlerName: string,
   ): AxisObserverBinding[] | undefined {
     return this.handlerClassObservers.get(handlerName);
+  }
+
+  /**
+   * Resolves the optional `handler...intent` wire shorthand to a registered
+   * canonical intent. Existing exact intent names always win.
+   */
+  resolveIntentAlias(intent: string): string {
+    if (this.handlers.has(intent) || IntentRouter.BUILTIN_INTENTS.has(intent)) {
+      return intent;
+    }
+
+    const separator = "...";
+    const separatorIndex = intent.indexOf(separator);
+    if (separatorIndex <= 0) return intent;
+
+    const handlerKey = intent.slice(0, separatorIndex);
+    const action = intent.slice(separatorIndex + separator.length);
+    if (!handlerKey || !action) return intent;
+
+    const handlerName =
+      this.handlerByPrefix.get(handlerKey) ??
+      (this.handlerIntents.has(handlerKey) ? handlerKey : undefined);
+    if (!handlerName) return intent;
+
+    const prefix = this.getHandlerPrefix(handlerName) ?? handlerKey;
+    const handlerIntents = this.getHandlerIntents(handlerName);
+    const prefixedIntent = `${prefix}.${action}`;
+    if (handlerIntents.includes(prefixedIntent)) return prefixedIntent;
+
+    if (handlerIntents.includes(action)) return action;
+
+    const suffix = `.${action}`;
+    const suffixMatches = handlerIntents.filter((candidate) =>
+      candidate.endsWith(suffix),
+    );
+    return suffixMatches.length === 1 ? suffixMatches[0] : intent;
   }
 
   /** Full summary of a handler's registered intents and aggregated policies. Returns null if unknown. */
@@ -1070,6 +1118,7 @@ export class IntentRouter {
   }
 
   trackHandlerIntent(handlerName: string, intent: string): void {
+    this.handlerByIntent.set(intent, handlerName);
     const existing = this.handlerIntents.get(handlerName);
     if (existing) {
       if (!existing.includes(intent)) existing.push(intent);
@@ -1089,6 +1138,7 @@ export class IntentRouter {
     observers: AxisObserverBinding[],
   ): void {
     this.handlerPrefixes.set(className, prefix);
+    this.handlerByPrefix.set(prefix, className);
     if (sensors.length > 0) {
       this.handlerClassSensors.set(
         className,

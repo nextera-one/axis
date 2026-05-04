@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  AxisPublic,
   Handler,
   Intent,
   IntentRouter,
@@ -96,6 +97,12 @@ class HandlerObserveHandler {
   }
 }
 
+class AuthAliasHandler {
+  async issue(body) {
+    return body;
+  }
+}
+
 class HandlerObserveProbe {
   constructor(events) {
     this.name = "HandlerObserveProbe";
@@ -140,6 +147,14 @@ Handler("sdk.handler.observe", {
   observe: [HandlerObserveProbe],
 })(HandlerObserveHandler);
 Intent("inspect")(HandlerObserveHandler.prototype, "inspect");
+
+Handler("auth")(AuthAliasHandler);
+AxisPublic()(
+  AuthAliasHandler.prototype,
+  "issue",
+  Object.getOwnPropertyDescriptor(AuthAliasHandler.prototype, "issue"),
+);
+Intent("capsule.issue")(AuthAliasHandler.prototype, "issue");
 
 function createFrame(intent, body = Buffer.from("payload")) {
   return {
@@ -224,4 +239,24 @@ test("Sensitivity decorator remains backward compatible", () => {
   router.registerHandler(new LegacySensitivityHandler());
 
   assert.equal(router.getSensitivity("sdk.intent.legacy-sensitivity"), "HIGH");
+});
+
+test("handler triple-dot intent aliases resolve to canonical intent", async () => {
+  const router = new IntentRouter();
+  router.registerHandler(new AuthAliasHandler());
+
+  assert.equal(
+    router.resolveIntentAlias("auth...capsule.issue"),
+    "auth.capsule.issue",
+  );
+  assert.equal(router.has("auth...capsule.issue"), true);
+  assert.equal(router.isPublic("auth...capsule.issue"), true);
+  assert.equal(
+    router.getHandlerByIntent("auth...capsule.issue"),
+    "AuthAliasHandler",
+  );
+
+  const effect = await router.route(createFrame("auth...capsule.issue"));
+  assert.equal(effect.ok, true);
+  assert.deepEqual(Buffer.from(effect.body), Buffer.from("payload"));
 });
