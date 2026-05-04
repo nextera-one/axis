@@ -1,94 +1,28 @@
-import {
-  decodeChainEnvelope,
-  decodeChainRequest,
-} from "@nextera.one/axis-protocol";
+import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
 
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import {
-  CAPSULE_POLICY_METADATA_KEY,
-  type CapsulePolicyOptions,
-  mergeCapsulePolicyOptions,
-  normalizeCapsulePolicyOptions,
-} from "../decorators/capsule-policy.decorator";
+import { CAPSULE_POLICY_METADATA_KEY, type CapsulePolicyOptions, mergeCapsulePolicyOptions, normalizeCapsulePolicyOptions } from "../decorators/capsule-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import {
-  AXIS_ANONYMOUS_KEY,
-  AXIS_AUTHORIZED_KEY,
-  AXIS_PUBLIC_KEY,
-  AXIS_RATE_LIMIT_KEY,
-  type AxisRateLimitConfig,
-  CONTRACT_METADATA_KEY,
-  REQUIRED_PROOF_METADATA_KEY,
-  type RequiredProofKind,
-  SENSITIVITY_METADATA_KEY,
-} from "../decorators/intent-policy.decorator";
+import { AXIS_ANONYMOUS_KEY, AXIS_AUTHORIZED_KEY, AXIS_PUBLIC_KEY, AXIS_RATE_LIMIT_KEY, type AxisRateLimitConfig, CONTRACT_METADATA_KEY, REQUIRED_PROOF_METADATA_KEY, type RequiredProofKind, SENSITIVITY_METADATA_KEY } from "../decorators/intent-policy.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
-import {
-  AxisObserverBinding,
-  AxisObserverRef,
-  OBSERVER_BINDINGS_KEY,
-} from "../decorators/observer.decorator";
+import { AxisObserverBinding, AxisObserverRef, OBSERVER_BINDINGS_KEY } from "../decorators/observer.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import {
-  type AxisIntentSensorBinding,
-  type AxisIntentSensorBindingInput,
-  type AxisIntentSensorRef,
-  INTENT_METADATA_KEY,
-  INTENT_ROUTES_KEY,
-  IntentKind,
-  IntentRoute,
-  IntentTlvField,
-  toIntentSensorBinding,
-} from "../decorators/intent.decorator";
+import { type AxisIntentSensorBinding, type AxisIntentSensorBindingInput, type AxisIntentSensorRef, INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField, toIntentSensorBinding } from "../decorators/intent.decorator";
 import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
-import {
-  buildDtoDecoder,
-  extractDtoSchema,
-} from "../decorators/dto-schema.util";
+import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
-import {
-  inlineCapsuleAllowsIntent,
-  inlineCapsuleSatisfiesScopes,
-  isInlineCapsuleExpired,
-  normalizeInlineCapsule,
-  resolvePolicyScopes,
-} from "../security/inline-capsule";
+import { inlineCapsuleAllowsIntent, inlineCapsuleSatisfiesScopes, isInlineCapsuleExpired, normalizeInlineCapsule, resolvePolicyScopes } from "../security/inline-capsule";
 import type { AxisDependencyResolver } from "./axis-dependency-resolver";
 import { SensorRegistry } from "./registry/sensor.registry";
-import {
-  getAxisExecutionContext,
-  mergeAxisExecutionContext,
-  withAxisExecutionContext,
-} from "./axis-execution-context";
+import { getAxisExecutionContext, mergeAxisExecutionContext, withAxisExecutionContext } from "./axis-execution-context";
 import type { SensitivityLevel } from "../schemas/axis-schemas";
-import {
-  AxisSensor,
-  normalizeSensorDecision,
-  SensorInput,
-} from "../sensor/axis-sensor";
+import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
 import { createAxisLogger } from "../utils/axis-logger";
-import {
-  type CceHandler,
-  type CcePipelineConfig,
-  type CcePipelineResult,
-  executeCcePipeline,
-} from "../cce/cce-pipeline";
+import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
 import { AxisError } from "../core/axis-error";
-import {
-  AxisChainEnvelope,
-  AxisChainRequest,
-  ChainOptions,
-  RegisteredChainConfig,
-} from "./axis-chain.types";
-import {
-  TLV_ACTOR_ID,
-  TLV_CAPSULE,
-  TLV_INTENT,
-  TLV_NODE,
-  TLV_PROOF_REF,
-  TLV_REALM,
-} from "../core/constants";
+import { AxisChainEnvelope, AxisChainRequest, ChainOptions, RegisteredChainConfig } from "./axis-chain.types";
+import { TLV_ACTOR_ID, TLV_CAPSULE, TLV_INTENT, TLV_NODE, TLV_PROOF_REF, TLV_REALM } from "../core/constants";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
 
@@ -224,6 +158,32 @@ export interface AxisEffect {
 }
 
 /**
+ * Summary of all intents and policies registered under a handler class.
+ */
+export interface HandlerSummary {
+  /** Handler class name (e.g. 'UsersHandler') */
+  handler: string;
+  /** All intents registered under this handler */
+  intents: string[];
+  /** True if any intent in this handler is public */
+  isPublic: boolean;
+  /** True if any intent in this handler is anonymous-accessible */
+  isAnonymous: boolean;
+  /** True if any intent in this handler is authorized-session-only */
+  isAuthorized: boolean;
+  /** Union of all required proof kinds across intents */
+  requiredProof?: RequiredProofKind[];
+  /** Contract metadata (typically class-level, first found wins) */
+  contract?: Record<string, any>;
+  /** Sensitivity level (first found wins) */
+  sensitivity?: SensitivityLevel;
+  /** Rate limit config (first found wins) */
+  rateLimit?: AxisRateLimitConfig;
+  /** Capsule policy (first found wins) */
+  capsulePolicy?: CapsulePolicyOptions;
+}
+
+/**
  * IntentRouter
  *
  * The central dispatching mechanism of the AXIS backend.
@@ -313,6 +273,9 @@ export class IntentRouter {
 
   /** CCE pipeline configuration (set via configureCce) */
   private ccePipelineConfig: Omit<CcePipelineConfig, "handlers"> | null = null;
+
+  /** Reverse index: handler class name → list of registered intents */
+  private handlerIntents = new Map<string, string[]>();
 
   constructor(
     dependencyResolver?: AxisDependencyResolver,
@@ -439,6 +402,7 @@ export class IntentRouter {
         intentName,
         `${instance.constructor.name}.${String(route.methodName)}`,
       );
+      this.trackHandlerIntent(instance.constructor.name, intentName);
 
       this.registerIntentMeta(
         intentName,
@@ -470,6 +434,7 @@ export class IntentRouter {
         handlerSensors,
         handlerObservers,
       );
+      this.trackHandlerIntent(instance.constructor.name, intentName);
     }
   }
 
@@ -888,6 +853,123 @@ export class IntentRouter {
     return this.intentRateLimits.get(intent);
   }
 
+  // ─── Handler-level Getters ─────────────────────────────────────────────────
+
+  /** All intents registered under the given handler class name. */
+  getHandlerIntents(handlerName: string): string[] {
+    return this.handlerIntents.get(handlerName) ?? [];
+  }
+
+  /** Returns the handler class name that owns the given intent, or undefined if not found. */
+  getHandlerByIntent(intent: string): string | undefined {
+    for (const [handlerName, intents] of this.handlerIntents) {
+      if (intents.includes(intent)) return handlerName;
+    }
+    return undefined;
+  }
+
+  /** All registered handler class names. */
+  getRegisteredHandlers(): string[] {
+    return Array.from(this.handlerIntents.keys());
+  }
+
+  /** The system/builtin intents (ping, time, echo, chain, intent.exec). */
+  getSystemIntents(): string[] {
+    return [...IntentRouter.BUILTIN_INTENTS];
+  }
+
+  /** True if every intent in the handler is public, or any one is public — returns true if ANY intent is @AxisPublic. */
+  isHandlerPublic(handlerName: string): boolean {
+    return this.getHandlerIntents(handlerName).some((i) => this.isPublic(i));
+  }
+
+  /** True if any intent in the handler is @AxisAnonymous. */
+  isHandlerAnonymous(handlerName: string): boolean {
+    return this.getHandlerIntents(handlerName).some((i) => this.isAnonymous(i));
+  }
+
+  /** True if any intent in the handler is @AxisAuthorized. */
+  isHandlerAuthorized(handlerName: string): boolean {
+    return this.getHandlerIntents(handlerName).some((i) =>
+      this.isAuthorized(i),
+    );
+  }
+
+  /** Union of all required proof kinds across the handler's intents (deduplicated). */
+  getHandlerProof(handlerName: string): RequiredProofKind[] | undefined {
+    const all = this.getHandlerIntents(handlerName).flatMap(
+      (i) => this.getRequiredProof(i) ?? [],
+    );
+    if (all.length === 0) return undefined;
+    return [...new Set(all)];
+  }
+
+  /** Contract from the first intent that has one (class-level contracts propagate to all intents). */
+  getHandlerContract(handlerName: string): Record<string, any> | undefined {
+    for (const intent of this.getHandlerIntents(handlerName)) {
+      const contract = this.getContract(intent);
+      if (contract) return contract;
+    }
+    return undefined;
+  }
+
+  /** Sensitivity from the first intent that has one. */
+  getHandlerSensitivity(handlerName: string): SensitivityLevel | undefined {
+    for (const intent of this.getHandlerIntents(handlerName)) {
+      const sensitivity = this.getSensitivity(intent);
+      if (sensitivity) return sensitivity;
+    }
+    return undefined;
+  }
+
+  /** Rate limit from the first intent that has one. */
+  getHandlerRateLimit(handlerName: string): AxisRateLimitConfig | undefined {
+    for (const intent of this.getHandlerIntents(handlerName)) {
+      const rateLimit = this.getRateLimit(intent);
+      if (rateLimit) return rateLimit;
+    }
+    return undefined;
+  }
+
+  /** Capsule policy from the first intent that has one. */
+  getHandlerCapsulePolicy(
+    handlerName: string,
+  ): CapsulePolicyOptions | undefined {
+    for (const intent of this.getHandlerIntents(handlerName)) {
+      const policy = this.intentCapsulePolicies.get(intent);
+      if (policy) return policy;
+    }
+    return undefined;
+  }
+
+  /** Full summary of a handler's registered intents and aggregated policies. Returns null if unknown. */
+  getHandlerSummary(handlerName: string): HandlerSummary | null {
+    const intents = this.getHandlerIntents(handlerName);
+    if (intents.length === 0) return null;
+    return {
+      handler: handlerName,
+      intents,
+      isPublic: this.isHandlerPublic(handlerName),
+      isAnonymous: this.isHandlerAnonymous(handlerName),
+      isAuthorized: this.isHandlerAuthorized(handlerName),
+      requiredProof: this.getHandlerProof(handlerName),
+      contract: this.getHandlerContract(handlerName),
+      sensitivity: this.getHandlerSensitivity(handlerName),
+      rateLimit: this.getHandlerRateLimit(handlerName),
+      capsulePolicy: this.getHandlerCapsulePolicy(handlerName),
+    };
+  }
+
+  /** Summary of all registered handlers keyed by handler class name. */
+  getAllHandlerSummaries(): Map<string, HandlerSummary> {
+    const result = new Map<string, HandlerSummary>();
+    for (const handlerName of this.handlerIntents.keys()) {
+      const summary = this.getHandlerSummary(handlerName);
+      if (summary) result.set(handlerName, summary);
+    }
+    return result;
+  }
+
   private async emitIntentObservers(
     bindings: AxisObserverBinding[],
     context: Parameters<ObserverDispatcherService["dispatch"]>[1],
@@ -950,6 +1032,15 @@ export class IntentRouter {
         );
         throw new Error(`SENSOR_DENY:${reason}`);
       }
+    }
+  }
+
+  private trackHandlerIntent(handlerName: string, intent: string): void {
+    const existing = this.handlerIntents.get(handlerName);
+    if (existing) {
+      if (!existing.includes(intent)) existing.push(intent);
+    } else {
+      this.handlerIntents.set(handlerName, [intent]);
     }
   }
 
