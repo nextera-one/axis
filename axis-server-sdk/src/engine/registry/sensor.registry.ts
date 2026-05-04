@@ -101,12 +101,14 @@ export class SensorRegistry {
   }
 
   getPreDecodeSensors(): AxisPreSensor[] {
-    return this.list().filter((s): s is AxisPreSensor => (s.order ?? 999) < 40);
+    return this.list().filter((s): s is AxisPreSensor =>
+      this.isPreDecodeSensor(s),
+    );
   }
 
   getPostDecodeSensors(): AxisPostSensor[] {
-    return this.list().filter(
-      (s): s is AxisPostSensor => (s.order ?? 999) >= 40,
+    return this.list().filter((s): s is AxisPostSensor =>
+      this.isPostDecodeSensor(s),
     );
   }
 
@@ -126,13 +128,17 @@ export class SensorRegistry {
   private isPreDecodeSensor(sensor: AxisSensor): boolean {
     const phase =
       typeof sensor.phase === "string" ? sensor.phase : sensor.phase?.phase;
-    return phase === "PRE_DECODE" || (sensor.order ?? 999) < 40;
+    // Explicit phase metadata is authoritative; order is only the fallback.
+    if (phase) return phase === "PRE_DECODE";
+    return (sensor.order ?? 999) < 40;
   }
 
   private isPostDecodeSensor(sensor: AxisSensor): boolean {
     const phase =
       typeof sensor.phase === "string" ? sensor.phase : sensor.phase?.phase;
-    return phase === "POST_DECODE" || (sensor.order ?? 999) >= 40;
+    // Explicit phase metadata is authoritative; order is only the fallback.
+    if (phase) return phase === "POST_DECODE";
+    return (sensor.order ?? 999) >= 40;
   }
 
   private indexSensor(sensor: AxisSensor): void {
