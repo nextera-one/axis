@@ -163,6 +163,8 @@ export interface AxisEffect {
 export interface HandlerSummary {
   /** Handler class name (e.g. 'UsersHandler') */
   handler: string;
+  /** Intent namespace prefix from @Handler('auth') */
+  prefix?: string;
   /** All intents registered under this handler */
   intents: string[];
   /** True if any intent in this handler is public */
@@ -181,6 +183,10 @@ export interface HandlerSummary {
   rateLimit?: AxisRateLimitConfig;
   /** Capsule policy (first found wins) */
   capsulePolicy?: CapsulePolicyOptions;
+  /** Class-level sensor bindings from @HandlerSensors (applied before every intent in this handler) */
+  classSensors?: AxisIntentSensorBinding[];
+  /** Class-level observer bindings from @Handler({ observe: [...] }) */
+  classObservers?: AxisObserverBinding[];
 }
 
 /**
@@ -276,6 +282,12 @@ export class IntentRouter {
 
   /** Reverse index: handler class name → list of registered intents */
   private handlerIntents = new Map<string, string[]>();
+  /** Handler class name → intent namespace prefix (from @Handler('auth')) */
+  private handlerPrefixes = new Map<string, string>();
+  /** Handler class name → class-level sensor bindings (from @HandlerSensors) */
+  private handlerClassSensors = new Map<string, AxisIntentSensorBinding[]>();
+  /** Handler class name → class-level observer bindings (from @Handler({ observe: [...] })) */
+  private handlerClassObservers = new Map<string, AxisObserverBinding[]>();
 
   constructor(
     dependencyResolver?: AxisDependencyResolver,
@@ -942,12 +954,32 @@ export class IntentRouter {
     return undefined;
   }
 
+  /** Intent namespace prefix declared in @Handler('auth'). */
+  getHandlerPrefix(handlerName: string): string | undefined {
+    return this.handlerPrefixes.get(handlerName);
+  }
+
+  /** Class-level sensor bindings from @HandlerSensors (run before every intent in this handler). */
+  getHandlerClassSensors(
+    handlerName: string,
+  ): AxisIntentSensorBinding[] | undefined {
+    return this.handlerClassSensors.get(handlerName);
+  }
+
+  /** Class-level observer bindings from @Handler({ observe: [...] }). */
+  getHandlerClassObservers(
+    handlerName: string,
+  ): AxisObserverBinding[] | undefined {
+    return this.handlerClassObservers.get(handlerName);
+  }
+
   /** Full summary of a handler's registered intents and aggregated policies. Returns null if unknown. */
   getHandlerSummary(handlerName: string): HandlerSummary | null {
     const intents = this.getHandlerIntents(handlerName);
     if (intents.length === 0) return null;
     return {
       handler: handlerName,
+      prefix: this.getHandlerPrefix(handlerName),
       intents,
       isPublic: this.isHandlerPublic(handlerName),
       isAnonymous: this.isHandlerAnonymous(handlerName),
@@ -957,6 +989,8 @@ export class IntentRouter {
       sensitivity: this.getHandlerSensitivity(handlerName),
       rateLimit: this.getHandlerRateLimit(handlerName),
       capsulePolicy: this.getHandlerCapsulePolicy(handlerName),
+      classSensors: this.getHandlerClassSensors(handlerName),
+      classObservers: this.getHandlerClassObservers(handlerName),
     };
   }
 
@@ -1035,12 +1069,37 @@ export class IntentRouter {
     }
   }
 
-  private trackHandlerIntent(handlerName: string, intent: string): void {
+  trackHandlerIntent(handlerName: string, intent: string): void {
     const existing = this.handlerIntents.get(handlerName);
     if (existing) {
       if (!existing.includes(intent)) existing.push(intent);
     } else {
       this.handlerIntents.set(handlerName, [intent]);
+    }
+  }
+
+  /**
+   * Stores class-level handler metadata (prefix, sensors, observers) gathered
+   * at discovery time. Should be called once per handler class.
+   */
+  trackHandlerMeta(
+    className: string,
+    prefix: string,
+    sensors: AxisIntentSensorBindingInput[],
+    observers: AxisObserverBinding[],
+  ): void {
+    this.handlerPrefixes.set(className, prefix);
+    if (sensors.length > 0) {
+      this.handlerClassSensors.set(
+        className,
+        mergeIntentSensorBindings(sensors),
+      );
+    }
+    if (observers.length > 0) {
+      this.handlerClassObservers.set(
+        className,
+        mergeObserverBindings(observers),
+      );
     }
   }
 
