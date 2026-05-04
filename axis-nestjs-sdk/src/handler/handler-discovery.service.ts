@@ -53,7 +53,10 @@ export class HandlerDiscoveryService implements OnModuleInit {
           ? route.action
           : `${prefix}.${route.action}`;
 
-        if (!this.router.has(intentName)) {
+        // `router.has()` includes SDK built-in fallbacks. Discovery must only
+        // skip handlers already registered by the app so built-ins like
+        // `system.ping` can be overridden by Nest handlers.
+        if (!this.router.hasRegisteredHandler(intentName)) {
           this.router.register(
             intentName,
             (instance as any)[route.methodName].bind(instance),
@@ -86,7 +89,9 @@ export class HandlerDiscoveryService implements OnModuleInit {
           ? meta.intent
           : `${prefix}.${meta.intent}`;
 
-        if (!this.router.has(intentName)) {
+        // See the route registration path above: built-in fallback existence
+        // must not block app handler registration.
+        if (!this.router.hasRegisteredHandler(intentName)) {
           this.router.register(
             intentName,
             (instance as any)[methodName].bind(instance),

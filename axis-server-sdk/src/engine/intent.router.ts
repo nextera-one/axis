@@ -351,6 +351,16 @@ export class IntentRouter {
     return this.handlers.has(resolved) || isBuiltinIntent(resolved);
   }
 
+  /**
+   * True only when the application registered a concrete handler.
+   * Unlike `has()`, this intentionally ignores SDK built-in fallbacks so
+   * discovery layers can override simple built-ins such as `system.ping`.
+   */
+  hasRegisteredHandler(intent: string): boolean {
+    const resolved = this.resolveIntentAlias(intent);
+    return this.handlers.has(resolved);
+  }
+
   getRegisteredIntents(): string[] {
     return [...BUILTIN_INTENTS, ...this.handlers.keys()];
   }
