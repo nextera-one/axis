@@ -14,6 +14,7 @@ export type { PageResult } from "./dto/page-result";
 export { AxisPageDto } from "./dto/axis-page.dto";
 export {
   AxisAnonymous,
+  AxisAuthorized,
   AxisPartialType,
   AxisPublic,
   AxisRateLimit,
