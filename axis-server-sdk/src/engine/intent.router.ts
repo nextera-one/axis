@@ -1,30 +1,86 @@
 import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
 
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { CAPSULE_POLICY_METADATA_KEY, type CapsulePolicyOptions, mergeCapsulePolicyOptions, normalizeCapsulePolicyOptions } from "../decorators/capsule-policy.decorator";
+import {
+  CAPSULE_POLICY_METADATA_KEY,
+  type CapsulePolicyOptions,
+  mergeCapsulePolicyOptions,
+  normalizeCapsulePolicyOptions,
+} from "../decorators/capsule-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import { AXIS_ANONYMOUS_KEY, AXIS_AUTHORIZED_KEY, AXIS_PUBLIC_KEY, AXIS_RATE_LIMIT_KEY, type AxisRateLimitConfig, CONTRACT_METADATA_KEY, REQUIRED_PROOF_METADATA_KEY, type RequiredProofKind, SENSITIVITY_METADATA_KEY } from "../decorators/intent-policy.decorator";
+import {
+  AXIS_RATE_LIMIT_KEY,
+  type AxisRateLimitConfig,
+  CONTRACT_METADATA_KEY,
+  type RequiredProofKind,
+  SENSITIVITY_METADATA_KEY,
+} from "../decorators/intent-policy.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
 import { AxisObserverBinding, AxisObserverRef, OBSERVER_BINDINGS_KEY } from "../decorators/observer.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { type AxisIntentSensorBinding, type AxisIntentSensorBindingInput, type AxisIntentSensorRef, INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField, toIntentSensorBinding } from "../decorators/intent.decorator";
+import {
+  type AxisIntentSensorBinding,
+  type AxisIntentSensorBindingInput,
+  type AxisIntentSensorRef,
+  INTENT_METADATA_KEY,
+  INTENT_ROUTES_KEY,
+  IntentKind,
+  IntentRoute,
+  IntentTlvField,
+  toIntentSensorBinding,
+} from "../decorators/intent.decorator";
 import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
 import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
-import { inlineCapsuleAllowsIntent, inlineCapsuleSatisfiesScopes, isInlineCapsuleExpired, normalizeInlineCapsule, resolvePolicyScopes } from "../security/inline-capsule";
+import {
+  inlineCapsuleAllowsIntent,
+  inlineCapsuleSatisfiesScopes,
+  isInlineCapsuleExpired,
+  normalizeInlineCapsule,
+  resolvePolicyScopes,
+} from "../security/inline-capsule";
 import type { AxisDependencyResolver } from "./axis-dependency-resolver";
 import { SensorRegistry } from "./registry/sensor.registry";
-import { getAxisExecutionContext, mergeAxisExecutionContext, withAxisExecutionContext } from "./axis-execution-context";
+import {
+  getAxisExecutionContext,
+  mergeAxisExecutionContext,
+  withAxisExecutionContext,
+} from "./axis-execution-context";
 import type { SensitivityLevel } from "../schemas/axis-schemas";
 import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
 import { createAxisLogger } from "../utils/axis-logger";
-import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import {
+  type CceHandler,
+  type CcePipelineConfig,
+  type CcePipelineResult,
+  executeCcePipeline,
+} from "../cce/cce-pipeline";
 import { AxisError } from "../core/axis-error";
-import { AxisChainEnvelope, AxisChainRequest, ChainOptions, RegisteredChainConfig } from "./axis-chain.types";
-import { TLV_ACTOR_ID, TLV_CAPSULE, TLV_INTENT, TLV_NODE, TLV_PROOF_REF, TLV_REALM } from "../core/constants";
+import {
+  AxisChainEnvelope,
+  AxisChainRequest,
+  ChainOptions,
+  RegisteredChainConfig,
+} from "./axis-chain.types";
+import {
+  TLV_ACTOR_ID,
+  TLV_CAPSULE,
+  TLV_INTENT,
+  TLV_NODE,
+  TLV_PROOF_REF,
+  TLV_REALM,
+} from "../core/constants";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
+import {
+  BUILTIN_INTENTS,
+  isBuiltinIntent,
+  isChainExecIntent,
+  isIntentExecIntent,
+  routeSystemBuiltinIntent,
+} from "./intent-builtins";
+import { resolveIntentProofPolicy } from "./intent-proof-policy";
 
 function observerRefKey(ref: AxisObserverRef): string {
   return typeof ref === "string" ? ref : ref.name;
@@ -36,30 +92,6 @@ function sensorRefKey(ref: AxisIntentSensorRef): string {
 
 function sensorBindingKey(binding: AxisIntentSensorBinding): string {
   return `${binding.when}:${sensorRefKey(binding.ref)}`;
-}
-
-function mergeProofKinds(
-  ...proofGroups: Array<RequiredProofKind[] | undefined>
-): RequiredProofKind[] {
-  const merged = new Set<RequiredProofKind>();
-  for (const proofs of proofGroups) {
-    for (const proof of proofs ?? []) {
-      merged.add(proof);
-    }
-  }
-  return Array.from(merged);
-}
-
-function accessProofKinds(
-  isPublic?: boolean,
-  isAnonymous?: boolean,
-  isAuthorized?: boolean,
-): RequiredProofKind[] {
-  const proofs: RequiredProofKind[] = [];
-  if (isPublic) proofs.push("NONE");
-  if (isAnonymous) proofs.push("ANONYMOUS");
-  if (isAuthorized) proofs.push("AUTHORIZED");
-  return proofs;
 }
 
 function mergeIntentSensorBindings(
@@ -235,18 +267,6 @@ export class IntentRouter {
   private readonly observerDispatcher?: ObserverDispatcherService;
   private readonly sensorRegistry?: SensorRegistry;
 
-  /** Intents handled inline in route() — not in `handlers` map */
-  private static readonly BUILTIN_INTENTS = new Set([
-    "system.ping",
-    "public.ping",
-    "system.time",
-    "system.echo",
-    "CHAIN.EXEC",
-    "axis.chain.exec",
-    "INTENT.EXEC",
-    "axis.intent.exec",
-  ]);
-
   /** Internal registry of dynamic intent handlers */
   private handlers = new Map<string, any>();
 
@@ -285,15 +305,6 @@ export class IntentRouter {
 
   /** Per-intent required proof kinds */
   private intentRequiredProof = new Map<string, RequiredProofKind[]>();
-
-  /** Intents flagged as public (no auth required) */
-  private publicIntents = new Set<string>();
-
-  /** Intents flagged as anonymous-session accessible */
-  private anonymousIntents = new Set<string>();
-
-  /** Intents flagged as authorized-session accessible */
-  private authorizedIntents = new Set<string>();
 
   /** Per-intent rate limit config */
   private intentRateLimits = new Map<string, AxisRateLimitConfig>();
@@ -337,13 +348,11 @@ export class IntentRouter {
 
   has(intent: string): boolean {
     const resolved = this.resolveIntentAlias(intent);
-    return (
-      this.handlers.has(resolved) || IntentRouter.BUILTIN_INTENTS.has(resolved)
-    );
+    return this.handlers.has(resolved) || isBuiltinIntent(resolved);
   }
 
   getRegisteredIntents(): string[] {
-    return [...IntentRouter.BUILTIN_INTENTS, ...this.handlers.keys()];
+    return [...BUILTIN_INTENTS, ...this.handlers.keys()];
   }
 
   getIntentEntry(intent: string): {
@@ -362,7 +371,7 @@ export class IntentRouter {
       schema: this.intentSchemas.get(resolved),
       validators: this.intentValidators.get(resolved),
       hasSensors: this.intentSensors.has(resolved),
-      builtin: IntentRouter.BUILTIN_INTENTS.has(resolved),
+      builtin: isBuiltinIntent(resolved),
       kind: this.intentKinds.get(resolved),
       chain: this.intentChains.get(resolved),
       capsulePolicy: this.intentCapsulePolicies.get(resolved),
@@ -387,6 +396,12 @@ export class IntentRouter {
    * @param {any} handler - The handler function or object
    */
   register(intent: string, handler: any) {
+    // Keep compatibility with dynamic registration by allowing replacement,
+    // but surface it because duplicate intents usually indicate discovery drift.
+    if (this.handlers.has(intent)) {
+      this.logger.warn(`Intent ${intent} is already registered; replacing handler`);
+    }
+
     this.handlers.set(intent, handler);
     if (typeof handler === "function" && handler.name) {
       this.intentHandlerRefs.set(intent, handler.name);
@@ -522,143 +537,7 @@ export class IntentRouter {
 
       let effect: AxisEffect;
 
-      if (intent === "system.ping" || intent === "public.ping") {
-        this.logger.debug("PING received");
-        effect = {
-          ok: true,
-          effect: "pong",
-          headers: new Map([
-            [100, new TextEncoder().encode("AXIS_BACKEND_V1")],
-          ]),
-          body: new TextEncoder().encode(
-            JSON.stringify({
-              status: "ok",
-              timestamp: new Date().toISOString(),
-              version: "1.0.0",
-            }),
-          ),
-        };
-      } else if (intent === "system.time") {
-        const ts = Date.now().toString();
-        effect = {
-          ok: true,
-          effect: "time",
-          body: new TextEncoder().encode(
-            JSON.stringify({
-              ts,
-              iso: new Date().toISOString(),
-            }),
-          ),
-        };
-      } else if (intent === "system.echo") {
-        effect = {
-          ok: true,
-          effect: "echo",
-          body: frame.body,
-        };
-      } else if (intent === "CHAIN.EXEC" || intent === "axis.chain.exec") {
-        const chainRequest = this.parseChainRequestBody(frame.body);
-        effect = await this.executeChainRequest(frame, chainRequest);
-      } else if (intent === "INTENT.EXEC" || intent === "axis.intent.exec") {
-        const execBody = this.parseIntentExecBody(frame.body);
-        const innerIntent = execBody.intent;
-        const innerArgs = execBody.args || {};
-
-        if (!innerIntent) {
-          throw new Error("INTENT.EXEC missing inner intent");
-        }
-
-        this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
-
-        const innerHeaders = new Map(frame.headers);
-        innerHeaders.set(TLV_INTENT, this.encoder.encode(innerIntent));
-
-        const inlineCapsule = this.toInlineCapsuleRecord(execBody.capsule);
-        const capsuleId = this.extractInlineCapsuleId(inlineCapsule);
-        if (capsuleId) {
-          innerHeaders.set(TLV_CAPSULE, this.encoder.encode(capsuleId));
-          innerHeaders.set(TLV_PROOF_REF, this.encoder.encode(capsuleId));
-        }
-
-        const innerFrame = withAxisExecutionContext(
-          {
-            ...frame,
-            headers: innerHeaders,
-            body: this.encodeJson(innerArgs),
-          },
-          mergeAxisExecutionContext(getAxisExecutionContext(frame), {
-            metaIntent: "INTENT.EXEC",
-            actorId: this.getActorIdFromFrame(frame),
-            inlineCapsule,
-          }) || {},
-        );
-
-        effect = await this.route(innerFrame);
-      } else {
-        const handler = this.handlers.get(intent);
-        if (!handler) {
-          throw new Error(`Intent not found: ${intent}`);
-        }
-
-        const sensorBindings = this.intentSensors.get(intent);
-        if (sensorBindings && sensorBindings.length > 0) {
-          await this.runIntentSensors(sensorBindings, intent, frame, "before");
-        }
-
-        const decoder = this.intentDecoders.get(intent);
-        let decodedBody: any = frame.body;
-        if (decoder) {
-          try {
-            decodedBody = decoder(Buffer.from(frame.body));
-          } catch (decodeErr: any) {
-            throw new Error(
-              `IntentBody decode failed for ${intent}: ${decodeErr.message}`,
-            );
-          }
-        }
-
-        this.enforceCapsulePolicy(
-          intent,
-          frame,
-          decodedBody,
-          this.getEffectiveCapsulePolicy(intent, frame),
-        );
-
-        if (typeof handler === "function") {
-          const resultBody = decoder
-            ? await handler(decodedBody, frame.headers)
-            : await handler(frame.body, frame.headers);
-          effect = {
-            ok: true,
-            effect: "complete",
-            body: resultBody,
-          };
-        } else {
-          if (typeof (handler as any).handle === "function") {
-            effect = await (handler as any).handle(frame);
-          } else if (typeof (handler as any).execute === "function") {
-            const bodyRes = decoder
-              ? await (handler as any).execute(decodedBody, frame.headers)
-              : await (handler as any).execute(frame.body, frame.headers);
-            effect = {
-              ok: true,
-              effect: "complete",
-              body: bodyRes,
-            };
-          } else {
-            throw new Error(
-              `Handler for ${intent} does not implement handle or execute`,
-            );
-          }
-        }
-
-        if (sensorBindings && sensorBindings.length > 0) {
-          await this.runIntentSensors(sensorBindings, intent, frame, "after", {
-            decodedBody,
-            effect,
-          });
-        }
-      }
+      effect = await this.routeResolvedIntent(intent, frame);
 
       await this.emitIntentObservers(observerBindings, {
         event: "intent.completed",
@@ -684,6 +563,178 @@ export class IntentRouter {
       this.logIntent(intent, start, false, e.message);
       throw e;
     }
+  }
+
+  /**
+   * Dispatches a resolved canonical intent to the correct execution path.
+   * This keeps route() focused on observer/error lifecycle concerns.
+   */
+  private async routeResolvedIntent(
+    intent: string,
+    frame: AxisFrame,
+  ): Promise<AxisEffect> {
+    const builtinEffect = routeSystemBuiltinIntent(
+      intent,
+      frame.body,
+      this.encoder,
+    );
+    if (builtinEffect) {
+      if (intent === "system.ping" || intent === "public.ping") {
+        this.logger.debug("PING received");
+      }
+      return builtinEffect;
+    }
+
+    if (isChainExecIntent(intent)) {
+      const chainRequest = this.parseChainRequestBody(frame.body);
+      return this.executeChainRequest(frame, chainRequest);
+    }
+
+    if (isIntentExecIntent(intent)) {
+      return this.routeIntentExec(frame);
+    }
+
+    return this.routeRegisteredIntent(intent, frame);
+  }
+
+  /**
+   * Handles INTENT.EXEC by building an inner frame and routing it normally.
+   * The recursive route call is intentional so sensors/observers/policies for
+   * the inner intent stay identical to a direct request.
+   */
+  private async routeIntentExec(frame: AxisFrame): Promise<AxisEffect> {
+    const execBody = this.parseIntentExecBody(frame.body);
+    const innerIntent = execBody.intent;
+    const innerArgs = execBody.args || {};
+
+    if (!innerIntent) {
+      throw new Error("INTENT.EXEC missing inner intent");
+    }
+
+    this.logger.debug(`EXEC: routing to inner intent '${innerIntent}'`);
+
+    const innerHeaders = new Map(frame.headers);
+    innerHeaders.set(TLV_INTENT, this.encoder.encode(innerIntent));
+
+    const inlineCapsule = this.toInlineCapsuleRecord(execBody.capsule);
+    const capsuleId = this.extractInlineCapsuleId(inlineCapsule);
+    if (capsuleId) {
+      innerHeaders.set(TLV_CAPSULE, this.encoder.encode(capsuleId));
+      innerHeaders.set(TLV_PROOF_REF, this.encoder.encode(capsuleId));
+    }
+
+    const innerFrame = withAxisExecutionContext(
+      {
+        ...frame,
+        headers: innerHeaders,
+        body: this.encodeJson(innerArgs),
+      },
+      mergeAxisExecutionContext(getAxisExecutionContext(frame), {
+        metaIntent: "INTENT.EXEC",
+        actorId: this.getActorIdFromFrame(frame),
+        inlineCapsule,
+      }) || {},
+    );
+
+    return this.route(innerFrame);
+  }
+
+  /**
+   * Executes an app-registered intent: before sensors, body decode, capsule
+   * policy, handler invocation, then after sensors.
+   */
+  private async routeRegisteredIntent(
+    intent: string,
+    frame: AxisFrame,
+  ): Promise<AxisEffect> {
+    const handler = this.handlers.get(intent);
+    if (!handler) {
+      throw new Error(`Intent not found: ${intent}`);
+    }
+
+    const sensorBindings = this.intentSensors.get(intent);
+    if (sensorBindings && sensorBindings.length > 0) {
+      await this.runIntentSensors(sensorBindings, intent, frame, "before");
+    }
+
+    const decoder = this.intentDecoders.get(intent);
+    const decodedBody = this.decodeIntentBody(intent, frame, decoder);
+
+    this.enforceCapsulePolicy(
+      intent,
+      frame,
+      decodedBody,
+      this.getEffectiveCapsulePolicy(intent, frame),
+    );
+
+    const effect = await this.invokeRegisteredHandler(
+      intent,
+      handler,
+      frame,
+      decoder,
+      decodedBody,
+    );
+
+    if (sensorBindings && sensorBindings.length > 0) {
+      await this.runIntentSensors(sensorBindings, intent, frame, "after", {
+        decodedBody,
+        effect,
+      });
+    }
+
+    return effect;
+  }
+
+  private decodeIntentBody(
+    intent: string,
+    frame: AxisFrame,
+    decoder?: (buf: Buffer) => any,
+  ): any {
+    if (!decoder) return frame.body;
+
+    try {
+      return decoder(Buffer.from(frame.body));
+    } catch (decodeErr: any) {
+      throw new Error(
+        `IntentBody decode failed for ${intent}: ${decodeErr.message}`,
+      );
+    }
+  }
+
+  private async invokeRegisteredHandler(
+    intent: string,
+    handler: any,
+    frame: AxisFrame,
+    decoder: ((buf: Buffer) => any) | undefined,
+    decodedBody: any,
+  ): Promise<AxisEffect> {
+    if (typeof handler === "function") {
+      const resultBody = decoder
+        ? await handler(decodedBody, frame.headers)
+        : await handler(frame.body, frame.headers);
+      return {
+        ok: true,
+        effect: "complete",
+        body: resultBody,
+      };
+    }
+
+    if (typeof handler.handle === "function") {
+      return handler.handle(frame);
+    }
+
+    if (typeof handler.execute === "function") {
+      const bodyRes = decoder
+        ? await handler.execute(decodedBody, frame.headers)
+        : await handler.execute(frame.body, frame.headers);
+      return {
+        ok: true,
+        effect: "complete",
+        body: bodyRes,
+      };
+    }
+
+    throw new Error(`Handler for ${intent} does not implement handle or execute`);
   }
 
   private logIntent(
@@ -803,67 +854,10 @@ export class IntentRouter {
       this.intentContracts.set(intent, contract);
     }
 
-    // ── Proof policy (@RequiredProof and shorthand access decorators) ─────────
-    const methodProof: RequiredProofKind[] | undefined = Reflect.getMetadata(
-      REQUIRED_PROOF_METADATA_KEY,
-      proto,
-      methodName,
-    );
-    const classProof: RequiredProofKind[] | undefined = Reflect.getMetadata(
-      REQUIRED_PROOF_METADATA_KEY,
-      proto.constructor,
-    );
-    const isPublicMethod: boolean | undefined = Reflect.getMetadata(
-      AXIS_PUBLIC_KEY,
-      proto,
-      methodName,
-    );
-    const isPublicClass: boolean | undefined = Reflect.getMetadata(
-      AXIS_PUBLIC_KEY,
-      proto.constructor,
-    );
-    const isAnonMethod: boolean | undefined = Reflect.getMetadata(
-      AXIS_ANONYMOUS_KEY,
-      proto,
-      methodName,
-    );
-    const isAnonClass: boolean | undefined = Reflect.getMetadata(
-      AXIS_ANONYMOUS_KEY,
-      proto.constructor,
-    );
-    const isAuthorizedMethod: boolean | undefined = Reflect.getMetadata(
-      AXIS_AUTHORIZED_KEY,
-      proto,
-      methodName,
-    );
-    const isAuthorizedClass: boolean | undefined = Reflect.getMetadata(
-      AXIS_AUTHORIZED_KEY,
-      proto.constructor,
-    );
-
-    const methodPolicyProof = mergeProofKinds(
-      methodProof,
-      accessProofKinds(isPublicMethod, isAnonMethod, isAuthorizedMethod),
-    );
-    const classPolicyProof = mergeProofKinds(
-      classProof,
-      accessProofKinds(isPublicClass, isAnonClass, isAuthorizedClass),
-    );
-    const requiredProof = methodPolicyProof.length
-      ? methodPolicyProof
-      : classPolicyProof;
-    if (requiredProof.length > 0) {
-      this.intentRequiredProof.set(intent, requiredProof);
-    }
-
-    if (requiredProof.includes("NONE")) {
-      this.publicIntents.add(intent);
-    }
-    if (requiredProof.includes("ANONYMOUS")) {
-      this.anonymousIntents.add(intent);
-    }
-    if (requiredProof.includes("AUTHORIZED")) {
-      this.authorizedIntents.add(intent);
+    // Method-level proof/access decorators override class-level defaults.
+    const proofPolicy = resolveIntentProofPolicy(proto, methodName);
+    if (proofPolicy.requiredProof.length > 0) {
+      this.intentRequiredProof.set(intent, proofPolicy.requiredProof);
     }
 
     // ── @AxisRateLimit ───────────────────────────────────────────────────────
@@ -892,15 +886,15 @@ export class IntentRouter {
   }
 
   isPublic(intent: string): boolean {
-    return this.publicIntents.has(this.resolveIntentAlias(intent));
+    return this.getRequiredProof(intent)?.includes("NONE") ?? false;
   }
 
   isAnonymous(intent: string): boolean {
-    return this.anonymousIntents.has(this.resolveIntentAlias(intent));
+    return this.getRequiredProof(intent)?.includes("ANONYMOUS") ?? false;
   }
 
   isAuthorized(intent: string): boolean {
-    return this.authorizedIntents.has(this.resolveIntentAlias(intent));
+    return this.getRequiredProof(intent)?.includes("AUTHORIZED") ?? false;
   }
 
   getRateLimit(intent: string): AxisRateLimitConfig | undefined {
@@ -927,7 +921,7 @@ export class IntentRouter {
 
   /** The system/builtin intents (ping, time, echo, chain, intent.exec). */
   getSystemIntents(): string[] {
-    return [...IntentRouter.BUILTIN_INTENTS];
+    return [...BUILTIN_INTENTS];
   }
 
   /** True if every intent in the handler is public, or any one is public — returns true if ANY intent is @AxisPublic. */
@@ -1018,7 +1012,7 @@ export class IntentRouter {
    * canonical intent. Existing exact intent names always win.
    */
   resolveIntentAlias(intent: string): string {
-    if (this.handlers.has(intent) || IntentRouter.BUILTIN_INTENTS.has(intent)) {
+    if (this.handlers.has(intent) || isBuiltinIntent(intent)) {
       return intent;
     }
 
