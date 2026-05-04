@@ -20,6 +20,44 @@ export const REQUIRED_PROOF_METADATA_KEY = "axis:required_proof";
  */
 export type RequiredProofKind = ProofKind;
 
+function appendRequiredProof(
+  target: object | Function,
+  propertyKey: string | symbol | undefined,
+  proof: RequiredProofKind,
+): void {
+  const existing: RequiredProofKind[] =
+    propertyKey !== undefined
+      ? (Reflect.getMetadata(
+          REQUIRED_PROOF_METADATA_KEY,
+          target,
+          propertyKey,
+        ) ?? [])
+      : (Reflect.getMetadata(
+          REQUIRED_PROOF_METADATA_KEY,
+          target as Function,
+        ) ?? []);
+
+  const merged: RequiredProofKind[] = existing.includes(proof)
+    ? existing
+    : [...existing, proof];
+
+  if (propertyKey !== undefined) {
+    Reflect.defineMetadata(
+      REQUIRED_PROOF_METADATA_KEY,
+      merged,
+      target,
+      propertyKey,
+    );
+    return;
+  }
+
+  Reflect.defineMetadata(
+    REQUIRED_PROOF_METADATA_KEY,
+    merged,
+    target as Function,
+  );
+}
+
 // ─── @Sensitivity ─────────────────────────────────────────────────────────────
 
 /**
@@ -138,36 +176,7 @@ export function RequiredProof(
  */
 export function Capsule(): ClassDecorator & MethodDecorator {
   return ((target: object | Function, propertyKey?: string | symbol) => {
-    const existing: RequiredProofKind[] =
-      propertyKey !== undefined
-        ? (Reflect.getMetadata(
-            REQUIRED_PROOF_METADATA_KEY,
-            target,
-            propertyKey,
-          ) ?? [])
-        : (Reflect.getMetadata(
-            REQUIRED_PROOF_METADATA_KEY,
-            target as Function,
-          ) ?? []);
-
-    const merged: RequiredProofKind[] = existing.includes("CAPSULE")
-      ? existing
-      : [...existing, "CAPSULE"];
-
-    if (propertyKey !== undefined) {
-      Reflect.defineMetadata(
-        REQUIRED_PROOF_METADATA_KEY,
-        merged,
-        target,
-        propertyKey,
-      );
-    } else {
-      Reflect.defineMetadata(
-        REQUIRED_PROOF_METADATA_KEY,
-        merged,
-        target as Function,
-      );
-    }
+    appendRequiredProof(target, propertyKey, "CAPSULE");
   }) as ClassDecorator & MethodDecorator;
 }
 
@@ -193,36 +202,7 @@ export function Capsule(): ClassDecorator & MethodDecorator {
  */
 export function Witness(): ClassDecorator & MethodDecorator {
   return ((target: object | Function, propertyKey?: string | symbol) => {
-    const existing: RequiredProofKind[] =
-      propertyKey !== undefined
-        ? (Reflect.getMetadata(
-            REQUIRED_PROOF_METADATA_KEY,
-            target,
-            propertyKey,
-          ) ?? [])
-        : (Reflect.getMetadata(
-            REQUIRED_PROOF_METADATA_KEY,
-            target as Function,
-          ) ?? []);
-
-    const merged: RequiredProofKind[] = existing.includes("WITNESS")
-      ? existing
-      : [...existing, "WITNESS"];
-
-    if (propertyKey !== undefined) {
-      Reflect.defineMetadata(
-        REQUIRED_PROOF_METADATA_KEY,
-        merged,
-        target,
-        propertyKey,
-      );
-    } else {
-      Reflect.defineMetadata(
-        REQUIRED_PROOF_METADATA_KEY,
-        merged,
-        target as Function,
-      );
-    }
+    appendRequiredProof(target, propertyKey, "WITNESS");
   }) as ClassDecorator & MethodDecorator;
 }
 
@@ -286,11 +266,13 @@ export function AxisPublic(): ClassDecorator & MethodDecorator {
     propertyKey?: string | symbol,
     descriptor?: PropertyDescriptor,
   ) => {
-    if (descriptor) {
+    if (propertyKey !== undefined) {
       Reflect.defineMetadata(AXIS_PUBLIC_KEY, true, target, propertyKey!);
+      appendRequiredProof(target, propertyKey, "NONE");
       return descriptor;
     }
     Reflect.defineMetadata(AXIS_PUBLIC_KEY, true, target);
+    appendRequiredProof(target, undefined, "NONE");
     return target;
   };
 }
@@ -304,8 +286,6 @@ export function AxisPublic(): ClassDecorator & MethodDecorator {
  */
 export const AXIS_ANONYMOUS_KEY = "axis:anonymous";
 
-//TODO AxisAuthorized decorator
-
 // ─── @AxisAuthorized ──────────────────────────────────────────────────────────
 
 export const AXIS_AUTHORIZED_KEY = "axis:authorized";
@@ -316,11 +296,13 @@ export function AxisAuthorized(): ClassDecorator & MethodDecorator {
     propertyKey?: string | symbol,
     descriptor?: PropertyDescriptor,
   ) => {
-    if (descriptor) {
+    if (propertyKey !== undefined) {
       Reflect.defineMetadata(AXIS_AUTHORIZED_KEY, true, target, propertyKey!);
+      appendRequiredProof(target, propertyKey, "AUTHORIZED");
       return descriptor;
     }
     Reflect.defineMetadata(AXIS_AUTHORIZED_KEY, true, target);
+    appendRequiredProof(target, undefined, "AUTHORIZED");
     return target;
   };
 }
@@ -351,11 +333,13 @@ export function AxisAnonymous(): ClassDecorator & MethodDecorator {
     propertyKey?: string | symbol,
     descriptor?: PropertyDescriptor,
   ) => {
-    if (descriptor) {
+    if (propertyKey !== undefined) {
       Reflect.defineMetadata(AXIS_ANONYMOUS_KEY, true, target, propertyKey!);
+      appendRequiredProof(target, propertyKey, "ANONYMOUS");
       return descriptor;
     }
     Reflect.defineMetadata(AXIS_ANONYMOUS_KEY, true, target);
+    appendRequiredProof(target, undefined, "ANONYMOUS");
     return target;
   };
 }

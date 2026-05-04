@@ -38,6 +38,30 @@ function sensorBindingKey(binding: AxisIntentSensorBinding): string {
   return `${binding.when}:${sensorRefKey(binding.ref)}`;
 }
 
+function mergeProofKinds(
+  ...proofGroups: Array<RequiredProofKind[] | undefined>
+): RequiredProofKind[] {
+  const merged = new Set<RequiredProofKind>();
+  for (const proofs of proofGroups) {
+    for (const proof of proofs ?? []) {
+      merged.add(proof);
+    }
+  }
+  return Array.from(merged);
+}
+
+function accessProofKinds(
+  isPublic?: boolean,
+  isAnonymous?: boolean,
+  isAuthorized?: boolean,
+): RequiredProofKind[] {
+  const proofs: RequiredProofKind[] = [];
+  if (isPublic) proofs.push("NONE");
+  if (isAnonymous) proofs.push("ANONYMOUS");
+  if (isAuthorized) proofs.push("AUTHORIZED");
+  return proofs;
+}
+
 function mergeIntentSensorBindings(
   ...sensorGroups: Array<AxisIntentSensorBindingInput[] | undefined>
 ): AxisIntentSensorBinding[] {
@@ -779,7 +803,7 @@ export class IntentRouter {
       this.intentContracts.set(intent, contract);
     }
 
-    // ── @RequiredProof / @Capsule / @Witness ─────────────────────────────────
+    // ── Proof policy (@RequiredProof and shorthand access decorators) ─────────
     const methodProof: RequiredProofKind[] | undefined = Reflect.getMetadata(
       REQUIRED_PROOF_METADATA_KEY,
       proto,
@@ -789,12 +813,6 @@ export class IntentRouter {
       REQUIRED_PROOF_METADATA_KEY,
       proto.constructor,
     );
-    const requiredProof = methodProof ?? classProof;
-    if (requiredProof && requiredProof.length > 0) {
-      this.intentRequiredProof.set(intent, requiredProof);
-    }
-
-    // ── @AxisPublic ──────────────────────────────────────────────────────────
     const isPublicMethod: boolean | undefined = Reflect.getMetadata(
       AXIS_PUBLIC_KEY,
       proto,
@@ -804,11 +822,6 @@ export class IntentRouter {
       AXIS_PUBLIC_KEY,
       proto.constructor,
     );
-    if (isPublicMethod || isPublicClass) {
-      this.publicIntents.add(intent);
-    }
-
-    // ── @AxisAnonymous ───────────────────────────────────────────────────────
     const isAnonMethod: boolean | undefined = Reflect.getMetadata(
       AXIS_ANONYMOUS_KEY,
       proto,
@@ -818,13 +831,6 @@ export class IntentRouter {
       AXIS_ANONYMOUS_KEY,
       proto.constructor,
     );
-    if (isAnonMethod || isAnonClass) {
-      this.anonymousIntents.add(intent);
-    }
-
-    //TODO add @AxisAuthorized   and logic
-
-    // ── @AxisAuthorized ──────────────────────────────────────────────────────────
     const isAuthorizedMethod: boolean | undefined = Reflect.getMetadata(
       AXIS_AUTHORIZED_KEY,
       proto,
@@ -834,7 +840,29 @@ export class IntentRouter {
       AXIS_AUTHORIZED_KEY,
       proto.constructor,
     );
-    if (isAuthorizedMethod || isAuthorizedClass) {
+
+    const methodPolicyProof = mergeProofKinds(
+      methodProof,
+      accessProofKinds(isPublicMethod, isAnonMethod, isAuthorizedMethod),
+    );
+    const classPolicyProof = mergeProofKinds(
+      classProof,
+      accessProofKinds(isPublicClass, isAnonClass, isAuthorizedClass),
+    );
+    const requiredProof = methodPolicyProof.length
+      ? methodPolicyProof
+      : classPolicyProof;
+    if (requiredProof.length > 0) {
+      this.intentRequiredProof.set(intent, requiredProof);
+    }
+
+    if (requiredProof.includes("NONE")) {
+      this.publicIntents.add(intent);
+    }
+    if (requiredProof.includes("ANONYMOUS")) {
+      this.anonymousIntents.add(intent);
+    }
+    if (requiredProof.includes("AUTHORIZED")) {
       this.authorizedIntents.add(intent);
     }
 

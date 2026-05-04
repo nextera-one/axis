@@ -26,8 +26,8 @@ export interface LawArticlePresenceSensorOptions {
  */
 @Sensor({ phase: "POST_DECODE" })
 export class LawArticlePresenceSensor implements AxisSensor {
-  readonly name = "LawArticlePresenceSensor";
-  readonly order = BAND.IDENTITY + 27;
+  readonly name: string = "LawArticlePresenceSensor";
+  readonly order: number = BAND.IDENTITY + 27;
 
   constructor(private readonly options: LawArticlePresenceSensorOptions) {}
 

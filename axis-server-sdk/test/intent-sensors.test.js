@@ -4,17 +4,22 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  AxisAnonymous,
+  AxisAuthorized,
   AxisPublic,
+  Capsule,
   Handler,
   Intent,
   IntentRouter,
   IntentSensors,
   ObserverDispatcherService,
   ObserverRegistry,
+  RequiredProof,
   Sensitivity,
   SensorDecisions,
   SensorRegistry,
   TLV_INTENT,
+  Witness,
 } = require("../dist");
 
 class NamedGateSensor {
@@ -103,6 +108,36 @@ class AuthAliasHandler {
   }
 }
 
+class ProofPolicyHandler {
+  async classDefault(body) {
+    return body;
+  }
+
+  async publicAccess(body) {
+    return body;
+  }
+
+  async anonymousAccess(body) {
+    return body;
+  }
+
+  async authorizedShortcut(body) {
+    return body;
+  }
+
+  async authorizedProof(body) {
+    return body;
+  }
+
+  async capsuleProof(body) {
+    return body;
+  }
+
+  async witnessProof(body) {
+    return body;
+  }
+}
+
 class HandlerObserveProbe {
   constructor(events) {
     this.name = "HandlerObserveProbe";
@@ -155,6 +190,46 @@ AxisPublic()(
   Object.getOwnPropertyDescriptor(AuthAliasHandler.prototype, "issue"),
 );
 Intent("capsule.issue")(AuthAliasHandler.prototype, "issue");
+
+Handler("proof.policy")(ProofPolicyHandler);
+RequiredProof(["NONE"])(ProofPolicyHandler);
+Intent("class-default")(ProofPolicyHandler.prototype, "classDefault");
+AxisPublic()(
+  ProofPolicyHandler.prototype,
+  "publicAccess",
+  Object.getOwnPropertyDescriptor(ProofPolicyHandler.prototype, "publicAccess"),
+);
+Intent("public")(ProofPolicyHandler.prototype, "publicAccess");
+AxisAnonymous()(
+  ProofPolicyHandler.prototype,
+  "anonymousAccess",
+  Object.getOwnPropertyDescriptor(
+    ProofPolicyHandler.prototype,
+    "anonymousAccess",
+  ),
+);
+Intent("anonymous")(ProofPolicyHandler.prototype, "anonymousAccess");
+AxisAuthorized()(
+  ProofPolicyHandler.prototype,
+  "authorizedShortcut",
+  Object.getOwnPropertyDescriptor(
+    ProofPolicyHandler.prototype,
+    "authorizedShortcut",
+  ),
+);
+Intent("authorized-shortcut")(
+  ProofPolicyHandler.prototype,
+  "authorizedShortcut",
+);
+RequiredProof(["AUTHORIZED"])(
+  ProofPolicyHandler.prototype,
+  "authorizedProof",
+);
+Intent("authorized-proof")(ProofPolicyHandler.prototype, "authorizedProof");
+Capsule()(ProofPolicyHandler.prototype, "capsuleProof");
+Intent("capsule")(ProofPolicyHandler.prototype, "capsuleProof");
+Witness()(ProofPolicyHandler.prototype, "witnessProof");
+Intent("witness")(ProofPolicyHandler.prototype, "witnessProof");
 
 function createFrame(intent, body = Buffer.from("payload")) {
   return {
@@ -259,4 +334,43 @@ test("handler triple-dot intent aliases resolve to canonical intent", async () =
   const effect = await router.route(createFrame("auth...capsule.issue"));
   assert.equal(effect.ok, true);
   assert.deepEqual(Buffer.from(effect.body), Buffer.from("payload"));
+});
+
+test("proof shorthand decorators resolve to effective RequiredProof kinds", () => {
+  const router = new IntentRouter();
+  router.registerHandler(new ProofPolicyHandler());
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.class-default"), [
+    "NONE",
+  ]);
+  assert.equal(router.isPublic("proof.policy.class-default"), true);
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.public"), ["NONE"]);
+  assert.equal(router.isPublic("proof.policy.public"), true);
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.anonymous"), [
+    "ANONYMOUS",
+  ]);
+  assert.equal(router.isAnonymous("proof.policy.anonymous"), true);
+
+  assert.deepEqual(
+    router.getRequiredProof("proof.policy.authorized-shortcut"),
+    ["AUTHORIZED"],
+  );
+  assert.equal(router.isAuthorized("proof.policy.authorized-shortcut"), true);
+  assert.equal(router.isPublic("proof.policy.authorized-shortcut"), false);
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.authorized-proof"), [
+    "AUTHORIZED",
+  ]);
+  assert.equal(router.isAuthorized("proof.policy.authorized-proof"), true);
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.capsule"), [
+    "CAPSULE",
+  ]);
+  assert.equal(router.isPublic("proof.policy.capsule"), false);
+
+  assert.deepEqual(router.getRequiredProof("proof.policy.witness"), [
+    "WITNESS",
+  ]);
 });
