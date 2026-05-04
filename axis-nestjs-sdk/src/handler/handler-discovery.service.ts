@@ -1,18 +1,8 @@
+import { HANDLER_METADATA_KEY, HANDLER_SENSORS_KEY, INTENT_METADATA_KEY, INTENT_ROUTES_KEY, OBSERVER_BINDINGS_KEY } from "@nextera.one/axis-server-sdk";
+import type { AxisIntentSensorBindingInput, AxisObserverBinding, IntentRoute } from "@nextera.one/axis-server-sdk";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner } from "@nestjs/core";
 
-import {
-  OBSERVER_BINDINGS_KEY,
-  HANDLER_METADATA_KEY,
-  HANDLER_SENSORS_KEY,
-  INTENT_METADATA_KEY,
-  INTENT_ROUTES_KEY,
-} from "@nextera.one/axis-server-sdk";
-import type {
-  AxisObserverBinding,
-  AxisIntentSensorBindingInput,
-  IntentRoute,
-} from "@nextera.one/axis-server-sdk";
 import { IntentRouter } from "../engine/intent.router";
 
 /**
@@ -79,6 +69,7 @@ export class HandlerDiscoveryService implements OnModuleInit {
           handlerSensors,
           handlerObservers,
         );
+        this.router.trackHandlerIntent(metatype.name, intentName);
       }
 
       for (const methodName of methods) {
@@ -111,6 +102,7 @@ export class HandlerDiscoveryService implements OnModuleInit {
           handlerSensors,
           handlerObservers,
         );
+        this.router.trackHandlerIntent(metatype.name, intentName);
       }
 
       if (registered > 0) {
@@ -118,6 +110,13 @@ export class HandlerDiscoveryService implements OnModuleInit {
           `Auto-registered ${registered} intents from ${handlerName}`,
         );
       }
+
+      this.router.trackHandlerMeta(
+        metatype.name,
+        prefix,
+        handlerSensors,
+        handlerObservers,
+      );
     }
 
     this.logger.log(
