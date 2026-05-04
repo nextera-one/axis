@@ -507,9 +507,14 @@ export class IntentRouter {
    * Routes a decoded AXIS frame to the appropriate handler.
    *
    * **Precedence:**
-   * 1. System Built-ins (`system.ping`, `public.ping`, `system.time`, `system.echo`)
-   * 2. Meta-intent execution (`INTENT.EXEC` / `axis.intent.exec`)
-   * 3. Dynamically registered handlers from modules.
+   * 1. SDK meta-intents (`CHAIN.EXEC`, `INTENT.EXEC`)
+   * 2. Dynamically registered handlers from modules
+   * 3. Simple SDK built-in fallback (`system.ping`, `public.ping`, `system.time`, `system.echo`)
+   *
+   * Registered app handlers intentionally win over simple built-ins. This lets
+   * applications attach sensors, rate limits, and custom responses to intents
+   * like `system.ping` while keeping a default fallback for apps that do not
+   * register their own handler.
    *
    * @param {AxisFrame} frame - The validated and decoded binary frame
    * @returns {Promise<AxisEffect>} The resulting effect of the execution
@@ -573,6 +578,19 @@ export class IntentRouter {
     intent: string,
     frame: AxisFrame,
   ): Promise<AxisEffect> {
+    if (isChainExecIntent(intent)) {
+      const chainRequest = this.parseChainRequestBody(frame.body);
+      return this.executeChainRequest(frame, chainRequest);
+    }
+
+    if (isIntentExecIntent(intent)) {
+      return this.routeIntentExec(frame);
+    }
+
+    if (this.handlers.has(intent)) {
+      return this.routeRegisteredIntent(intent, frame);
+    }
+
     const builtinEffect = routeSystemBuiltinIntent(
       intent,
       frame.body,
@@ -583,15 +601,6 @@ export class IntentRouter {
         this.logger.debug("PING received");
       }
       return builtinEffect;
-    }
-
-    if (isChainExecIntent(intent)) {
-      const chainRequest = this.parseChainRequestBody(frame.body);
-      return this.executeChainRequest(frame, chainRequest);
-    }
-
-    if (isIntentExecIntent(intent)) {
-      return this.routeIntentExec(frame);
     }
 
     return this.routeRegisteredIntent(intent, frame);

@@ -138,6 +138,12 @@ class ProofPolicyHandler {
   }
 }
 
+class CustomPingHandler {
+  async ping() {
+    return Buffer.from(JSON.stringify({ ok: true, source: "app" }));
+  }
+}
+
 class HandlerObserveProbe {
   constructor(events) {
     this.name = "HandlerObserveProbe";
@@ -230,6 +236,15 @@ Capsule()(ProofPolicyHandler.prototype, "capsuleProof");
 Intent("capsule")(ProofPolicyHandler.prototype, "capsuleProof");
 Witness()(ProofPolicyHandler.prototype, "witnessProof");
 Intent("witness")(ProofPolicyHandler.prototype, "witnessProof");
+
+AxisPublic()(
+  CustomPingHandler.prototype,
+  "ping",
+  Object.getOwnPropertyDescriptor(CustomPingHandler.prototype, "ping"),
+);
+Intent("system.ping", {
+  absolute: true,
+})(CustomPingHandler.prototype, "ping");
 
 function createFrame(intent, body = Buffer.from("payload")) {
   return {
@@ -334,6 +349,20 @@ test("handler triple-dot intent aliases resolve to canonical intent", async () =
   const effect = await router.route(createFrame("auth...capsule.issue"));
   assert.equal(effect.ok, true);
   assert.deepEqual(Buffer.from(effect.body), Buffer.from("payload"));
+});
+
+test("registered handlers override simple built-in intents", async () => {
+  const router = new IntentRouter();
+  router.registerHandler(new CustomPingHandler());
+
+  const effect = await router.route(createFrame("system.ping"));
+
+  assert.equal(effect.ok, true);
+  assert.equal(effect.effect, "complete");
+  assert.deepEqual(JSON.parse(Buffer.from(effect.body).toString("utf8")), {
+    ok: true,
+    source: "app",
+  });
 });
 
 test("proof shorthand decorators resolve to effective RequiredProof kinds", () => {
