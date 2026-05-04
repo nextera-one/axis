@@ -11,6 +11,8 @@ export {
   AXIS_PUBLIC_KEY,
   AxisAnonymous,
   AXIS_ANONYMOUS_KEY,
+  AxisAuthorized,
+  AXIS_AUTHORIZED_KEY,
   AxisRateLimit,
   AXIS_RATE_LIMIT_KEY,
   Sensitivity,

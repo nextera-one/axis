@@ -1,5 +1,7 @@
 import "reflect-metadata";
 
+import { RequiredProofKind } from "./intent-policy.decorator";
+
 export const SENSOR_METADATA_KEY = "axis:sensor";
 
 export type SensorPhase = "PRE_DECODE" | "POST_DECODE";
@@ -7,6 +9,7 @@ export type SensorPhase = "PRE_DECODE" | "POST_DECODE";
 export interface SensorOptions {
   /** Explicit phase override. If omitted, auto-derived from order at bootstrap. */
   phase?: SensorPhase;
+  proofKind: RequiredProofKind;
 }
 
 /**

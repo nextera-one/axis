@@ -18,7 +18,7 @@ export const REQUIRED_PROOF_METADATA_KEY = "axis:required_proof";
  * Extends ProofKind with WITNESS — requires a co-signer witness signature
  * in addition to the standard proof kinds (CAPSULE, PASSPORT, MTLS, JWT).
  */
-export type RequiredProofKind = ProofKind | "WITNESS";
+export type RequiredProofKind = ProofKind;
 
 // ─── @Sensitivity ─────────────────────────────────────────────────────────────
 
