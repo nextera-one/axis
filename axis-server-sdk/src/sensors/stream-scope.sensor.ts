@@ -107,8 +107,10 @@ export class StreamScopeSensor implements AxisSensor {
    *
    * @returns {Promise<SensorDecision>} Always allow
    */
-  async supports(): Promise<SensorDecision> {
-    return { action: 'ALLOW' };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(): boolean {
+    return true;
   }
 
   /**
@@ -126,6 +128,8 @@ export class StreamScopeSensor implements AxisSensor {
    *
    * @returns {Promise<SensorDecision>} ALLOW (stub implementation)
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(): Promise<SensorDecision> {
     // TODO: Implement topic scope enforcement
     //

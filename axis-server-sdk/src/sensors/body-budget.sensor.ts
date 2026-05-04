@@ -104,14 +104,10 @@ export class BodyBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if sufficient peek data available
    */
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!input.peek && input.peek.length >= 8
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Insufficient peek data to read headers",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!input.peek && input.peek.length >= 8;
   }
 
   /**
@@ -128,6 +124,8 @@ export class BodyBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Request with peek data
    * @returns {Promise<SensorDecision>} ALLOW or DENY based on size limits
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const { peek } = input;
 

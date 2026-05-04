@@ -35,7 +35,21 @@ export interface AxisSensor {
   readonly order?: number; // Lower runs first
   /** Execution phase hint */
   phase?: SensorPhaseMetadata | "PRE_DECODE" | "POST_DECODE";
-  supports?(input: SensorInput): Promise<SensorDecision>;
+  /**
+   * Synchronous applicability gate.
+   *
+   * Return `false` when the sensor does not apply to this input. The chain will
+   * skip the sensor without recording a deny decision. Do not perform policy
+   * decisions or async I/O here; put those in `run()`.
+   */
+  supports?(input: SensorInput): boolean;
+  /**
+   * Executes the sensor's actual check after `supports()` has passed.
+   *
+   * Return a SensorDecision to allow, deny, throttle, flag, or tighten the
+   * request. This method may perform async work according to the sensor phase
+   * and metadata.
+   */
   run(input: SensorInput): Promise<SensorDecision>;
 }
 

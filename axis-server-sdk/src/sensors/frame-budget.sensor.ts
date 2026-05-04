@@ -97,14 +97,10 @@ export class FrameBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming AXIS request
    * @returns {boolean} True if Content-Length is present
    */
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return typeof input.contentLength === "number"
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Content-Length not available",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return typeof input.contentLength === "number";
   }
 
   /**
@@ -121,6 +117,8 @@ export class FrameBudgetSensor implements AxisSensor {
    * @param {SensorInput} input - Request with contentLength
    * @returns {Promise<SensorDecision>} ALLOW or DENY based on size
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const maxBytes =
       Number(process.env["AXIS_MAX_FRAME_SIZE"]) || 50 * 1024 * 1024;

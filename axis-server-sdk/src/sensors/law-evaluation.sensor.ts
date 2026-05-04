@@ -22,16 +22,14 @@ export class LawEvaluationSensor implements AxisSensor {
 
   constructor(private readonly options: LawEvaluationSensorOptions = {}) {}
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!this.options.evaluator && !!input.intent
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Law evaluator or intent missing",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!this.options.evaluator && !!input.intent;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const evaluator = this.options.evaluator;
     if (!evaluator) {

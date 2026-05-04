@@ -42,18 +42,16 @@ export class CceEnvelopeValidationSensor implements AxisSensor {
   readonly order = 5;
   readonly phase = "PRE_DECODE" as const;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     // Only process CCE envelopes (detected by metadata flag or content type)
     return input.metadata?.cce === true ||
-      input.metadata?.contentType === "application/axis-cce"
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Not a CCE envelope",
-        };
+      input.metadata?.contentType === "application/axis-cce";
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const envelope = input.metadata?.cceEnvelope as
       | CceRequestEnvelope

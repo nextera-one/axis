@@ -111,14 +111,10 @@ export class VarintHardeningSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if sufficient peek data
    */
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!input.peek && input.peek.length >= 7
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Insufficient peek data for varint hardening",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!input.peek && input.peek.length >= 7;
   }
 
   /**
@@ -133,6 +129,8 @@ export class VarintHardeningSensor implements AxisSensor {
    * @param {SensorInput} input - Request with peek data
    * @returns {Promise<SensorDecision>} ALLOW or DENY based on varint length
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     // After magic(5) + version(1) + flags(1), varints follow for hdrLen, bodyLen, sigLen
     const peek = input.peek!;

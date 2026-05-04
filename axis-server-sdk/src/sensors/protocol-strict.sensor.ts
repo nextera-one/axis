@@ -168,6 +168,8 @@ export class ProtocolStrictSensor implements AxisSensor {
   /**
    * Evaluate protocol strictness
    */
+  // This sensor does not define supports(), so it is applicable whenever registered.
+  // run() returns the actual ALLOW/DENY/FLAG/THROTTLE decision.
   async run(input: SensorInput): Promise<SensorDecision> {
     const validatedInput = ProtocolStrictInputZ.safeParse(input);
     if (!validatedInput.success) {

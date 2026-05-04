@@ -28,16 +28,14 @@ export class TLVParseSensor implements AxisSensor {
   readonly name = "TLVParseSensor";
   readonly order = BAND.CONTENT + 20;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!input.packet
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Packet is not available",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!input.packet;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const packet = input.packet;
     if (!packet) return { action: "ALLOW" };

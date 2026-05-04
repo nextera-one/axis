@@ -16,17 +16,15 @@ export class IntentAllowlistSensor implements AxisSensor {
   readonly name = "IntentAllowlistSensor";
   readonly order = BAND.IDENTITY + 20;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     // Only run in post-decode phase when intent is available
-    return !!input.intent
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Intent is not available",
-        };
+    return !!input.intent;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const profile = input.metadata?.profile || "PUBLIC";
     const intent = input.intent || "";

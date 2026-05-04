@@ -99,14 +99,10 @@ export class ChunkHashSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if intent is 'file.chunk'
    */
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return input.intent === "file.chunk"
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Only file.chunk intent is supported",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return input.intent === "file.chunk";
   }
 
   /**
@@ -123,6 +119,8 @@ export class ChunkHashSensor implements AxisSensor {
    * @param {SensorInput} input - Request with chunk body
    * @returns {Promise<SensorDecision>} ALLOW if hash matches, DENY otherwise
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const headerTLVs = input.headerTLVs as Map<number, Uint8Array>;
     const bodyBytes = input.body as Uint8Array;

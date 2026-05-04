@@ -82,10 +82,8 @@ export class AxisSensorChainService {
       }
 
       try {
-        const supportsDecision = normalizeSensorDecision(
-          await sensor.supports(input),
-        );
-        if (supportsDecision.allow) {
+        // supports() is only an applicability gate; false means skip, not deny.
+        if (sensor.supports(input)) {
           relevantSensors.push(sensor);
         }
       } catch (error) {

@@ -103,8 +103,10 @@ export class ExecutionTimeoutSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming request
    * @returns {boolean} True if intent is present
    */
-  async supports(): Promise<SensorDecision> {
-    return Promise.resolve({ action: "ALLOW" });
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(): boolean {
+    return true;
   }
 
   /**
@@ -119,6 +121,8 @@ export class ExecutionTimeoutSensor implements AxisSensor {
    * @param {SensorInput} input - Request with intent
    * @returns {Promise<SensorDecision>} Always ALLOW
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const { intent, context } = input;
     if (!intent) {

@@ -93,21 +93,19 @@ export class TickAuthSensor implements AxisSensor {
       : null;
   }
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     // Only engage when a capsule reference is present
     return !!(
       input.metadata?.capsule ||
       input.metadata?.tickauthCapsule ||
       input.metadata?.cceEnvelope?.capsule
-    )
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "TickAuth capsule not found",
-        };
+    );
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const capsule: TickAuthCapsuleRef | undefined =
       input.metadata?.capsule ??

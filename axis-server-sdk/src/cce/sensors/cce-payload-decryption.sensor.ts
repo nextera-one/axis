@@ -83,19 +83,17 @@ export class CcePayloadDecryptionSensor implements AxisSensor {
     private readonly payloadValidator?: CcePayloadValidator,
   ) {}
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     return input.metadata?.cceEnvelopeValid === true &&
       input.metadata?.cceClientSigVerified === true &&
       input.metadata?.cceCapsuleVerified === true &&
-      input.metadata?.cceReplayClean === true
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "CCE preconditions not met",
-        };
+      input.metadata?.cceReplayClean === true;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const envelope = input.metadata?.cceEnvelope as
       | CceRequestEnvelope

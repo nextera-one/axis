@@ -223,6 +223,8 @@ export class EntropySensor implements AxisSensor {
    * @param {SensorInput} input - Request with header TLVs
    * @returns {Promise<SensorDecision>} ALLOW or FLAG based on entropy analysis
    */
+  // This sensor does not define supports(), so it is applicable whenever registered.
+  // run() returns the actual ALLOW/DENY/FLAG/THROTTLE decision.
   async run(input: SensorInput): Promise<SensorDecision> {
     const headers = input.headerTLVs as Map<number, Uint8Array>;
 

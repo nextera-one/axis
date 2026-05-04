@@ -8,16 +8,14 @@ export class FrameHeaderSanitySensor implements AxisSensor {
   readonly name = "FrameHeaderSanitySensor";
   readonly order = BAND.WIRE + 30;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!input.peek && input.peek.length >= 7
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Insufficient peek data for header sanity checks",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!input.peek && input.peek.length >= 7;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const peek = input.peek!;
     const contentLen = input.contentLength || 0;

@@ -66,21 +66,19 @@ export class TpsSensor implements AxisSensor {
     this.resolver = options.resolver ?? parseINotation;
   }
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     // Only run when a TPS coordinate is present
     const tps =
       input.metadata?.tps_coordinate ??
       input.metadata?.tps ??
       input.packet?.tps;
-    return typeof tps === "string" && tps.length > 0
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "TPS coordinate not available",
-        };
+    return typeof tps === "string" && tps.length > 0;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const tps: string =
       input.metadata?.tps_coordinate ??

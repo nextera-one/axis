@@ -9,16 +9,14 @@ export class HeaderTLVLimitSensor implements AxisSensor {
   readonly order = BAND.CONTENT + 0;
   private readonly MAX_TLVS = 64;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return !!input.headerTLVs || !!input.packet
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "Header TLV context is not available",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return !!input.headerTLVs || !!input.packet;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     if (input.headerTLVs && input.headerTLVs.size > this.MAX_TLVS) {
       return {

@@ -12,13 +12,14 @@ export class ProofPresenceSensor implements AxisSensor {
   readonly name = "ProofPresenceSensor";
   readonly order = BAND.IDENTITY + 30;
 
-  async supports(input: ProofPresenceInput): Promise<SensorDecision> {
-    if (!!input.profile && !!input.visibility) {
-      return { action: "ALLOW" };
-    }
-    return { action: "DENY", code: "MISSING_REQUIRED_FIELDS" };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: ProofPresenceInput): boolean {
+    return !!input.profile && !!input.visibility;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: ProofPresenceInput): Promise<SensorDecision> {
     // Validate input with Zod
     const validatedInput = ProofPresenceInputZ.safeParse(input);

@@ -98,9 +98,11 @@ export class CapabilityEnforcementSensor implements AxisSensor {
    * @param {SensorInput} input - Incoming AXIS request
    * @returns {boolean} True if intent is present
    */
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     void input;
-    return { action: "ALLOW" };
+    return true;
   }
 
   /**
@@ -118,6 +120,8 @@ export class CapabilityEnforcementSensor implements AxisSensor {
    * @param {SensorInput} input - Request with intent and packet
    * @returns {Promise<SensorDecision>} ALLOW or DENY based on capabilities
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const { intent, packet } = input;
     if (!intent) {

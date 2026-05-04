@@ -19,10 +19,14 @@ export class IntentRegistrySensor implements AxisSensor {
 
   constructor(private readonly router: IntentRouter) {}
 
-  async supports(): Promise<SensorDecision> {
-    return Promise.resolve({ action: "ALLOW" });
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(): boolean {
+    return true;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const intent = input.intent!;
 

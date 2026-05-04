@@ -45,16 +45,14 @@ export class CceClientSignatureSensor implements AxisSensor {
     private readonly signatureVerifier: CceSignatureVerifier,
   ) {}
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return input.metadata?.cceEnvelopeValid === true
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: "SENSOR_NOT_APPLICABLE",
-          reason: "CCE envelope not validated",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return input.metadata?.cceEnvelopeValid === true;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const envelope = input.metadata?.cceEnvelope as CceRequestEnvelope;
     if (!envelope) {

@@ -30,16 +30,14 @@ export class CceAudienceIntentBindingSensor implements AxisSensor {
     private readonly axisAudience: string,
   ) {}
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
-    return input.metadata?.cceCapsuleVerified === true
-      ? { action: "ALLOW" }
-      : {
-          action: "DENY",
-          code: CCE_ERROR.CAPSULE_NOT_VERIFIED,
-          reason: "CCE capsule not verified",
-        };
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
+    return input.metadata?.cceCapsuleVerified === true;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     const capsule = input.metadata?.cceCapsule as CceCapsuleClaims | undefined;
     const envelope = input.metadata?.cceEnvelope as

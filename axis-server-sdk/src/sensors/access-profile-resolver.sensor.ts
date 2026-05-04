@@ -36,11 +36,15 @@ export class AccessProfileResolverSensor implements AxisSensor {
    */
   readonly order = BAND.IDENTITY + 10;
 
-  async supports(input: SensorInput): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: SensorInput): boolean {
     void input;
-    return { action: "ALLOW" };
+    return true;
   }
 
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(input: SensorInput): Promise<SensorDecision> {
     // Resolve profile: presence of proof => GUARDED, else PUBLIC
     const hasCapsule = !!input.metadata?.capsuleId;

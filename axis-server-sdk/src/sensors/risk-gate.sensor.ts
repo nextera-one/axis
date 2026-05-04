@@ -70,6 +70,8 @@ export class RiskGateSensor implements AxisSensor {
     this.flagThreshold = options.flagThreshold ?? 40;
   }
 
+  // This sensor does not define supports(), so it is applicable whenever registered.
+  // run() returns the actual ALLOW/DENY/FLAG/THROTTLE decision.
   async run(input: SensorInput): Promise<SensorDecision> {
     // Collect all signals in parallel
     const results = await Promise.all(

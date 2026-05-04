@@ -126,12 +126,11 @@ export class SchemaValidationSensor implements AxisSensor {
    * @param {any} input - Sensor input
    * @returns {Promise<SensorDecision>} Allow when a schema exists, deny otherwise
    */
-  async supports(input: any): Promise<SensorDecision> {
+  // supports() is a synchronous applicability gate.
+  // Return false to skip this sensor without producing a denial.
+  supports(input: any): boolean {
     // Only run in post-decode phase when schema is provided
-    if (input.metadata?.schema) {
-      return { action: 'ALLOW' };
-    }
-    return { action: 'DENY', code: 'SCHEMA_NOT_CONFIGURED' };
+    return !!input.metadata?.schema;
   }
 
   /**
@@ -147,6 +146,8 @@ export class SchemaValidationSensor implements AxisSensor {
    * @param {any} input - Standard SensorInput
    * @returns {{ action: 'ALLOW' } | { action: 'DENY', code: string, reason: string }} Decision
    */
+  // run() executes only after supports() passes.
+  // Return the actual ALLOW/DENY/FLAG/THROTTLE decision here.
   async run(
     input: any,
   ): Promise<
