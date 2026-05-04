@@ -1,5 +1,6 @@
-import * as z from 'zod';
-import { AxisFrameZ } from '../core/axis-bin';
+import * as z from "zod";
+
+import { AxisFrameZ } from "../core/axis-bin";
 
 /**
  * AXIS Sensor Input/Output Validation Schemas
@@ -20,9 +21,9 @@ import { AxisFrameZ } from '../core/axis-bin';
  * Sensor decision outcomes (Zod version for schema composition)
  */
 export const SensorDecisionZ = z.union([
-  z.object({ action: z.literal('ALLOW'), meta: z.any().optional() }),
+  z.object({ action: z.literal("ALLOW"), meta: z.any().optional() }),
   z.object({
-    action: z.literal('DENY'),
+    action: z.literal("DENY"),
     code: z.string(),
     reason: z.string().optional(),
     meta: z.any().optional(),
@@ -30,9 +31,9 @@ export const SensorDecisionZ = z.union([
 ]);
 
 export const SensorDecisionWithMetadataZ = z.union([
-  z.object({ action: z.literal('ALLOW'), meta: z.any().optional() }),
+  z.object({ action: z.literal("ALLOW"), meta: z.any().optional() }),
   z.object({
-    action: z.literal('DENY'),
+    action: z.literal("DENY"),
     code: z.string(),
     reason: z.string().optional(),
     retryAfterMs: z.number().int().positive().optional(),
@@ -71,20 +72,25 @@ export type ScanBurstDecision = z.infer<typeof ScanBurstDecisionZ>;
 // ============================================================================
 
 export const ProofKindZ = z.enum([
-  'NONE',
-  'CAPSULE',
-  'PASSPORT',
-  'MTLS',
-  'JWT',
+  "NONE",
+  "ANONYMOUS",
+  "PASSPORT",
+  "CAPSULE",
+  "JWT",
+  "CONTRACT",
+  "WITNESS",
+  "MTLS",
+  "DEVICE",
+  "AUTHORIZED",
 ]);
 export type ProofKind = z.infer<typeof ProofKindZ>;
 
-export const AccessProfileZ = z.enum(['PUBLIC', 'PARTNER', 'INTERNAL', 'NODE']);
+export const AccessProfileZ = z.enum(["PUBLIC", "PARTNER", "INTERNAL", "NODE"]);
 export type AccessProfile = z.infer<typeof AccessProfileZ>;
 
 export const ProofPresenceInputZ = z.object({
   profile: AccessProfileZ,
-  visibility: z.enum(['PUBLIC', 'GUARDED']),
+  visibility: z.enum(["PUBLIC", "GUARDED"]),
   requiredProof: z.array(ProofKindZ).min(1),
   hasCapsule: z.boolean(),
   hasPassportSignature: z.boolean(),
@@ -96,7 +102,7 @@ export type ProofPresenceInput = z.infer<typeof ProofPresenceInputZ>;
 // INTENT POLICY SENSOR
 // ============================================================================
 
-export const SensitivityLevelZ = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+export const SensitivityLevelZ = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export type SensitivityLevel = z.infer<typeof SensitivityLevelZ>;
 
 export const IntentPolicyZ = z.object({
@@ -123,11 +129,11 @@ export type IntentPolicySensorInput = z.infer<typeof IntentPolicySensorInputZ>;
 
 export const IntentPolicyDecisionZ = z.union([
   z.object({
-    action: z.literal('ALLOW'),
+    action: z.literal("ALLOW"),
     policy: IntentPolicyZ,
   }),
   z.object({
-    action: z.literal('DENY'),
+    action: z.literal("DENY"),
     reason: z.string(),
   }),
 ]);
@@ -154,7 +160,7 @@ export const CapsuleZ = z.object({
   claims: CapsuleClaimsZ,
   issuedAt: z.number().int(),
   expiresAt: z.number().int(),
-  tier: z.enum(['FREE', 'STANDARD', 'PREMIUM']),
+  tier: z.enum(["FREE", "STANDARD", "PREMIUM"]),
 });
 export type Capsule = z.infer<typeof CapsuleZ>;
 
@@ -189,10 +195,10 @@ export type CapsuleVerifyResult = z.infer<typeof CapsuleVerifyResultZ>;
 // ============================================================================
 
 export const RateLimitProfileZ = z.enum([
-  'PUBLIC',
-  'PARTNER',
-  'INTERNAL',
-  'NODE',
+  "PUBLIC",
+  "PARTNER",
+  "INTERNAL",
+  "NODE",
 ]);
 export type RateLimitProfile = z.infer<typeof RateLimitProfileZ>;
 
@@ -209,7 +215,7 @@ export type RateLimitInput = z.infer<typeof RateLimitInputZ>;
 export const RateLimitConfigZ = z.object({
   windowSec: z.number().int().positive(),
   max: z.number().int().positive(),
-  key: z.enum(['ip_fingerprint', 'actor_capsule']),
+  key: z.enum(["ip_fingerprint", "actor_capsule"]),
 });
 export type RateLimitConfig = z.infer<typeof RateLimitConfigZ>;
 
@@ -225,7 +231,7 @@ export type SensorResult = z.infer<typeof SensorResultZ>;
 export const PassportZ = z.object({
   id: z.string(),
   public_key: z.custom<Buffer>((v) => Buffer.isBuffer(v)),
-  status: z.enum(['ACTIVE', 'REVOKED', 'EXPIRED', 'PENDING']),
+  status: z.enum(["ACTIVE", "REVOKED", "EXPIRED", "PENDING"]),
   issuedAt: z.number().int(),
   expiresAt: z.number().int().optional(),
 });
@@ -268,7 +274,10 @@ export type EntropySensorInput = z.infer<typeof EntropySensorInputZ>;
 
 export const ProtocolStrictInputZ = z.object({
   rawBytes: z
-    .union([z.custom<Buffer>((v) => Buffer.isBuffer(v)), z.instanceof(Uint8Array)])
+    .union([
+      z.custom<Buffer>((v) => Buffer.isBuffer(v)),
+      z.instanceof(Uint8Array),
+    ])
     .optional(),
   ip: z.string().min(1),
   path: z.string().min(1),
@@ -284,17 +293,17 @@ export type ProtocolStrictInput = z.infer<typeof ProtocolStrictInputZ>;
 // ============================================================================
 
 export const SchemaFieldKindZ = z.enum([
-  'utf8',
-  'u64',
-  'bytes',
-  'bytes16',
-  'bool',
-  'obj',
-  'arr',
+  "utf8",
+  "u64",
+  "bytes",
+  "bytes16",
+  "bool",
+  "obj",
+  "arr",
 ]);
 export type SchemaFieldKind = z.infer<typeof SchemaFieldKindZ>;
 
-export const ScopeZ = z.enum(['header', 'body']);
+export const ScopeZ = z.enum(["header", "body"]);
 export type Scope = z.infer<typeof ScopeZ>;
 
 export const SchemaFieldZ = z.object({
@@ -308,7 +317,7 @@ export const SchemaFieldZ = z.object({
 });
 export type SchemaField = z.infer<typeof SchemaFieldZ>;
 
-export const BodyProfileZ = z.enum(['TLV_MAP', 'RAW', 'TLV_OBJ', 'TLV_ARR']);
+export const BodyProfileZ = z.enum(["TLV_MAP", "RAW", "TLV_OBJ", "TLV_ARR"]);
 export type BodyProfile = z.infer<typeof BodyProfileZ>;
 
 export const IntentSchemaZ = z.object({
@@ -331,8 +340,8 @@ export const WsHandshakeInputZ = z.object({
 export type WsHandshakeInput = z.infer<typeof WsHandshakeInputZ>;
 
 export const WsHandshakeDecisionZ = z.union([
-  z.object({ action: z.literal('ALLOW') }),
-  z.object({ action: z.literal('DENY'), code: z.string() }),
+  z.object({ action: z.literal("ALLOW") }),
+  z.object({ action: z.literal("DENY"), code: z.string() }),
 ]);
 export type WsHandshakeDecision = z.infer<typeof WsHandshakeDecisionZ>;
 
@@ -360,11 +369,11 @@ export type IPReputation = z.infer<typeof IPReputationZ>;
 // ============================================================================
 
 export const UploadStatusZ = z.enum([
-  'INIT',
-  'UPLOADING',
-  'FINALIZING',
-  'DONE',
-  'ABORTED',
+  "INIT",
+  "UPLOADING",
+  "FINALIZING",
+  "DONE",
+  "ABORTED",
 ]);
 export type UploadStatus = z.infer<typeof UploadStatusZ>;
 

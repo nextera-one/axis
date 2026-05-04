@@ -26,10 +26,7 @@ export type {
   RequiredProofKind,
   AxisRateLimitConfig,
 } from "./decorators/intent-policy.decorator";
-export {
-  Handler,
-  HANDLER_METADATA_KEY,
-} from "./decorators/handler.decorator";
+export { Handler, HANDLER_METADATA_KEY } from "./decorators/handler.decorator";
 export type { HandlerOptions } from "./decorators/handler.decorator";
 export {
   Intent,
