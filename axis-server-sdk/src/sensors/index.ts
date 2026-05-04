@@ -9,6 +9,7 @@ export * from './frame-header-sanity.sensor';
 export * from './header-tlv-limit.sensor';
 export * from './intent-allowlist.sensor';
 export * from './intent-registry.sensor';
+export * from './law-article-presence.sensor';
 export * from './law-evaluation.sensor';
 export * from './proof-presence.sensor';
 export * from './protocol-strict.sensor';

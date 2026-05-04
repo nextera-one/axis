@@ -8,6 +8,24 @@ export type {
   RequestLifecycleLike,
   ResponseLifecycleLike,
 } from "./http/request-lifecycle";
+export {
+  collectAxisFrame,
+  mapAxisErrorCodeToStatus,
+  runAxisPreDecodeSensors,
+  validateAxisMagic,
+} from "./http/axis-intake";
+export type {
+  AxisIntakeConfig,
+  AxisIntakeController,
+  AxisIntakeHooks,
+  AxisIntakeNextFunction,
+  AxisIntakeTerminationInfo,
+  AxisMagicValidation,
+  CollectedFrame,
+  PreDecodeResult,
+  RunPreDecodeHooks,
+  SensorEvaluation,
+} from "./http/axis-intake";
 
 // DTO primitives
 export type { PageResult } from "./dto/page-result";
