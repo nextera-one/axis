@@ -1,28 +1,94 @@
-import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
+import {
+  decodeChainEnvelope,
+  decodeChainRequest,
+} from "@nextera.one/axis-protocol";
 
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { CAPSULE_POLICY_METADATA_KEY, type CapsulePolicyOptions, mergeCapsulePolicyOptions, normalizeCapsulePolicyOptions } from "../decorators/capsule-policy.decorator";
+import {
+  CAPSULE_POLICY_METADATA_KEY,
+  type CapsulePolicyOptions,
+  mergeCapsulePolicyOptions,
+  normalizeCapsulePolicyOptions,
+} from "../decorators/capsule-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import { AXIS_ANONYMOUS_KEY, AXIS_PUBLIC_KEY, AXIS_RATE_LIMIT_KEY, type AxisRateLimitConfig, CONTRACT_METADATA_KEY, REQUIRED_PROOF_METADATA_KEY, type RequiredProofKind, SENSITIVITY_METADATA_KEY } from "../decorators/intent-policy.decorator";
+import {
+  AXIS_ANONYMOUS_KEY,
+  AXIS_AUTHORIZED_KEY,
+  AXIS_PUBLIC_KEY,
+  AXIS_RATE_LIMIT_KEY,
+  type AxisRateLimitConfig,
+  CONTRACT_METADATA_KEY,
+  REQUIRED_PROOF_METADATA_KEY,
+  type RequiredProofKind,
+  SENSITIVITY_METADATA_KEY,
+} from "../decorators/intent-policy.decorator";
 import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
-import { AxisObserverBinding, AxisObserverRef, OBSERVER_BINDINGS_KEY } from "../decorators/observer.decorator";
+import {
+  AxisObserverBinding,
+  AxisObserverRef,
+  OBSERVER_BINDINGS_KEY,
+} from "../decorators/observer.decorator";
 import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { type AxisIntentSensorBinding, type AxisIntentSensorBindingInput, type AxisIntentSensorRef, INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField, toIntentSensorBinding } from "../decorators/intent.decorator";
+import {
+  type AxisIntentSensorBinding,
+  type AxisIntentSensorBindingInput,
+  type AxisIntentSensorRef,
+  INTENT_METADATA_KEY,
+  INTENT_ROUTES_KEY,
+  IntentKind,
+  IntentRoute,
+  IntentTlvField,
+  toIntentSensorBinding,
+} from "../decorators/intent.decorator";
 import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
-import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
+import {
+  buildDtoDecoder,
+  extractDtoSchema,
+} from "../decorators/dto-schema.util";
 import { ObserverDispatcherService } from "./observer-dispatcher.service";
-import { inlineCapsuleAllowsIntent, inlineCapsuleSatisfiesScopes, isInlineCapsuleExpired, normalizeInlineCapsule, resolvePolicyScopes } from "../security/inline-capsule";
+import {
+  inlineCapsuleAllowsIntent,
+  inlineCapsuleSatisfiesScopes,
+  isInlineCapsuleExpired,
+  normalizeInlineCapsule,
+  resolvePolicyScopes,
+} from "../security/inline-capsule";
 import type { AxisDependencyResolver } from "./axis-dependency-resolver";
 import { SensorRegistry } from "./registry/sensor.registry";
-import { getAxisExecutionContext, mergeAxisExecutionContext, withAxisExecutionContext } from "./axis-execution-context";
+import {
+  getAxisExecutionContext,
+  mergeAxisExecutionContext,
+  withAxisExecutionContext,
+} from "./axis-execution-context";
 import type { SensitivityLevel } from "../schemas/axis-schemas";
-import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
+import {
+  AxisSensor,
+  normalizeSensorDecision,
+  SensorInput,
+} from "../sensor/axis-sensor";
 import { createAxisLogger } from "../utils/axis-logger";
-import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import {
+  type CceHandler,
+  type CcePipelineConfig,
+  type CcePipelineResult,
+  executeCcePipeline,
+} from "../cce/cce-pipeline";
 import { AxisError } from "../core/axis-error";
-import { AxisChainEnvelope, AxisChainRequest, ChainOptions, RegisteredChainConfig } from "./axis-chain.types";
-import { TLV_ACTOR_ID, TLV_CAPSULE, TLV_INTENT, TLV_NODE, TLV_PROOF_REF, TLV_REALM } from "../core/constants";
+import {
+  AxisChainEnvelope,
+  AxisChainRequest,
+  ChainOptions,
+  RegisteredChainConfig,
+} from "./axis-chain.types";
+import {
+  TLV_ACTOR_ID,
+  TLV_CAPSULE,
+  TLV_INTENT,
+  TLV_NODE,
+  TLV_PROOF_REF,
+  TLV_REALM,
+} from "../core/constants";
 import type { CceRequestEnvelope } from "../cce/cce.types";
 import { AxisFrame } from "../core/axis-bin";
 
@@ -765,7 +831,21 @@ export class IntentRouter {
       this.anonymousIntents.add(intent);
     }
 
-    //TODO add @AxisAuthorized decorator and logic
+    //TODO add @AxisAuthorized   and logic
+
+    // ── @AxisAuthorized ──────────────────────────────────────────────────────────
+    const isAuthorizedMethod: boolean | undefined = Reflect.getMetadata(
+      AXIS_AUTHORIZED_KEY,
+      proto,
+      methodName,
+    );
+    const isAuthorizedClass: boolean | undefined = Reflect.getMetadata(
+      AXIS_AUTHORIZED_KEY,
+      proto.constructor,
+    );
+    if (isAuthorizedMethod || isAuthorizedClass) {
+      this.authorizedIntents.add(intent);
+    }
 
     // ── @AxisRateLimit ───────────────────────────────────────────────────────
     const rateLimit: AxisRateLimitConfig | undefined = Reflect.getMetadata(

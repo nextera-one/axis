@@ -305,6 +305,25 @@ export function AxisPublic(): ClassDecorator & MethodDecorator {
 export const AXIS_ANONYMOUS_KEY = "axis:anonymous";
 
 //TODO AxisAuthorized decorator
+
+// ─── @AxisAuthorized ──────────────────────────────────────────────────────────
+
+export const AXIS_AUTHORIZED_KEY = "axis:authorized";
+
+export function AxisAuthorized(): ClassDecorator & MethodDecorator {
+  return (
+    target: any,
+    propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor,
+  ) => {
+    if (descriptor) {
+      Reflect.defineMetadata(AXIS_AUTHORIZED_KEY, true, target, propertyKey!);
+      return descriptor;
+    }
+    Reflect.defineMetadata(AXIS_AUTHORIZED_KEY, true, target);
+    return target;
+  };
+}
 /**
  * @AxisAnonymous — Marks a handler class or individual intent method as
  * accessible to anonymous sessions.
