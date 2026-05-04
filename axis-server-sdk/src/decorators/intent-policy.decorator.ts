@@ -304,6 +304,7 @@ export function AxisPublic(): ClassDecorator & MethodDecorator {
  */
 export const AXIS_ANONYMOUS_KEY = "axis:anonymous";
 
+//TODO AxisAuthorized decorator
 /**
  * @AxisAnonymous — Marks a handler class or individual intent method as
  * accessible to anonymous sessions.

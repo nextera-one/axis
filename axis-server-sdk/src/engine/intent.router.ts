@@ -1,95 +1,30 @@
-import {
-  decodeChainEnvelope,
-  decodeChainRequest,
-} from "@nextera.one/axis-protocol";
+import { decodeChainEnvelope, decodeChainRequest } from "@nextera.one/axis-protocol";
 
-import {
-  type CceHandler,
-  type CcePipelineConfig,
-  type CcePipelineResult,
-  executeCcePipeline,
-} from "../cce/cce-pipeline";
-import type { CceRequestEnvelope } from "../cce/cce.types";
-import { AxisFrame } from "../core/axis-bin";
-import { AxisError } from "../core/axis-error";
-import {
-  TLV_ACTOR_ID,
-  TLV_CAPSULE,
-  TLV_INTENT,
-  TLV_NODE,
-  TLV_PROOF_REF,
-  TLV_REALM,
-} from "../core/constants";
-import {
-  CAPSULE_POLICY_METADATA_KEY,
-  type CapsulePolicyOptions,
-  mergeCapsulePolicyOptions,
-  normalizeCapsulePolicyOptions,
-} from "../decorators/capsule-policy.decorator";
-import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
-import {
-  buildDtoDecoder,
-  extractDtoSchema,
-} from "../decorators/dto-schema.util";
 import { HANDLER_SENSORS_KEY } from "../decorators/handler-sensors.decorator";
-import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
-import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
-import {
-  AXIS_ANONYMOUS_KEY,
-  AXIS_PUBLIC_KEY,
-  AXIS_RATE_LIMIT_KEY,
-  type AxisRateLimitConfig,
-  CONTRACT_METADATA_KEY,
-  type RequiredProofKind,
-  REQUIRED_PROOF_METADATA_KEY,
-  SENSITIVITY_METADATA_KEY,
-} from "../decorators/intent-policy.decorator";
+import { CAPSULE_POLICY_METADATA_KEY, type CapsulePolicyOptions, mergeCapsulePolicyOptions, normalizeCapsulePolicyOptions } from "../decorators/capsule-policy.decorator";
 import { INTENT_SENSORS_KEY } from "../decorators/intent-sensors.decorator";
-import {
-  type AxisIntentSensorBinding,
-  type AxisIntentSensorBindingInput,
-  type AxisIntentSensorRef,
-  INTENT_METADATA_KEY,
-  INTENT_ROUTES_KEY,
-  IntentKind,
-  IntentRoute,
-  IntentTlvField,
-  toIntentSensorBinding,
-} from "../decorators/intent.decorator";
-import {
-  AxisObserverBinding,
-  AxisObserverRef,
-  OBSERVER_BINDINGS_KEY,
-} from "../decorators/observer.decorator";
+import { AXIS_ANONYMOUS_KEY, AXIS_PUBLIC_KEY, AXIS_RATE_LIMIT_KEY, type AxisRateLimitConfig, CONTRACT_METADATA_KEY, REQUIRED_PROOF_METADATA_KEY, type RequiredProofKind, SENSITIVITY_METADATA_KEY } from "../decorators/intent-policy.decorator";
+import { INTENT_BODY_KEY } from "../decorators/intent-body.decorator";
 import type { TlvValidatorFn } from "../decorators/tlv-field.decorator";
-import type { SensitivityLevel } from "../schemas/axis-schemas";
-import {
-  inlineCapsuleAllowsIntent,
-  inlineCapsuleSatisfiesScopes,
-  isInlineCapsuleExpired,
-  normalizeInlineCapsule,
-  resolvePolicyScopes,
-} from "../security/inline-capsule";
-import {
-  AxisSensor,
-  normalizeSensorDecision,
-  SensorInput,
-} from "../sensor/axis-sensor";
+import { AxisObserverBinding, AxisObserverRef, OBSERVER_BINDINGS_KEY } from "../decorators/observer.decorator";
+import { HANDLER_METADATA_KEY } from "../decorators/handler.decorator";
+import { type AxisIntentSensorBinding, type AxisIntentSensorBindingInput, type AxisIntentSensorRef, INTENT_METADATA_KEY, INTENT_ROUTES_KEY, IntentKind, IntentRoute, IntentTlvField, toIntentSensorBinding } from "../decorators/intent.decorator";
+import { CHAIN_METADATA_KEY } from "../decorators/chain.decorator";
+import { buildDtoDecoder, extractDtoSchema } from "../decorators/dto-schema.util";
+import { ObserverDispatcherService } from "./observer-dispatcher.service";
+import { inlineCapsuleAllowsIntent, inlineCapsuleSatisfiesScopes, isInlineCapsuleExpired, normalizeInlineCapsule, resolvePolicyScopes } from "../security/inline-capsule";
 import type { AxisDependencyResolver } from "./axis-dependency-resolver";
 import { SensorRegistry } from "./registry/sensor.registry";
-import {
-  AxisChainEnvelope,
-  AxisChainRequest,
-  ChainOptions,
-  RegisteredChainConfig,
-} from "./axis-chain.types";
-import {
-  getAxisExecutionContext,
-  mergeAxisExecutionContext,
-  withAxisExecutionContext,
-} from "./axis-execution-context";
-import { ObserverDispatcherService } from "./observer-dispatcher.service";
+import { getAxisExecutionContext, mergeAxisExecutionContext, withAxisExecutionContext } from "./axis-execution-context";
+import type { SensitivityLevel } from "../schemas/axis-schemas";
+import { AxisSensor, normalizeSensorDecision, SensorInput } from "../sensor/axis-sensor";
 import { createAxisLogger } from "../utils/axis-logger";
+import { type CceHandler, type CcePipelineConfig, type CcePipelineResult, executeCcePipeline } from "../cce/cce-pipeline";
+import { AxisError } from "../core/axis-error";
+import { AxisChainEnvelope, AxisChainRequest, ChainOptions, RegisteredChainConfig } from "./axis-chain.types";
+import { TLV_ACTOR_ID, TLV_CAPSULE, TLV_INTENT, TLV_NODE, TLV_PROOF_REF, TLV_REALM } from "../core/constants";
+import type { CceRequestEnvelope } from "../cce/cce.types";
+import { AxisFrame } from "../core/axis-bin";
 
 function observerRefKey(ref: AxisObserverRef): string {
   return typeof ref === "string" ? ref : ref.name;
@@ -300,6 +235,9 @@ export class IntentRouter {
 
   /** Intents flagged as anonymous-session accessible */
   private anonymousIntents = new Set<string>();
+
+  /** Intents flagged as authorized-session accessible */
+  private authorizedIntents = new Set<string>();
 
   /** Per-intent rate limit config */
   private intentRateLimits = new Map<string, AxisRateLimitConfig>();
@@ -827,6 +765,8 @@ export class IntentRouter {
       this.anonymousIntents.add(intent);
     }
 
+    //TODO add @AxisAuthorized decorator and logic
+
     // ── @AxisRateLimit ───────────────────────────────────────────────────────
     const rateLimit: AxisRateLimitConfig | undefined = Reflect.getMetadata(
       AXIS_RATE_LIMIT_KEY,
@@ -858,6 +798,10 @@ export class IntentRouter {
 
   isAnonymous(intent: string): boolean {
     return this.anonymousIntents.has(intent);
+  }
+
+  isAuthorized(intent: string): boolean {
+    return this.authorizedIntents.has(intent);
   }
 
   getRateLimit(intent: string): AxisRateLimitConfig | undefined {
