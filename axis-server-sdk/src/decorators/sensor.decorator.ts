@@ -10,6 +10,7 @@ export interface SensorOptions {
   /** Explicit phase override. If omitted, auto-derived from order at bootstrap. */
   phase?: SensorPhase;
   proofKind?: RequiredProofKind | RequiredProofKind[];
+  excludeProofKind?: RequiredProofKind | RequiredProofKind[];
 }
 
 /**
