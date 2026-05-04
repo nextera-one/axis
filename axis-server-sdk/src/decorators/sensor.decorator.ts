@@ -9,7 +9,7 @@ export type SensorPhase = "PRE_DECODE" | "POST_DECODE";
 export interface SensorOptions {
   /** Explicit phase override. If omitted, auto-derived from order at bootstrap. */
   phase?: SensorPhase;
-  proofKind: RequiredProofKind;
+  proofKind?: RequiredProofKind;
 }
 
 /**
