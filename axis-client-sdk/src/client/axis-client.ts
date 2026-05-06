@@ -14,7 +14,7 @@ import {
   generatePid,
   uuidToBytes,
 } from '../binary/frame-builder';
-import { ProofType } from '../binary/binary-types';
+import { ProofType, TLVType } from '../binary/binary-types';
 import { encodeChainRequest } from '../chain/binary-chain';
 import {
   type AxisChainEnvelope,
@@ -35,7 +35,7 @@ export interface AxisClientConfig {
   actorId: string;
   /** Audience binding (defaults to axis-core) */
   audience?: string;
-  /** Optional capsule for INTENT.EXEC */
+  /** Optional capsule id used for direct capsule headers in binary mode */
   capsuleId?: string;
   /** Optional signer for frame signing (Ed25519) */
   signer?: Signer;
@@ -77,6 +77,10 @@ export interface IntentResult<T = any> {
   data?: T;
   error?: string;
   receipt?: any;
+}
+
+export interface AxisSendOptions {
+  capsule?: Capsule | SerializedCapsule | Record<string, unknown> | string;
 }
 
 type AxisAlg = 'EdDSA';
@@ -131,13 +135,17 @@ export class AxisClient {
   /**
    * Send an intent with automatic retry
    */
-  async send<T = any>(intent: string, body?: any): Promise<IntentResult<T>> {
-    return this.withRetries(() => this.doSend(intent, body));
+  async send<T = any>(
+    intent: string,
+    body?: any,
+    options?: AxisSendOptions,
+  ): Promise<IntentResult<T>> {
+    return this.withRetries(() => this.doSend(intent, body, options));
   }
 
   /**
-   * Helper for INTENT.EXEC
-   * body shape: { intent, capsule, execNonce, args }
+   * Legacy helper for INTENT.EXEC body-wrapped execution.
+   * Prefer send(intent, body, { capsule }) for direct header-capsule requests.
    */
   async exec<T = any>(
     intent: string,
@@ -444,9 +452,13 @@ export class AxisClient {
   }
 
   // Private methods
-  private async doSend(intent: string, body?: any): Promise<any> {
+  private async doSend(
+    intent: string,
+    body?: any,
+    options?: AxisSendOptions,
+  ): Promise<any> {
     if (this.config.useBinary) {
-      return this.doSendBinary(intent, body);
+      return this.doSendBinary(intent, body, options);
     }
     return this.doSendJSON(intent, body);
   }
@@ -490,10 +502,14 @@ export class AxisClient {
     return response.data;
   }
 
-  private async doSendBinary(intent: string, body?: any): Promise<any> {
+  private async doSendBinary(
+    intent: string,
+    body?: any,
+    options?: AxisSendOptions,
+  ): Promise<any> {
     return this.doSendBinaryRaw(intent, this.encodeBody(body), {
       chainReq: intent === 'CHAIN.EXEC' || intent === 'axis.chain.exec',
-      capsuleId: this.config.capsuleId || undefined,
+      capsule: options?.capsule ?? (this.config.capsuleId || undefined),
     });
   }
 
@@ -502,20 +518,31 @@ export class AxisClient {
     body: Uint8Array,
     options?: {
       chainReq?: boolean;
+      capsule?: Capsule | SerializedCapsule | Record<string, unknown> | string;
       capsuleId?: string;
     },
   ): Promise<any> {
-    const proofRef = this.resolveProofRef(options?.capsuleId);
+    const capsule = this.toCapsuleProof(options?.capsule);
+    const capsuleId =
+      this.extractCapsuleId(capsule) || options?.capsuleId || undefined;
+    const proofRef = this.resolveProofRef(capsuleId);
     const builder = new AxisFrameBuilder()
       .setPid(generatePid())
       .setTimestamp(BigInt(Date.now()))
       .setIntent(intent)
       .setActorId(uuidToBytes(this.config.actorId))
-      .setProofType(ProofType.CAPSULE)
+      .setProofType(capsuleId ? ProofType.CAPSULE : ProofType.NONE)
       .setProofRef(proofRef)
       .setNonce(generateNonce())
       .setBody(body)
       .setFlags(false, options?.chainReq ?? false, false);
+
+    if (capsule) {
+      builder.setHeader(
+        TLVType.CAPSULE,
+        new TextEncoder().encode(JSON.stringify(capsule)),
+      );
+    }
 
     let frame: Uint8Array;
     if (this.config.signer) {
@@ -560,7 +587,11 @@ export class AxisClient {
 
   private resolveProofRef(capsuleId?: string): Uint8Array {
     if (capsuleId) {
-      return uuidToBytes(capsuleId);
+      try {
+        return uuidToBytes(capsuleId);
+      } catch {
+        return new TextEncoder().encode(capsuleId);
+      }
     }
     return new Uint8Array(16);
   }
@@ -599,8 +630,47 @@ export class AxisClient {
   private extractCapsuleId(
     capsule?: SerializedCapsule | Record<string, unknown>,
   ): string | undefined {
-    const id = capsule?.id;
+    const record = capsule as Record<string, unknown> | undefined;
+    const payload = record?.payload as Record<string, unknown> | undefined;
+    const data = record?.data as Record<string, unknown> | undefined;
+    const id =
+      record?.id ||
+      record?.capsuleId ||
+      record?.capsule_id ||
+      data?.id ||
+      data?.capsuleId ||
+      data?.capsule_id ||
+      payload?.capsuleId;
     return typeof id === 'string' && id.length > 0 ? id : undefined;
+  }
+
+  private toCapsuleProof(
+    capsule?: Capsule | SerializedCapsule | Record<string, unknown> | string,
+  ): SerializedCapsule | Record<string, unknown> | undefined {
+    if (!capsule) {
+      return undefined;
+    }
+
+    if (typeof capsule === 'string') {
+      return { payload: { v: 1, capsuleId: capsule } };
+    }
+
+    const normalized = this.normalizeCapsulePayload(capsule);
+    const capsuleId = this.extractCapsuleId(normalized);
+    if (!normalized || !capsuleId) {
+      return normalized;
+    }
+
+    const record = normalized as Record<string, unknown>;
+    const payload = record.payload as Record<string, unknown> | undefined;
+    return {
+      ...normalized,
+      payload: {
+        ...(payload ?? {}),
+        v: payload?.v ?? 1,
+        capsuleId,
+      },
+    };
   }
 
   private isRawCapsule(

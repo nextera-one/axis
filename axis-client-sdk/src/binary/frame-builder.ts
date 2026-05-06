@@ -119,6 +119,14 @@ export class AxisFrameBuilder {
   }
 
   /**
+   * Set an extension header.
+   */
+  setHeader(type: TLVType | number, value: Uint8Array): this {
+    this.headers.set(type, value);
+    return this;
+  }
+
+  /**
    * Set realm (optional)
    */
   setRealm(realm: string): this {
