@@ -1741,7 +1741,7 @@ body.body--light .ax-bento-card {
   background: rgba(3, 1, 8, 0.88);
   backdrop-filter: blur(20px) saturate(1.4);
   border-bottom: 1px solid var(--ax-border);
-  position: relative;
+  // position: relative;
 
   /* Plasma edge */
   &::after {
@@ -1983,7 +1983,6 @@ body.body--light .ax-bento-card {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  position: relative;
 
   /* Plasma edge */
   &::before {
@@ -3341,6 +3340,8 @@ body.body--light .studio-connect-btn .q-btn__content > * {
 /* Footer — telemetry strip */
 .studio-footer {
   height: 36px;
+  display: flex;
+  align-items: center;
   background: var(--ax-surface) !important;
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
@@ -3359,6 +3360,8 @@ body.body--light .studio-connect-btn .q-btn__content > * {
 }
 
 .studio-status-item {
+  display: flex;
+  align-items: center;
   color: var(--ax-on-surface-variant);
   gap: 7px;
 }
@@ -4079,6 +4082,6 @@ body.body--light .q-dialog__backdrop {
   width: 200px !important;
 }
 
-.q-page-container {
-  padding-top: 0px !important;
-}
+// .q-page-container {
+//   padding-top: 0px !important;
+// }
