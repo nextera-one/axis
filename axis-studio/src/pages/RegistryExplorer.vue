@@ -1,9 +1,11 @@
 <template>
-  <div class="registry-page">
-    <section class="registry-header">
+  <div class="column q-gutter-y-sm">
+    <section
+      class="col-auto full-width registry-header row justify-between items-center"
+    >
       <div>
         <div class="registry-eyebrow">Registry Service</div>
-        <h1>Intent Explorer</h1>
+        <div class="text-h4">Intent Explorer</div>
         <p>
           Explore available AXIS intents and open any intent directly in Sender.
         </p>
@@ -20,14 +22,16 @@
       </div>
     </section>
 
-    <section class="registry-controls">
+    <section
+      class="col-auto full-width row justify-between items-center q-gutter-x-sm"
+    >
       <q-input
         v-model="search"
         dense
         outlined
         clearable
         placeholder="Filter intents..."
-        class="registry-search"
+        class="col"
       >
         <template #prepend>
           <q-icon name="search" />
@@ -41,88 +45,107 @@
         clearable
         :options="domains"
         label="Domain"
-        class="registry-domain"
+        class="w-200 col"
       />
 
-      <q-btn flat no-caps label="Reset" @click="resetFilters" />
+      <q-btn
+        flat
+        no-caps
+        label="Reset"
+        @click="resetFilters"
+        class="col-auto"
+      />
+      <q-btn
+        flat
+        round
+        dense
+        icon="refresh"
+        :loading="loading"
+        title="Reload from server"
+        @click="loadCatalog(true)"
+        class="col-auto"
+      />
     </section>
 
     <q-inner-loading :showing="loading">
       <q-spinner color="primary" size="32px" />
     </q-inner-loading>
 
-    <section v-if="filteredIntents.length" class="registry-grid">
-      <q-card
+    <section
+      v-if="!loading && filteredIntents.length"
+      class="col row justify-start items-center scroll-y"
+    >
+      <div
         v-for="item in filteredIntents"
         :key="item.intent"
-        flat
-        bordered
-        class="registry-card"
+        class="q-pa-xs col-3"
       >
-        <q-card-section class="registry-card-head">
-          <div>
-            <q-badge color="primary" text-color="black">
-              {{ item.intent.split(".").pop() }}
-            </q-badge>
-            <q-badge v-if="item.deprecated" color="negative" class="q-ml-sm">
-              Deprecated
-            </q-badge>
-            <h3>{{ item.intent }}</h3>
-          </div>
-          <q-btn
-            flat
-            round
-            dense
-            icon="launch"
-            @click="openInSender(item.intent)"
-          />
-        </q-card-section>
-
-        <q-card-section>
-          <p class="registry-card-desc">
-            {{ item.description || "No description provided." }}
-          </p>
-
-          <div class="registry-card-meta">
+        <q-card flat bordered class="fit registry-card">
+          <q-card-section class="registry-card-head">
             <div>
-              <small>Proofs</small>
-              <span>{{
-                (item.requiredProof || []).join(" / ") || "None"
-              }}</span>
+              <q-badge color="primary" text-color="black">
+                {{ item.intent.split(".").pop() }}
+              </q-badge>
+              <q-badge v-if="item.deprecated" color="negative" class="q-ml-sm">
+                Deprecated
+              </q-badge>
+              <h3>{{ item.intent }}</h3>
             </div>
-            <div>
-              <small>Schema</small>
-              <span>{{ hasInputSchema(item) ? "Present" : "N/A" }}</span>
+            <q-btn
+              flat
+              round
+              dense
+              icon="launch"
+              @click="openInSender(item.intent)"
+            />
+          </q-card-section>
+
+          <q-card-section>
+            <p class="registry-card-desc">
+              {{ item.description || "No description provided." }}
+            </p>
+
+            <div class="registry-card-meta">
+              <div>
+                <small>Proofs</small>
+                <span>{{
+                  (item.requiredProof || []).join(" / ") || "None"
+                }}</span>
+              </div>
+              <div>
+                <small>Schema</small>
+                <span>{{ hasInputSchema(item) ? "Present" : "N/A" }}</span>
+              </div>
             </div>
-          </div>
-        </q-card-section>
+          </q-card-section>
 
-        <q-separator />
+          <q-separator />
 
-        <q-card-actions align="between">
-          <div class="registry-tags">
-            <q-badge
-              v-for="tag in getTags(item)"
-              :key="tag"
-              color="grey-8"
-              text-color="grey-3"
-            >
-              {{ tag }}
-            </q-badge>
-          </div>
-          <q-btn
-            unelevated
-            color="primary"
-            text-color="black"
-            no-caps
-            label="Open in Sender"
-            @click="openInSender(item.intent)"
-          />
-        </q-card-actions>
-      </q-card>
+          <q-card-actions align="between">
+            <div class="registry-tags">
+              <q-badge
+                v-for="tag in getTags(item)"
+                :key="tag"
+                color="grey-8"
+                text-color="grey-3"
+              >
+                {{ tag }}
+              </q-badge>
+            </div>
+            <q-btn
+              unelevated
+              color="primary"
+              text-color="black"
+              no-caps
+              label="Open in Sender"
+              @click="openInSender(item.intent)"
+            />
+          </q-card-actions>
+        </q-card>
+      </div>
     </section>
 
-    <section v-else class="registry-empty">
+    <section v-else class="col fit registry-empty">
       <q-icon name="search_off" size="40px" />
       <span>No intents match your filters</span>
       <q-btn flat no-caps label="Reset all filters" @click="resetFilters" />
