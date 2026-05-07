@@ -40,6 +40,15 @@
               placeholder="optional UUID"
               @update:model-value="(v) => auth.setCapsuleId(String(v ?? ''))"
             />
+            <q-input
+              :model-value="auth.bearerToken"
+              dense
+              outlined
+              type="password"
+              label="Bearer Token"
+              placeholder="devjwt1010"
+              @update:model-value="(v) => auth.setBearerToken(String(v ?? '').trim())"
+            />
             <q-toggle
               :model-value="auth.secureIntentAliasMode"
               label="Secure Intent Alias Mode"

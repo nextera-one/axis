@@ -19,12 +19,29 @@ export interface AuthenticatedUser {
   is_new_user?: boolean;
 }
 
+const AXIS_TEST_PRIVATE_KEY_HEX =
+  '5ff6cfe25032c3f69cd737157afaa19982bfdb0e2995ee6ecb3711e8814b69d7';
+const AXIS_TEST_PUBLIC_KEY_HEX =
+  '82831fc53a4d6ece619023615022caba19ac4dd4ef3c1f1b34a1ca097e6151d9';
+
+function defaultKeys(): KeyEntry[] {
+  return [
+    {
+      id: 'axis-test-key',
+      label: 'AXIS_TEST_KEY',
+      privateKeyHex: AXIS_TEST_PRIVATE_KEY_HEX,
+      publicKeyHex: AXIS_TEST_PUBLIC_KEY_HEX,
+      createdAt: 0,
+    },
+  ];
+}
+
 function loadKeys(): KeyEntry[] {
   try {
     const raw = localStorage.getItem('axis_keys');
-    return raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw) : defaultKeys();
   } catch {
-    return [];
+    return defaultKeys();
   }
 }
 
@@ -40,10 +57,13 @@ function loadAuthenticatedUser(): AuthenticatedUser | null {
 export const useAuthStore = defineStore('auth', () => {
   const keys = ref<KeyEntry[]>(loadKeys());
   const activeKeyId = ref<string | null>(
-    localStorage.getItem('axis_active_key'),
+    localStorage.getItem('axis_active_key') || keys.value[0]?.id || null,
   );
   const actorId = ref(localStorage.getItem('axis_actor_id') || '');
   const capsuleId = ref(localStorage.getItem('axis_capsule_id') || '');
+  const bearerToken = ref(
+    localStorage.getItem('axis_bearer_token') || 'devjwt1010',
+  );
   const secureIntentAliasMode = ref(
     localStorage.getItem('axis_secure_intent_alias_mode') === '1',
   );
@@ -94,6 +114,15 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('axis_capsule_id', v);
   }
 
+  function setBearerToken(v: string) {
+    bearerToken.value = v;
+    if (v) {
+      localStorage.setItem('axis_bearer_token', v);
+    } else {
+      localStorage.removeItem('axis_bearer_token');
+    }
+  }
+
   function setIntentSecret(v: string) {
     intentSecret.value = v;
     if (v) {
@@ -129,6 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
     activeKeyId,
     actorId,
     capsuleId,
+    bearerToken,
     secureIntentAliasMode,
     intentSecret,
     authenticatedUser,
@@ -137,6 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
     setActive,
     setActorId,
     setCapsuleId,
+    setBearerToken,
     setSecureIntentAliasMode,
     setIntentSecret,
     setAuthenticatedUser,

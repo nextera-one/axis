@@ -90,7 +90,7 @@
             </div>
             <div>
               <small>Schema</small>
-              <span>{{ item.schema ? 'Present' : 'N/A' }}</span>
+              <span>{{ hasInputSchema(item) ? 'Present' : 'N/A' }}</span>
             </div>
           </div>
         </q-card-section>
@@ -140,6 +140,9 @@ interface IntentDef {
   sensitivity: string;
   requiredProof?: string[];
   contract?: { maxDbWrites?: number; maxTimeMs?: number };
+  bodyProfile?: string;
+  input?: unknown[];
+  fields?: unknown[];
   examples?: string[];
   schema?: unknown;
   inputSchema?: unknown;
@@ -191,6 +194,16 @@ function getTags(item: IntentDef): string[] {
   if (domain) tags.push(domain);
   if (item.requiredProof?.length) tags.push(item.requiredProof[0]);
   return tags.slice(0, 2);
+}
+
+function hasInputSchema(item: IntentDef): boolean {
+  return Boolean(
+    item.input?.length ||
+      item.fields?.length ||
+      item.schema ||
+      item.inputSchema ||
+      item.bodyProfile,
+  );
 }
 
 async function loadCatalog() {

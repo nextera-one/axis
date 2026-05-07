@@ -6,7 +6,6 @@
  */
 
 import {
-  AXIS_TAG,
   AxisFrameBuilder,
   FrameFlags,
   ProofType,
@@ -20,11 +19,16 @@ import {
   uuidToBytes,
 } from "@nextera.one/axis-client-sdk/browser";
 import * as ed from "@noble/ed25519";
+import { sha256 } from "@noble/hashes/sha256";
+import { sha512 } from "@noble/hashes/sha512";
 
 import { useAuthStore, type AuthenticatedUser } from "stores/auth";
 import { AxisMediaTypes } from "./axis-media-types";
 import { useConnectionStore } from "stores/connection";
 import { useHistoryStore } from "stores/history";
+
+ed.hashes.sha512 = sha512;
+ed.hashes.sha512Async = async (message: Uint8Array) => sha512(message);
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -32,6 +36,9 @@ const EMPTY_16 = new Uint8Array(16);
 const MAX_RAW_CHARS = 16_000;
 const DEV_PROXY_PATH = "/axis";
 const DEV_PROXY_TARGET_HEADER = "X-AXIS-Proxy-Target";
+const TLV_CAPSULE = 90;
+const CAPSULE_BODY_ENCRYPTION_ALG = "A256GCM.SHA256";
+const DEFAULT_CATALOG_PAGE_SIZE = Number.MAX_SAFE_INTEGER;
 
 // Intent prefixes that are always routed plain by the server (no decryption).
 // Must stay in sync with IntentAliasService.PASSTHROUGH_PREFIXES on the backend.
@@ -47,9 +54,31 @@ const CAPSULE_BOOTSTRAP_INTENTS = [
   "capsule.issue",
   "capsule.create",
 ];
+const FALLBACK_CAPSULE_INTENTS = new Set(["projects.page"]);
 
 function isPassthroughIntent(intent: string): boolean {
   return INTENT_PASSTHROUGH_PREFIXES.some((p) => intent.startsWith(p));
+}
+
+function isPublicIntent(
+  intent: string,
+  metadata?: IntentCatalogEntry | null,
+): boolean {
+  const proof = metadata?.requiredProof;
+  if (Array.isArray(proof)) {
+    return proof.length === 0 || proof.some((p) => p.toUpperCase() === "NONE");
+  }
+
+  return isPassthroughIntent(intent);
+}
+
+function shouldSignFrame(
+  intent: string,
+  metadata: IntentCatalogEntry | null | undefined,
+  hasCapsule: boolean,
+): boolean {
+  if (hasCapsule) return true;
+  return !isPublicIntent(intent, metadata);
 }
 
 type SnapshotTransport =
@@ -76,6 +105,50 @@ export interface SendResult {
   requestSnapshot: ProtocolSnapshot;
   responseSnapshot: ProtocolSnapshot;
   responseHeaders: Record<string, string>;
+}
+
+type TlvFieldKind =
+  | "utf8"
+  | "u64"
+  | "bytes"
+  | "bytes16"
+  | "bool"
+  | "obj"
+  | "arr";
+
+export interface IntentFieldDoc {
+  name: string;
+  tag: number;
+  kind: TlvFieldKind | string;
+  required?: boolean;
+  scope?: string;
+  maxLen?: number;
+  max?: string | number;
+}
+
+export interface IntentCatalogEntry {
+  intent: string;
+  description?: string;
+  sensitivity?: string;
+  requiredProof?: string[];
+  contract?: { maxDbWrites?: number; maxTimeMs?: number };
+  bodyProfile?: string;
+  input?: IntentFieldDoc[];
+  fields?: IntentFieldDoc[];
+  schema?: { bodyProfile?: string; fields?: IntentFieldDoc[] } | unknown;
+  inputSchema?: { bodyProfile?: string; fields?: IntentFieldDoc[] } | unknown;
+  request?: {
+    bodyProfile?: string;
+    input?: IntentFieldDoc[];
+    fields?: IntentFieldDoc[];
+  };
+  examples?: string[];
+  deprecated?: boolean;
+}
+
+interface BodyEncodingSpec {
+  profile?: string;
+  fields: IntentFieldDoc[];
 }
 
 interface AxisFrameLike {
@@ -119,6 +192,14 @@ function base64UrlDecode(input: string): Uint8Array {
   return bytes;
 }
 
+function base64Encode(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
@@ -128,6 +209,36 @@ function base64UrlEncode(bytes: Uint8Array): string {
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
+}
+
+function getBrowserCrypto(): Crypto | undefined {
+  return typeof globalThis.crypto !== "undefined"
+    ? globalThis.crypto
+    : undefined;
+}
+
+function requireSubtleCrypto(feature: string): SubtleCrypto {
+  const subtle = getBrowserCrypto()?.subtle;
+  if (!subtle) {
+    throw new Error(
+      `${feature} requires WebCrypto AES-GCM. Use http://localhost, HTTPS, or disable secure alias mode.`,
+    );
+  }
+  return subtle;
+}
+
+const catalogByIntent = new Map<string, IntentCatalogEntry>();
+
+function rememberCatalog(entries: IntentCatalogEntry[]): void {
+  for (const entry of entries) {
+    if (entry?.intent) {
+      catalogByIntent.set(entry.intent, entry);
+    }
+  }
+}
+
+function getCatalogEntry(intent: string): IntentCatalogEntry | undefined {
+  return catalogByIntent.get(intent);
 }
 
 function concatBytes(parts: Uint8Array[]): Uint8Array {
@@ -151,7 +262,12 @@ async function encryptIntentToken(
     throw new Error("Intent Secret must decode to exactly 32 bytes");
   }
 
-  const cryptoKey = await crypto.subtle.importKey(
+  const browserCrypto = getBrowserCrypto();
+  if (!browserCrypto?.getRandomValues) {
+    throw new Error("Secure intent alias mode requires crypto.getRandomValues");
+  }
+  const subtle = requireSubtleCrypto("Secure intent alias mode");
+  const cryptoKey = await subtle.importKey(
     "raw",
     keyBytes.buffer as ArrayBuffer,
     { name: "AES-GCM" },
@@ -159,8 +275,8 @@ async function encryptIntentToken(
     ["encrypt"],
   );
 
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipherBuf = await crypto.subtle.encrypt(
+  const iv = browserCrypto.getRandomValues(new Uint8Array(12));
+  const cipherBuf = await subtle.encrypt(
     {
       name: "AES-GCM",
       iv,
@@ -294,20 +410,6 @@ function safeActorIdToBytes(input: string | null | undefined): Uint8Array {
   }
 }
 
-function safeProofRefToBytes(input: string | null | undefined): Uint8Array {
-  if (!input) return EMPTY_16;
-  try {
-    return uuidToBytes(input);
-  } catch {
-    try {
-      const bytes = hexToBytes(input);
-      return bytes.length > 0 && bytes.length <= 64 ? bytes : EMPTY_16;
-    } catch {
-      return EMPTY_16;
-    }
-  }
-}
-
 function normalizeFieldKey(key: string): string {
   return key.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -377,6 +479,92 @@ function extractCapsuleBootstrapContext(response: unknown): {
     capsuleId: capsuleId?.trim() || undefined,
     intentSecret: intentSecret?.trim() || undefined,
   };
+}
+
+function extractCapsule(source: unknown): unknown {
+  if (!source || typeof source !== "object") {
+    return source;
+  }
+
+  const record = source as Record<string, unknown>;
+  return (
+    record.capsule ||
+    record.axisCapsule ||
+    record.token ||
+    (record.data as Record<string, unknown> | undefined)?.capsule ||
+    source
+  );
+}
+
+function extractCapsuleId(capsule: unknown): string | undefined {
+  if (!capsule || typeof capsule !== "object") {
+    return undefined;
+  }
+
+  const record = capsule as Record<string, unknown>;
+  const payload = record.payload as Record<string, unknown> | undefined;
+  const data = record.data as Record<string, unknown> | undefined;
+  const id =
+    record.id ||
+    record.capsuleId ||
+    record.capsule_id ||
+    data?.id ||
+    data?.capsuleId ||
+    data?.capsule_id ||
+    payload?.capsuleId ||
+    payload?.capsule_id;
+
+  return typeof id === "string" && id.length > 0 ? id : undefined;
+}
+
+function extractCapsuleEncryptionKey(capsule: unknown): string | undefined {
+  if (!capsule || typeof capsule !== "object") {
+    return undefined;
+  }
+
+  const record = capsule as Record<string, unknown>;
+  const payload = record.payload as Record<string, unknown> | undefined;
+  const data = record.data as Record<string, unknown> | undefined;
+  const key =
+    record.encryptionKey ||
+    record.encryption_key ||
+    data?.encryptionKey ||
+    data?.encryption_key ||
+    payload?.encryptionKey ||
+    payload?.encryption_key;
+
+  return typeof key === "string" && key.length > 0 ? key : undefined;
+}
+
+function toCapsuleProof(source: unknown): unknown {
+  const capsule = extractCapsule(source);
+  const capsuleId = extractCapsuleId(capsule);
+  if (!capsuleId) {
+    return capsule;
+  }
+
+  const record =
+    capsule && typeof capsule === "object"
+      ? (capsule as Record<string, unknown>)
+      : {};
+  const payload = record.payload as Record<string, unknown> | undefined;
+
+  return {
+    ...record,
+    payload: {
+      ...(payload ?? {}),
+      v: payload?.v ?? 1,
+      capsuleId,
+    },
+  };
+}
+
+function capsuleProofRefToBytes(capsuleId: string): Uint8Array {
+  const encoded = textEncoder.encode(capsuleId);
+  if (encoded.length === 0 || encoded.length > 64) {
+    throw new Error("Capsule ID is too long for AXIS proofRef");
+  }
+  return encoded;
 }
 
 function findObjectFieldDeep(
@@ -510,9 +698,7 @@ function browserDeviceInfo() {
 }
 
 async function digestToU64(input: string): Promise<string> {
-  const hash = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", textEncoder.encode(input)),
-  );
+  const hash = sha256(textEncoder.encode(input));
   let out = 0n;
   for (let i = 0; i < 8; i++) {
     out = (out << 8n) | BigInt(hash[i] ?? 0);
@@ -548,34 +734,341 @@ function sanitizeHistoryValue(value: unknown): unknown {
   );
 }
 
-function encodeIntentBody(body: unknown): {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function toPositiveInt(value: unknown, fallback: number): number {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) && normalized > 0
+    ? Math.trunc(normalized)
+    : fallback;
+}
+
+function isIntentFieldDoc(value: unknown): value is IntentFieldDoc {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.tag === "number" &&
+    typeof value.kind === "string"
+  );
+}
+
+function readFieldArray(value: unknown): IntentFieldDoc[] {
+  return Array.isArray(value) ? value.filter(isIntentFieldDoc) : [];
+}
+
+function getCatalogBodyFields(
+  entry?: IntentCatalogEntry | null,
+): IntentFieldDoc[] {
+  if (!entry) return [];
+
+  const request = isRecord(entry.request) ? entry.request : undefined;
+  const schema = isRecord(entry.schema) ? entry.schema : undefined;
+  const inputSchema = isRecord(entry.inputSchema) ? entry.inputSchema : undefined;
+
+  return [
+    ...readFieldArray(entry.input),
+    ...readFieldArray(entry.fields),
+    ...readFieldArray(request?.input),
+    ...readFieldArray(request?.fields),
+    ...readFieldArray(schema?.fields),
+    ...readFieldArray(inputSchema?.fields),
+  ].filter((field, index, fields) => {
+    if ((field.scope || "body") !== "body") return false;
+    return fields.findIndex((f) => f.tag === field.tag) === index;
+  });
+}
+
+function getCatalogBodyProfile(entry?: IntentCatalogEntry | null): string {
+  const request = isRecord(entry?.request) ? entry?.request : undefined;
+  const schema = isRecord(entry?.schema) ? entry?.schema : undefined;
+  const inputSchema = isRecord(entry?.inputSchema) ? entry?.inputSchema : undefined;
+
+  return (
+    entry?.bodyProfile ||
+    request?.bodyProfile ||
+    (typeof schema?.bodyProfile === "string" ? schema.bodyProfile : "") ||
+    (typeof inputSchema?.bodyProfile === "string"
+      ? inputSchema.bodyProfile
+      : "") ||
+    ""
+  );
+}
+
+function getFallbackBodyFields(intent: string): IntentFieldDoc[] {
+  if (intent === "catalog.list") {
+    return [{ name: "params", tag: 97, kind: "obj" }];
+  }
+
+  if (intent.endsWith(".page")) {
+    return [{ name: "params", tag: 97, kind: "obj" }];
+  }
+
+  if (intent === "capsule.issue") {
+    return [{ name: "intent", tag: 100, kind: "utf8" }];
+  }
+
+  return [];
+}
+
+function buildPaginationParams(input: Record<string, unknown>): {
+  filter: Record<string, unknown>;
+  sort: Record<string, unknown>;
+  pagination: Record<string, unknown>;
+} {
+  const page = toPositiveInt(input.page, 1);
+  const limit = toPositiveInt(input.limit ?? input.pageSize, 10);
+  const rawFilter = isRecord(input.filter) ? input.filter : {};
+  const rawPagination = isRecord(input.pagination) ? input.pagination : {};
+
+  const filter: Record<string, unknown> = {
+    ...rawFilter,
+    page: toPositiveInt(rawFilter.page, page),
+    limit: toPositiveInt(rawFilter.limit, limit),
+  };
+
+  if (Array.isArray(input.where)) filter.where = input.where;
+  if (input.order_by !== undefined) filter.order_by = input.order_by;
+  if (Array.isArray(input.relations)) filter.relations = input.relations;
+
+  return {
+    filter,
+    sort: isRecord(input.sort) ? input.sort : {},
+    pagination: {
+      ...rawPagination,
+      page,
+      limit,
+    },
+  };
+}
+
+function normalizeBodyForFields(
+  intent: string,
+  body: unknown,
+  fields: IntentFieldDoc[],
+): Record<string, unknown> {
+  if (!fields.length) return {};
+
+  if (!isRecord(body)) {
+    if (fields.length === 1) return { [fields[0].name]: body };
+    return {};
+  }
+
+  const data: Record<string, unknown> = { ...body };
+  const paramsField = fields.find((field) => field.name === "params");
+  if (paramsField && data.params === undefined) {
+    if (intent === "catalog.list") {
+      data.params = {
+        page: toPositiveInt(data.page, 1),
+        pageSize: toPositiveInt(
+          data.pageSize ?? data.limit,
+          DEFAULT_CATALOG_PAGE_SIZE,
+        ),
+      };
+    } else if (intent.endsWith(".page")) {
+      data.params = buildPaginationParams(data);
+    }
+  }
+
+  return data;
+}
+
+function encodeU64(value: unknown): Uint8Array {
+  const buffer = new ArrayBuffer(8);
+  const numberValue =
+    typeof value === "bigint" ? value : BigInt(String(value ?? 0));
+  new DataView(buffer).setBigUint64(0, numberValue, false);
+  return new Uint8Array(buffer);
+}
+
+function encodeTlvValue(kind: string, value: unknown): Uint8Array {
+  switch (kind) {
+    case "utf8":
+      return textEncoder.encode(String(value));
+    case "u64":
+      return encodeU64(value);
+    case "bytes":
+    case "bytes16":
+      if (value instanceof Uint8Array) return value;
+      return textEncoder.encode(String(value));
+    case "bool":
+      return new Uint8Array([value ? 1 : 0]);
+    case "obj":
+    case "arr":
+      return textEncoder.encode(JSON.stringify(value));
+    default:
+      if (value instanceof Uint8Array) return value;
+      return textEncoder.encode(String(value));
+  }
+}
+
+function encodeTlvObject(
+  intent: string,
+  body: unknown,
+  fields: IntentFieldDoc[],
+): Uint8Array {
+  const data = normalizeBodyForFields(intent, body, fields);
+  const tlvs = fields.flatMap((field) => {
+    const value = data[field.name];
+    if (value === undefined || value === null) {
+      if (field.required) {
+        throw new Error(`Missing required TLV field: ${field.name}`);
+      }
+      return [];
+    }
+
+    return [
+      {
+        type: field.tag,
+        value: encodeTlvValue(String(field.kind), value),
+      },
+    ];
+  });
+
+  return encodeTLVs(tlvs);
+}
+
+function encodeRawBody(body: unknown): Uint8Array {
+  if (body === null || body === undefined) {
+    return new Uint8Array();
+  }
+  if (body instanceof Uint8Array) {
+    return body;
+  }
+  if (typeof body === "string") {
+    return textEncoder.encode(body);
+  }
+  return textEncoder.encode(JSON.stringify(body ?? {}));
+}
+
+function encodeIntentBody(
+  intent: string,
+  body: unknown,
+  options: {
+    metadata?: IntentCatalogEntry | null;
+    bodyEncoding?: BodyEncodingSpec;
+  } = {},
+): {
   bytes: Uint8Array;
   isTLV: boolean;
 } {
+  const overrideFields = options.bodyEncoding?.fields ?? [];
+  if (overrideFields.length > 0) {
+    return {
+      bytes: encodeTlvObject(intent, body, overrideFields),
+      isTLV: true,
+    };
+  }
+
+  const catalogFields = getCatalogBodyFields(options.metadata);
+  const fields = catalogFields.length
+    ? catalogFields
+    : getFallbackBodyFields(intent);
+  const bodyProfile = getCatalogBodyProfile(options.metadata);
+  if (
+    fields.length > 0 &&
+    (!bodyProfile || bodyProfile === "TLV_MAP")
+  ) {
+    return {
+      bytes: encodeTlvObject(intent, body, fields),
+      isTLV: true,
+    };
+  }
+
   if (body === null || body === undefined) {
     return { bytes: new Uint8Array(), isTLV: false };
   }
+
   if (body instanceof Uint8Array) {
-    if (body.length === 0) return { bytes: new Uint8Array(), isTLV: false };
-    return {
-      bytes: encodeTLVs([{ type: AXIS_TAG.BODY, value: body }]),
-      isTLV: true,
-    };
+    return { bytes: body, isTLV: false };
   }
-  if (typeof body === "object" && Object.keys(body).length === 0) {
-    return {
-      bytes: encodeTLVs([
-        { type: AXIS_TAG.JSON, value: textEncoder.encode("{}") },
-      ]),
-      isTLV: true,
-    };
+
+  return { bytes: encodeRawBody(body), isTLV: false };
+}
+
+function deriveCapsuleBodyKey(encryptionKey: string): Uint8Array {
+  const trimmed = encryptionKey.trim().replace(/^0x/i, "");
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return hexToBytes(trimmed);
   }
-  const json = typeof body === "string" ? body : JSON.stringify(body);
+
+  return sha256(textEncoder.encode(encryptionKey));
+}
+
+async function encryptCapsuleBody(
+  body: Uint8Array,
+  encryptionKey: string,
+  options: { capsuleId?: string; bodyIsTlv?: boolean } = {},
+): Promise<Uint8Array | undefined> {
+  const browserCrypto = getBrowserCrypto();
+  const subtle = browserCrypto?.subtle;
+  if (!browserCrypto?.getRandomValues || !subtle) {
+    return undefined;
+  }
+
+  const keyBytes = deriveCapsuleBodyKey(encryptionKey);
+  const cryptoKey = await subtle.importKey(
+    "raw",
+    keyBytes.buffer as ArrayBuffer,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"],
+  );
+  const iv = browserCrypto.getRandomValues(new Uint8Array(12));
+  const cipherBuf = await subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv,
+      tagLength: 128,
+      ...(options.capsuleId
+        ? { additionalData: textEncoder.encode(options.capsuleId) }
+        : {}),
+    },
+    cryptoKey,
+    body,
+  );
+  const cipherAndTag = new Uint8Array(cipherBuf);
+  const tag = cipherAndTag.slice(cipherAndTag.length - 16);
+  const ciphertext = cipherAndTag.slice(0, cipherAndTag.length - 16);
+
+  return textEncoder.encode(
+    JSON.stringify({
+      v: 1,
+      alg: CAPSULE_BODY_ENCRYPTION_ALG,
+      iv: base64Encode(iv),
+      tag: base64Encode(tag),
+      ciphertext: base64Encode(ciphertext),
+      bodyIsTlv: options.bodyIsTlv ?? false,
+    }),
+  );
+}
+
+async function prepareFrameBody(
+  encodedBody: { bytes: Uint8Array; isTLV: boolean },
+  capsuleProof: unknown,
+): Promise<{ bytes: Uint8Array; isTLV: boolean }> {
+  const encryptionKey = extractCapsuleEncryptionKey(capsuleProof);
+  const capsuleId = extractCapsuleId(capsuleProof);
+  if (!capsuleProof || !encryptionKey) {
+    return encodedBody;
+  }
+
+  const encryptedBody = await encryptCapsuleBody(
+    encodedBody.bytes,
+    encryptionKey,
+    {
+      capsuleId,
+      bodyIsTlv: encodedBody.isTLV,
+    },
+  );
+  if (!encryptedBody) {
+    return encodedBody;
+  }
+
   return {
-    bytes: encodeTLVs([
-      { type: AXIS_TAG.JSON, value: textEncoder.encode(json) },
-    ]),
-    isTLV: true,
+    bytes: encryptedBody,
+    isTLV: false,
   };
 }
 
@@ -1011,6 +1504,10 @@ interface SendIntentOptions {
   recordHistory?: boolean;
   forcePlainIntent?: boolean;
   skipCapsuleBootstrap?: boolean;
+  skipAutoCapsule?: boolean;
+  metadata?: IntentCatalogEntry | null;
+  bodyEncoding?: BodyEncodingSpec;
+  capsule?: unknown | false;
   headers?: Record<string, string>;
 }
 
@@ -1078,6 +1575,128 @@ async function ensureCapsuleContext(
   throw new Error(
     `Secure alias bootstrap failed: ${errors[0] || "unable to obtain capsule context"}`,
   );
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const normalized = name.toLowerCase();
+  return Object.keys(headers).some((key) => key.toLowerCase() === normalized);
+}
+
+function withDefaultAuthHeaders(
+  headers: Record<string, string> | undefined,
+): Record<string, string> {
+  const auth = useAuthStore();
+  const merged = { ...(headers || {}) };
+  const token = auth.bearerToken?.trim();
+  if (token && !hasHeader(merged, "Authorization")) {
+    merged.Authorization = token.toLowerCase().startsWith("bearer ")
+      ? token
+      : `Bearer ${token}`;
+  }
+  return merged;
+}
+
+function requiresProof(
+  metadata: IntentCatalogEntry | null | undefined,
+  proof: string,
+): boolean {
+  return (metadata?.requiredProof || []).some(
+    (entry) => entry.toUpperCase() === proof,
+  );
+}
+
+function requiresCapsuleProof(
+  intent: string,
+  metadata: IntentCatalogEntry | null | undefined,
+): boolean {
+  return (
+    requiresProof(metadata, "CAPSULE") ||
+    (!metadata && FALLBACK_CAPSULE_INTENTS.has(intent))
+  );
+}
+
+function setFrameHeader(
+  builder: AxisFrameBuilder,
+  tag: number,
+  value: Uint8Array,
+): void {
+  const writableBuilder = builder as AxisFrameBuilder & {
+    setHeader?: (type: number, value: Uint8Array) => AxisFrameBuilder;
+    headers?: Map<number, Uint8Array>;
+  };
+
+  if (typeof writableBuilder.setHeader === "function") {
+    writableBuilder.setHeader(tag, value);
+    return;
+  }
+
+  if (writableBuilder.headers instanceof Map) {
+    writableBuilder.headers.set(tag, value);
+    return;
+  }
+
+  throw new Error("AXIS frame builder cannot attach extension headers");
+}
+
+async function issueCapsuleForIntent(
+  targetIntent: string,
+  targetUrl: string,
+  headers: Record<string, string>,
+): Promise<unknown> {
+  const capsuleIssueMeta = getCatalogEntry("capsule.issue");
+  const capsuleIssueFields = getCatalogBodyFields(capsuleIssueMeta);
+  const res = await sendIntent(
+    "capsule.issue",
+    { intent: targetIntent },
+    targetUrl,
+    {
+      recordHistory: false,
+      forcePlainIntent: true,
+      skipCapsuleBootstrap: true,
+      skipAutoCapsule: true,
+      metadata: capsuleIssueMeta,
+      bodyEncoding: {
+        fields: capsuleIssueFields.length
+          ? capsuleIssueFields
+          : [{ name: "intent", tag: 100, kind: "utf8" }],
+      },
+      headers,
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(
+      `capsule.issue failed for ${targetIntent}: ${res.effect || res.status}`,
+    );
+  }
+
+  const proof = toCapsuleProof(res.response);
+  if (!extractCapsuleId(proof)) {
+    throw new Error("capsule.issue response did not include a capsule id");
+  }
+  return proof;
+}
+
+async function resolveCapsuleProof(
+  intent: string,
+  targetUrl: string,
+  metadata: IntentCatalogEntry | null | undefined,
+  options: SendIntentOptions | undefined,
+  headers: Record<string, string>,
+): Promise<unknown | undefined> {
+  if (options?.capsule === false || options?.skipAutoCapsule) {
+    return undefined;
+  }
+
+  if (options?.capsule) {
+    return toCapsuleProof(options.capsule);
+  }
+
+  if (!requiresCapsuleProof(intent, metadata)) {
+    return undefined;
+  }
+
+  return issueCapsuleForIntent(intent, targetUrl, headers);
 }
 
 export async function loginWithActiveKey(
@@ -1202,6 +1821,8 @@ export async function sendIntent(
   const actorId = safeActorIdToBytes(auth.actorId);
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, "");
   const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
+  const metadata = options?.metadata ?? getCatalogEntry(intent) ?? null;
+  const baseHeaders = withDefaultAuthHeaders(options?.headers);
   const secureAliasMode =
     auth.secureIntentAliasMode === true && options?.forcePlainIntent !== true;
 
@@ -1219,15 +1840,32 @@ export async function sendIntent(
     intentSecret = bootstrap.intentSecret?.trim() || intentSecret;
   }
 
-  const hasCapsule = Boolean(capsuleId);
-  const proofRef = hasCapsule ? safeProofRefToBytes(capsuleId) : EMPTY_16;
+  let capsuleProof = await resolveCapsuleProof(
+    intent,
+    targetUrl,
+    metadata,
+    options,
+    baseHeaders,
+  );
+
+  const proofCapsuleId = extractCapsuleId(capsuleProof);
+  capsuleId = proofCapsuleId || capsuleId;
+  const hasCapsule = Boolean(proofCapsuleId);
+  const proofRef =
+    hasCapsule && proofCapsuleId
+      ? capsuleProofRefToBytes(proofCapsuleId)
+      : EMPTY_16;
   const wireIntent = await resolveWireIntent(intent, {
     secureAliasMode,
     capsuleId,
     intentSecret,
     forcePlainIntent: options?.forcePlainIntent,
   });
-  const encodedBody = encodeIntentBody(body);
+  const encodedBody = encodeIntentBody(intent, body, {
+    metadata,
+    bodyEncoding: options?.bodyEncoding,
+  });
+  const frameBody = await prepareFrameBody(encodedBody, capsuleProof);
 
   const builder = new AxisFrameBuilder()
     .setPid(pid)
@@ -1237,13 +1875,22 @@ export async function sendIntent(
     .setProofType(hasCapsule ? ProofType.CAPSULE : ProofType.NONE)
     .setProofRef(proofRef)
     .setNonce(nonce)
-    .setBody(encodedBody.bytes)
-    .setFlags(encodedBody.isTLV, false, false);
+    .setBody(frameBody.bytes)
+    .setFlags(frameBody.isTLV, false, false);
+
+  if (capsuleProof) {
+    setFrameHeader(
+      builder,
+      TLV_CAPSULE,
+      textEncoder.encode(JSON.stringify(capsuleProof)),
+    );
+  }
 
   const activeKey = auth.getActiveKey();
+  const signFrame = shouldSignFrame(intent, metadata, hasCapsule);
   let frameBytes: Uint8Array;
 
-  if (activeKey?.privateKeyHex) {
+  if (signFrame && activeKey?.privateKeyHex) {
     const privKey = parsePrivateKeyHex(activeKey.privateKeyHex);
     const unsigned = builder.buildUnsigned();
     const sig = await ed.signAsync(unsigned, privKey);
@@ -1256,8 +1903,11 @@ export async function sendIntent(
     "Content-Type": AxisMediaTypes.BINARY,
     Accept: AxisMediaTypes.CLIENT_ACCEPT,
     ...(proxyTarget ? { [DEV_PROXY_TARGET_HEADER]: proxyTarget } : {}),
-    ...(options?.headers || {}),
+    ...baseHeaders,
   };
+  if (proofCapsuleId && !hasHeader(requestHeaders, "capsule")) {
+    requestHeaders.capsule = proofCapsuleId;
+  }
   const requestSnapshot = buildRequestSnapshot(
     frameBytes,
     intent,
@@ -1351,17 +2001,45 @@ export async function sendIntent(
 
 /* ── catalog helpers ─────────────────────────────────────── */
 
-export async function fetchCatalog(): Promise<any[]> {
-  const res = await sendIntent("catalog.list", {});
-  return res.ok ? res.response?.intents || [] : [];
+export async function fetchCatalog(): Promise<IntentCatalogEntry[]> {
+  const res = await sendIntent(
+    "catalog.list",
+    {
+      params: {
+        page: 1,
+        pageSize: DEFAULT_CATALOG_PAGE_SIZE,
+      },
+    },
+    undefined,
+    {
+      bodyEncoding: {
+        fields: [{ name: "params", tag: 97, kind: "obj" }],
+      },
+    },
+  );
+  const entries = (
+    res.ok ? res.response?.intents || res.response?.docs || [] : []
+  ) as IntentCatalogEntry[];
+  rememberCatalog(entries);
+  return entries;
 }
 
-export async function describeIntent(intent: string): Promise<any> {
+export async function describeIntent(
+  intent: string,
+): Promise<IntentCatalogEntry | null> {
   const res = await sendIntent("catalog.describe", intent);
-  return res.ok ? res.response?.definition || null : null;
+  const definition = (res.ok
+    ? res.response?.definition || null
+    : null) as IntentCatalogEntry | null;
+  if (definition) rememberCatalog([definition]);
+  return definition;
 }
 
-export async function searchCatalog(query: string): Promise<any[]> {
+export async function searchCatalog(query: string): Promise<IntentCatalogEntry[]> {
   const res = await sendIntent("catalog.search", query);
-  return res.ok ? res.response?.intents || [] : [];
+  const entries = (
+    res.ok ? res.response?.intents || res.response?.docs || [] : []
+  ) as IntentCatalogEntry[];
+  rememberCatalog(entries);
+  return entries;
 }

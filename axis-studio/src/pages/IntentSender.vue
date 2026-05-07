@@ -227,7 +227,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import JsonEditor from 'src/components/JsonEditor.vue';
@@ -235,6 +235,7 @@ import JsonTree from 'src/components/JsonTree.vue';
 import {
   sendIntent,
   fetchCatalog,
+  type IntentCatalogEntry,
   type SendResult,
 } from 'src/services/axis-client';
 import { useAuthStore } from 'stores/auth';
@@ -305,10 +306,13 @@ const quickPicks = [
   'axis.sessions.list',
   'axis.identities.list',
   'axis.capsules.list',
+  'projects.page',
 ];
 
 const allOpts = ref<string[]>([...quickPicks]);
 const filteredOpts = ref<string[]>([...quickPicks]);
+const catalogEntries = ref<IntentCatalogEntry[]>([]);
+const lastAutoBody = ref(bodyText.value);
 
 function filterIntents(val: string, update: (fn: () => void) => void) {
   update(() => {
@@ -322,14 +326,112 @@ function filterIntents(val: string, update: (fn: () => void) => void) {
 onMounted(async () => {
   try {
     const catalog = await fetchCatalog();
+    catalogEntries.value = catalog;
     allOpts.value = catalog.map((i) => i.intent);
     filteredOpts.value = allOpts.value.slice(0, 60);
+    applyIntentDefaults(intent.value);
   } catch {
     /* fallback to quick picks */
   }
 
   const qi = route.query.intent as string | undefined;
   if (qi) intent.value = qi;
+});
+
+const selectedCatalogEntry = computed(() => {
+  return catalogEntries.value.find((entry) => entry.intent === intent.value) || null;
+});
+
+function catalogBodyFields(entry: IntentCatalogEntry | null | undefined) {
+  const schema =
+    entry?.schema && typeof entry.schema === 'object' && !Array.isArray(entry.schema)
+      ? (entry.schema as { fields?: unknown })
+      : null;
+  const inputSchema =
+    entry?.inputSchema &&
+    typeof entry.inputSchema === 'object' &&
+    !Array.isArray(entry.inputSchema)
+      ? (entry.inputSchema as { fields?: unknown })
+      : null;
+  const request = entry?.request;
+  const candidates = [
+    entry?.input,
+    entry?.fields,
+    request?.input,
+    request?.fields,
+    schema?.fields,
+    inputSchema?.fields,
+  ];
+
+  return candidates
+    .flatMap((value) => (Array.isArray(value) ? value : []))
+    .filter(
+      (field): field is { name: string; kind: string; required?: boolean; scope?: string } =>
+        field &&
+        typeof field === 'object' &&
+        typeof (field as { name?: unknown }).name === 'string' &&
+        typeof (field as { kind?: unknown }).kind === 'string' &&
+        ((field as { scope?: string }).scope || 'body') === 'body',
+    );
+}
+
+function defaultFieldValue(kind: string) {
+  switch (kind) {
+    case 'bool':
+      return false;
+    case 'u64':
+      return 0;
+    case 'obj':
+      return {};
+    case 'arr':
+      return [];
+    default:
+      return '';
+  }
+}
+
+function buildDefaultBody(entry: IntentCatalogEntry | null, nextIntent: string) {
+  const fields = catalogBodyFields(entry);
+  if (nextIntent === 'catalog.list') {
+    return {
+      page: 1,
+      pageSize: 500,
+    };
+  }
+
+  if (nextIntent.endsWith('.page') || fields.some((field) => field.name === 'params')) {
+    return {
+      page: 1,
+      limit: 5,
+      filter: {},
+      sort: {},
+    };
+  }
+
+  const requiredFields = fields.filter((field) => field.required);
+  if (!requiredFields.length) return null;
+
+  return Object.fromEntries(
+    requiredFields.map((field) => [field.name, defaultFieldValue(field.kind)]),
+  );
+}
+
+function canReplaceBody() {
+  const trimmed = bodyText.value.trim();
+  return !trimmed || trimmed === '{}' || bodyText.value === lastAutoBody.value;
+}
+
+function applyIntentDefaults(nextIntent: string) {
+  if (!nextIntent || !canReplaceBody()) return;
+  const defaultBody = buildDefaultBody(selectedCatalogEntry.value, nextIntent);
+  if (!defaultBody) return;
+
+  bodyText.value = JSON.stringify(defaultBody, null, 2);
+  lastAutoBody.value = bodyText.value;
+}
+
+watch(intent, (nextIntent) => {
+  applyIntentDefaults(nextIntent);
 });
 
 const bodyByteSize = computed(() => {
@@ -436,7 +538,9 @@ async function send() {
       payload = await decorateUploadPayload(body);
     }
 
-    lastResult.value = await sendIntent(intent.value, payload);
+    lastResult.value = await sendIntent(intent.value, payload, undefined, {
+      metadata: selectedCatalogEntry.value,
+    });
     viewerTarget.value = 'response';
     viewTab.value = 'tree';
   } catch (e: any) {
