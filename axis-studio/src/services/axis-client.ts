@@ -809,7 +809,32 @@ function getFallbackBodyFields(intent: string): IntentFieldDoc[] {
     return [{ name: "intent", tag: 100, kind: "utf8" }];
   }
 
+  if (intent === "auth.qr.login.scan") {
+    return qrLoginBodyFields(false);
+  }
+
+  if (intent === "auth.qr.login.login") {
+    return qrLoginBodyFields(true);
+  }
+
   return [];
+}
+
+function qrLoginBodyFields(includeUsername: boolean): IntentFieldDoc[] {
+  return [
+    { name: "session_id", tag: 100, kind: "utf8" },
+    { name: "device_fingerprint", tag: 101, kind: "u64" },
+    { name: "web_device_fingerprint", tag: 102, kind: "u64" },
+    { name: "device_public_key", tag: 103, kind: "utf8" },
+    { name: "primary_public_key", tag: 104, kind: "utf8" },
+    { name: "signature", tag: 105, kind: "utf8" },
+    { name: "fcm_token", tag: 106, kind: "utf8" },
+    { name: "primary_device_info", tag: 107, kind: "obj" },
+    { name: "web_device_info", tag: 108, kind: "obj" },
+    { name: "expires_at", tag: 109, kind: "utf8" },
+    { name: "is_admin_login", tag: 110, kind: "bool" },
+    ...(includeUsername ? [{ name: "username", tag: 111, kind: "utf8" }] : []),
+  ];
 }
 
 function buildPaginationParams(input: Record<string, unknown>): {
@@ -1719,7 +1744,7 @@ export async function loginWithActiveKey(
   const fingerprint = await digestToU64(`axis-studio:${fingerprintSeed}`);
 
   const anonSessionRes = await sendIntent(
-    "auth.anon-session",
+    "auth.anon.session",
     {},
     nodeUrlOverride,
     {
@@ -1731,7 +1756,7 @@ export async function loginWithActiveKey(
 
   if (!anonSessionRes.ok) {
     throw new Error(
-      `auth.anon-session failed: ${anonSessionRes.effect || anonSessionRes.status}`,
+      `auth.anon.session failed: ${anonSessionRes.effect || anonSessionRes.status}`,
     );
   }
 
@@ -1755,8 +1780,8 @@ export async function loginWithActiveKey(
   const trimmedUsername = username?.trim() || "";
   const isAdminLogin = trimmedUsername.toLowerCase().endsWith("-admin");
   const loginIntent = isAdminLogin
-    ? "auth.qr-login.login"
-    : "auth.qr-login.scan";
+    ? "auth.qr.login.login"
+    : "auth.qr.login.scan";
   const loginBody: Record<string, unknown> = {
     session_id: anonSession.sessionId,
     device_fingerprint: primaryFingerprint,
