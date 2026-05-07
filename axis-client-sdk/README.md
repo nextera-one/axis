@@ -362,9 +362,10 @@ new AxisClient(config: AxisClientConfig)
 
 #### Methods
 
-**send(intent, body?): Promise<IntentResult>**
+**send(intent, body?, options?): Promise<IntentResult>**
 
 - Send an intent with automatic retry
+- `options.handlerName` sends the intent as `handlerName...intent`
 - Returns `{ ok: boolean, data?: any, error?: string }`
 
 **uploadFile(path, options?): Promise<UploadResult>**
@@ -392,7 +393,7 @@ const builder = new AxisFrameBuilder();
 builder
   .setPid(pid) // 16-byte packet ID
   .setTimestamp(ts) // Timestamp (bigint)
-  .setIntent(intent) // Intent name
+  .setIntent(intent, handlerName) // Optional handlerName sends handlerName...intent
   .setActorId(actorId) // 16-byte actor UUID
   .setProofType(type) // Proof type enum
   .setProofRef(ref) // Proof reference

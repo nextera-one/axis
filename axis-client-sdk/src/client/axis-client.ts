@@ -23,6 +23,7 @@ import {
 } from '../chain/intent-chain';
 import type { Capsule, SerializedCapsule } from '../core/capsule';
 import { serializeCapsule } from '../core/capsule';
+import { buildIntentReference } from '../core/intent-reference';
 import { canonicalJson, fromBase64Url, toBase64Url } from '../utils/encoding';
 import { decodeFrame } from '../core/axis-bin';
 import { AxisMediaTypes } from '../core/constants';
@@ -81,6 +82,8 @@ export interface IntentResult<T = any> {
 
 export interface AxisSendOptions {
   capsule?: Capsule | SerializedCapsule | Record<string, unknown> | string;
+  /** Optional handler namespace/class key. Sent as `handlerName...intent`. */
+  handlerName?: string;
 }
 
 type AxisAlg = 'EdDSA';
@@ -153,13 +156,14 @@ export class AxisClient {
     options?: {
       capsule?: any;
       execNonce?: string;
+      handlerName?: string;
     },
   ): Promise<IntentResult<T>> {
     const capsule = options?.capsule ?? (this.config.capsuleId || undefined);
     const execNonce = options?.execNonce ?? this.generateExecNonce();
 
     const payload: Record<string, any> = {
-      intent,
+      intent: buildIntentReference(intent, options?.handlerName),
       execNonce,
       args: args ?? {},
     };
@@ -457,10 +461,11 @@ export class AxisClient {
     body?: any,
     options?: AxisSendOptions,
   ): Promise<any> {
+    const wireIntent = buildIntentReference(intent, options?.handlerName);
     if (this.config.useBinary) {
-      return this.doSendBinary(intent, body, options);
+      return this.doSendBinary(wireIntent, body, options);
     }
-    return this.doSendJSON(intent, body);
+    return this.doSendJSON(wireIntent, body);
   }
 
   private async withRetries<T>(

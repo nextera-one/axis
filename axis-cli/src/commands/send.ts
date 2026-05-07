@@ -3,7 +3,11 @@ import chalk from 'chalk';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { AxisClient, Ed25519Signer } from '@nextera.one/axis-client-sdk';
+import {
+  AxisClient,
+  Ed25519Signer,
+  buildIntentReference,
+} from '@nextera.one/axis-client-sdk';
 
 export const sendCommand = new Command('send')
   .description('Send an arbitrary intent')
@@ -19,6 +23,8 @@ export const sendCommand = new Command('send')
   .option('--exec', 'Send via INTENT.EXEC wrapper (capsule/execNonce)')
   .option('--exec-nonce <nonce>', 'Provide execNonce (defaults to random)')
   .option('--capsule <jsonOrPath>', 'Capsule JSON or path to capsule file')
+  .option('--handler-name <name>', 'Optional handler namespace/class key')
+  .option('--handler <name>', 'Alias for --handler-name')
   .option('-k, --key <hex>', 'Private key hex for signing (Ed25519)')
   .option('--kid <kid>', 'Key ID to send with signature')
   .action(async (intent, bodyStr, options) => {
@@ -55,14 +61,22 @@ export const sendCommand = new Command('send')
       }
 
       const useExec = Boolean(options.exec || capsule || options.execNonce);
-      console.log(chalk.blue(`Sending ${useExec ? 'INTENT.EXEC' : intent}...`));
+      const handlerOption = options.handlerName || options.handler;
+      const handlerName = handlerOption ? String(handlerOption) : undefined;
+      const wireIntent = buildIntentReference(intent, handlerName);
+      console.log(
+        chalk.blue(
+          `Sending ${useExec ? `INTENT.EXEC -> ${wireIntent}` : wireIntent}...`,
+        ),
+      );
 
       const res = useExec
         ? await client.exec(intent, body, {
             capsule,
             execNonce: options.execNonce,
+            handlerName,
           })
-        : await client.send(intent, body);
+        : await client.send(intent, body, { handlerName });
 
       if (res.ok) {
         console.log(chalk.green('✅ Success'));

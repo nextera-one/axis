@@ -11,6 +11,10 @@ export interface AxisBinaryClientOptions {
   trustStore?: TrustStore;
 }
 
+export interface AxisBinarySendOptions {
+  handlerName?: string;
+}
+
 /**
  * Binary-transport AXIS client (low-level).
  * For the high-level HTTP client, use AxisClient from './axis-client'.
@@ -28,9 +32,14 @@ export class AxisBinaryClient {
     this.actorId = opts.actorId;
   }
 
-  async send(intent: string, bodyTLV: Uint8Array): Promise<any> {
+  async send(
+    intent: string,
+    bodyTLV: Uint8Array,
+    options?: AxisBinarySendOptions,
+  ): Promise<any> {
     const frame = await this.factory.createFrame({
       intent,
+      handlerName: options?.handlerName,
       body: bodyTLV,
       actorId: this.actorId,
       proofType: 1, // Capsule by default in v1

@@ -6,6 +6,7 @@
 import { TLVType, ProofType, FrameFlags } from './binary-types';
 import { encodeTLVs, TLV } from './tlv';
 import { encodeVarint } from './varint';
+import { buildIntentReference } from '../core/intent-reference';
 
 const MAGIC = new TextEncoder().encode('AXIS1');
 const VERSION = 0x01;
@@ -15,6 +16,7 @@ export interface AxisFrameInput {
   pid: Uint8Array; // 16 bytes (UUIDv7)
   ts: bigint; // MEC ticks
   intent: string; // Intent name
+  handlerName?: string; // Optional handler namespace/class key
   actorId: Uint8Array; // 16 bytes
   proofType: ProofType;
   proofRef: Uint8Array; // Capsule ID or token
@@ -66,14 +68,12 @@ export class AxisFrameBuilder {
   /**
    * Set intent name (required)
    */
-  setIntent(intent: string): this {
-    if (!intent || intent.length === 0) {
-      throw new Error('Intent cannot be empty');
-    }
-    if (intent.length > 128) {
+  setIntent(intent: string, handlerName?: string): this {
+    const wireIntent = buildIntentReference(intent, handlerName);
+    if (wireIntent.length > 128) {
       throw new Error('Intent name too long (max 128 chars)');
     }
-    this.headers.set(TLVType.INTENT, new TextEncoder().encode(intent));
+    this.headers.set(TLVType.INTENT, new TextEncoder().encode(wireIntent));
     return this;
   }
 
@@ -381,7 +381,7 @@ export class AxisFrameBuilder {
     const builder = new AxisFrameBuilder()
       .setPid(input.pid)
       .setTimestamp(input.ts)
-      .setIntent(input.intent)
+      .setIntent(input.intent, input.handlerName)
       .setActorId(input.actorId)
       .setProofType(input.proofType)
       .setProofRef(input.proofRef)

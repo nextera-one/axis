@@ -1,5 +1,6 @@
 import { v7 as uuidv7 } from 'uuid';
 import { AxisFrame, encodeFrame, getSignTarget } from '../core/axis-bin';
+import { buildIntentReference } from '../core/intent-reference';
 import { Signer } from '../signer';
 import {
   FLAG_BODY_TLV,
@@ -15,6 +16,7 @@ import { encodeVarint } from '../core/varint';
 
 export interface PacketOptions {
   intent: string;
+  handlerName?: string;
   body: Uint8Array; // Already encoded body (or raw)
   actorId: string; // Hex string (16 bytes)
   proofType: number;
@@ -33,7 +35,12 @@ export class PacketFactory {
     const headers = new Map<number, Uint8Array>();
     headers.set(TLV_PID, pid);
     headers.set(TLV_TS, encodeVarint(Number(ts))); // Careful with big ints in varint v1
-    headers.set(TLV_INTENT, new TextEncoder().encode(opts.intent));
+    headers.set(
+      TLV_INTENT,
+      new TextEncoder().encode(
+        buildIntentReference(opts.intent, opts.handlerName),
+      ),
+    );
     headers.set(TLV_ACTOR_ID, actorId);
     headers.set(TLV_PROOF_TYPE, encodeVarint(opts.proofType));
     headers.set(TLV_NONCE, nonce);

@@ -481,6 +481,11 @@ const client = new AxisClient({
 // Simple intent
 const res = await client.send('system.ping', {});
 
+// Handler-scoped shorthand; wire intent is "vault...create"
+const scoped = await client.send('create', { name: 'my-vault' }, {
+  handlerName: 'vault',
+});
+
 // INTENT.EXEC wrapper with capsule
 const res = await client.exec('vault.transfer', { amount: 100 }, {
   capsule: myCapsule,
@@ -606,6 +611,7 @@ class VaultHandler {
 const router = new IntentRouter();
 router.registerHandler(new VaultHandler());
 const result = await router.dispatch('vault.create', bodyBytes);
+// Clients may also send the scoped wire form "vault...create".
 ```
 
 ### 6.2 Sensor Pipeline
@@ -770,6 +776,9 @@ axis send system.ping
 
 # Send with JSON body
 axis send vault.create '{"name":"my-vault"}'
+
+# Send handler-scoped shorthand as vault...create
+axis send create '{"name":"my-vault"}' --handler vault
 
 # Signed request with capsule
 axis send vault.transfer '{"amount":100}' \

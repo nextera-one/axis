@@ -6,6 +6,7 @@
 export { AxisClient, verifyAxisFrameSignature } from "./client/axis-client";
 export type {
   AxisClientConfig,
+  AxisSendOptions,
   ProgressCallback,
   ProgressInfo,
   UploadResult,
@@ -17,7 +18,10 @@ export { TypedAxisClient } from "./client/typed-intents";
 
 // Binary-transport client (low-level)
 export { AxisBinaryClient } from "./client/index";
-export type { AxisBinaryClientOptions } from "./client/index";
+export type {
+  AxisBinaryClientOptions,
+  AxisBinarySendOptions,
+} from "./client/index";
 
 // Binary utilities
 export * from "./binary";
@@ -81,6 +85,12 @@ export {
 // Re-export from core
 export { decodeFrame, encodeFrame } from "./core/axis-bin";
 export type { AxisBinaryFrame } from "./core/axis-bin";
+export {
+  HANDLER_INTENT_SEPARATOR,
+  buildIntentReference,
+  parseIntentReference,
+} from "./core/intent-reference";
+export type { AxisIntentReference } from "./core/intent-reference";
 export {
   createCapsule,
   signCapsule,

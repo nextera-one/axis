@@ -7,6 +7,7 @@
 
 // Binary utilities (frame builder, TLV, varint) — all browser-safe
 export * from './binary';
+export * from './core/intent-reference';
 
 // TLV tag registry and encoding — browser-safe
 export {

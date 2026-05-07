@@ -33,6 +33,9 @@ axis --help
 # Send a ping intent
 axis send public.ping '{"hello": "world"}'
 
+# Send a handler-scoped intent as vault...create
+axis send create '{"name": "my-vault"}' --handler vault
+
 # Issue a new node identity
 axis issue-node-cert --out ./certs
 
