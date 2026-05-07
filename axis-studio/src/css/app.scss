@@ -3,7 +3,7 @@
    Year 2226 ∙ Alien Tech Interface ∙ Post-Human Design
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap");
 
 /* ── Dark mode tokens — Xenocore Void ─────────────────── */
 :root {
@@ -52,9 +52,9 @@
   --ax-sidebar-shadow: 4px 0 40px rgba(168, 85, 247, 0.06);
 
   /* Typography — Alien glyphs */
-  --ax-font-headline: 'Orbitron', 'Exo 2', sans-serif;
-  --ax-font-body: 'Exo 2', -apple-system, BlinkMacSystemFont, sans-serif;
-  --ax-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --ax-font-headline: "Orbitron", "Exo 2", sans-serif;
+  --ax-font-body: "Exo 2", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ax-font-mono: "JetBrains Mono", "Fira Code", monospace;
 
   /* Radius — chamfered alien edges */
   --ax-radius: 2px;
@@ -62,10 +62,24 @@
   --ax-radius-xl: 8px;
 
   /* Plasma gradient */
-  --ax-gradient-plasma: linear-gradient(135deg, #a855f7 0%, #ff2d78 50%, #06ffa5 100%);
+  --ax-gradient-plasma: linear-gradient(
+    135deg,
+    #a855f7 0%,
+    #ff2d78 50%,
+    #06ffa5 100%
+  );
   --ax-gradient-void: linear-gradient(180deg, #080414 0%, #030108 100%);
-  --ax-gradient-aurora: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(6, 255, 165, 0.05) 50%, rgba(255, 45, 120, 0.1) 100%);
-  --ax-gradient-surface: linear-gradient(135deg, rgba(168, 85, 247, 0.04) 0%, rgba(6, 255, 165, 0.02) 100%);
+  --ax-gradient-aurora: linear-gradient(
+    135deg,
+    rgba(168, 85, 247, 0.15) 0%,
+    rgba(6, 255, 165, 0.05) 50%,
+    rgba(255, 45, 120, 0.1) 100%
+  );
+  --ax-gradient-surface: linear-gradient(
+    135deg,
+    rgba(168, 85, 247, 0.04) 0%,
+    rgba(6, 255, 165, 0.02) 100%
+  );
 
   /* JSON tree tokens (xenocore) */
   --jtn-str: #06ffa5;
@@ -126,10 +140,24 @@ body.body--light {
 
   --ax-sidebar-shadow: 4px 0 30px rgba(124, 58, 237, 0.04);
 
-  --ax-gradient-plasma: linear-gradient(135deg, #7c3aed 0%, #db2777 50%, #059669 100%);
+  --ax-gradient-plasma: linear-gradient(
+    135deg,
+    #7c3aed 0%,
+    #db2777 50%,
+    #059669 100%
+  );
   --ax-gradient-void: linear-gradient(180deg, #f5f0ff 0%, #faf7ff 100%);
-  --ax-gradient-aurora: linear-gradient(135deg, rgba(124, 58, 237, 0.06) 0%, rgba(5, 150, 105, 0.04) 50%, rgba(219, 39, 119, 0.05) 100%);
-  --ax-gradient-surface: linear-gradient(135deg, rgba(124, 58, 237, 0.03) 0%, rgba(5, 150, 105, 0.02) 100%);
+  --ax-gradient-aurora: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.06) 0%,
+    rgba(5, 150, 105, 0.04) 50%,
+    rgba(219, 39, 119, 0.05) 100%
+  );
+  --ax-gradient-surface: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.03) 0%,
+    rgba(5, 150, 105, 0.02) 100%
+  );
 
   --jtn-str: #059669;
   --jtn-num: #0284c7;
@@ -181,7 +209,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--ax-primary), var(--ax-accent, var(--ax-primary-dim)));
+  background: linear-gradient(
+    180deg,
+    var(--ax-primary),
+    var(--ax-accent, var(--ax-primary-dim))
+  );
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -192,10 +224,10 @@ body {
 /* ── Material Symbols icon sizing ────────────────────── */
 .material-symbols-outlined {
   font-variation-settings:
-    'FILL' 0,
-    'wght' 300,
-    'GRAD' 0,
-    'opsz' 24;
+    "FILL" 0,
+    "wght" 300,
+    "GRAD" 0,
+    "opsz" 24;
   font-size: 20px;
 }
 
@@ -205,56 +237,113 @@ body {
 
 /* Scanning line overlay */
 @keyframes xeno-scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
 }
 
 /* Plasma border animation */
 @keyframes xeno-border-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Dimensional pulse */
 @keyframes xeno-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.3); }
-  50% { opacity: 0.7; box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.15); }
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.15);
+  }
 }
 
 /* Energy flow */
 @keyframes xeno-energy {
-  0% { opacity: 0.3; transform: scaleX(0.5); }
-  50% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0.3; transform: scaleX(0.5); }
+  0% {
+    opacity: 0.3;
+    transform: scaleX(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scaleX(0.5);
+  }
 }
 
 /* Holographic shimmer */
 @keyframes xeno-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* Glyph flicker */
 @keyframes xeno-flicker {
-  0%, 95%, 100% { opacity: 1; }
-  96% { opacity: 0.4; }
-  97% { opacity: 1; }
-  98% { opacity: 0.6; }
+  0%,
+  95%,
+  100% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.4;
+  }
+  97% {
+    opacity: 1;
+  }
+  98% {
+    opacity: 0.6;
+  }
 }
 
 /* Aurora drift */
 @keyframes xeno-aurora {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(360deg); }
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
 }
 
 /* Floating particles */
 @keyframes xeno-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
-  25% { transform: translateY(-8px) rotate(90deg); opacity: 1; }
-  50% { transform: translateY(-3px) rotate(180deg); opacity: 0.4; }
-  75% { transform: translateY(-10px) rotate(270deg); opacity: 0.8; }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateY(-8px) rotate(90deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-3px) rotate(180deg);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translateY(-10px) rotate(270deg);
+    opacity: 0.8;
+  }
 }
 
 /* ── Layout: Sidebar ─────────────────────────────────── */
@@ -275,7 +364,7 @@ body {
 
   /* Xeno: subtle aurora gradient on sidebar */
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: var(--ax-gradient-aurora);
@@ -356,10 +445,10 @@ body {
 
   .material-symbols-outlined {
     font-variation-settings:
-      'FILL' 1,
-      'wght' 400,
-      'GRAD' 0,
-      'opsz' 24;
+      "FILL" 1,
+      "wght" 400,
+      "GRAD" 0,
+      "opsz" 24;
     filter: drop-shadow(0 0 4px var(--ax-primary));
   }
 }
@@ -406,7 +495,7 @@ body.body--light {
 
   /* Xeno: bottom edge plasma line */
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0;
@@ -520,7 +609,9 @@ body.body--light .ax-topbar {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.2s, box-shadow 0.2s;
+  transition:
+    opacity 0.2s,
+    box-shadow 0.2s;
   clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
 
   &:hover {
@@ -560,7 +651,7 @@ body.body--light .ax-connect-btn {
 
   /* Xeno: top edge plasma line */
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -629,13 +720,18 @@ body.body--light .ax-status-item {
 }
 
 @keyframes ax-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.5), 0 0 4px 1px rgba(6, 255, 165, 0.3);
+    box-shadow:
+      0 0 0 0 rgba(168, 85, 247, 0.5),
+      0 0 4px 1px rgba(6, 255, 165, 0.3);
   }
   50% {
     opacity: 0.5;
-    box-shadow: 0 0 12px 3px rgba(168, 85, 247, 0.2), 0 0 20px 6px rgba(6, 255, 165, 0.1);
+    box-shadow:
+      0 0 12px 3px rgba(168, 85, 247, 0.2),
+      0 0 20px 6px rgba(6, 255, 165, 0.1);
   }
 }
 
@@ -682,7 +778,9 @@ body.body--light .ax-status-item {
   clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
 
   &:hover:not(:disabled) {
-    box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.15);
+    box-shadow:
+      0 0 16px rgba(168, 85, 247, 0.5),
+      0 0 40px rgba(168, 85, 247, 0.15);
     transform: translateY(-1px);
   }
   &:active:not(:disabled) {
@@ -727,7 +825,9 @@ body.body--light .ax-send-btn {
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   flex-shrink: 0;
   font-family: var(--ax-font-headline);
   font-size: 10px;
@@ -834,7 +934,9 @@ body.body--light .ins-send-btn {
     color: var(--ax-outline);
     opacity: 1;
     font-family: var(--ax-font-headline);
-    transition: color 0.2s, text-shadow 0.2s;
+    transition:
+      color 0.2s,
+      text-shadow 0.2s;
   }
   .q-tab--active {
     color: var(--ax-primary) !important;
@@ -983,7 +1085,9 @@ body.body--light .ins-send-btn {
   border-radius: var(--ax-radius) !important;
 }
 .q-field--focused .q-field__control {
-  box-shadow: 0 0 0 2px var(--ax-primary-muted), 0 0 12px rgba(168, 85, 247, 0.08);
+  box-shadow:
+    0 0 0 2px var(--ax-primary-muted),
+    0 0 12px rgba(168, 85, 247, 0.08);
 }
 
 /* ── Connection status ───────────────────────────────── */
@@ -1015,7 +1119,9 @@ body.body--light .ins-send-btn {
 
   &--connected .ax-conn-dot {
     background: var(--ax-ok);
-    box-shadow: 0 0 8px var(--ax-ok), 0 0 16px rgba(6, 255, 165, 0.3);
+    box-shadow:
+      0 0 8px var(--ax-ok),
+      0 0 16px rgba(6, 255, 165, 0.3);
   }
   &--error .ax-conn-dot {
     background: var(--ax-error);
@@ -1277,7 +1383,7 @@ body.body--light {
   overflow: hidden;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0;
@@ -1377,11 +1483,15 @@ body.body--light .ax-glass {
 
 /* ── Protocol glow effect — Plasma Radiance ─────────── */
 .ax-glow {
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2), 0 0 40px rgba(168, 85, 247, 0.06);
+  box-shadow:
+    0 0 16px rgba(168, 85, 247, 0.2),
+    0 0 40px rgba(168, 85, 247, 0.06);
 }
 
 body.body--light .ax-glow {
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.12), 0 0 30px rgba(124, 58, 237, 0.04);
+  box-shadow:
+    0 0 12px rgba(124, 58, 237, 0.12),
+    0 0 30px rgba(124, 58, 237, 0.04);
 }
 
 /* ── Response / code blocks ──────────────────────────── */
@@ -1403,11 +1513,14 @@ body.body--light .ax-glow {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
   border: 1px solid var(--ax-border);
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -1492,6 +1605,26 @@ body.body--light .ax-bento-card {
 .studio-layout {
   background: var(--ax-bg);
   color: var(--ax-on-surface);
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.studio-layout .q-page-container {
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.studio-layout .q-page-container > .q-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .studio-header {
@@ -1502,7 +1635,7 @@ body.body--light .ax-bento-card {
 
   /* Plasma edge */
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0;
@@ -1522,7 +1655,9 @@ body.body--light .ax-bento-card {
 
 .studio-toolbar .q-btn {
   color: var(--ax-on-surface);
-  transition: color 0.2s, text-shadow 0.2s;
+  transition:
+    color 0.2s,
+    text-shadow 0.2s;
 }
 
 .studio-toolbar .q-btn:not(.studio-connect-btn):hover {
@@ -1552,7 +1687,9 @@ body.body--light .ax-bento-card {
   border-radius: var(--ax-radius);
   padding: 0 6px;
   background: var(--ax-surface-lowest);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:focus-within {
     border-color: var(--ax-primary);
@@ -1609,7 +1746,7 @@ body.body--light .ax-bento-card {
 
   /* Xeno: aurora gradient overlay */
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: var(--ax-gradient-aurora);
@@ -1710,6 +1847,17 @@ body.body--light .ax-bento-card {
 .studio-page {
   padding: 12px;
   background: var(--ax-bg);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-page > * {
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -1729,7 +1877,7 @@ body.body--light .ax-bento-card {
 
   /* Plasma edge */
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -1777,7 +1925,9 @@ body.body--light .ax-bento-card {
 
 .studio-live-dot--active {
   background: var(--ax-ok);
-  box-shadow: 0 0 8px rgba(6, 255, 165, 0.5), 0 0 16px rgba(6, 255, 165, 0.2);
+  box-shadow:
+    0 0 8px rgba(6, 255, 165, 0.5),
+    0 0 16px rgba(6, 255, 165, 0.2);
   animation: ax-pulse 2s infinite;
 }
 
@@ -1786,12 +1936,14 @@ body.body--light .ax-bento-card {
   max-width: 96vw;
   background: var(--ax-surface);
   border: 1px solid var(--ax-border);
-  box-shadow: 0 8px 48px rgba(168, 85, 247, 0.12), 0 0 0 1px rgba(168, 85, 247, 0.05);
+  box-shadow:
+    0 8px 48px rgba(168, 85, 247, 0.12),
+    0 0 0 1px rgba(168, 85, 247, 0.05);
   position: relative;
   overflow: hidden;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -1838,8 +1990,11 @@ body.body--light .ax-bento-card {
 
 /* ── Sender Page ─────────────────────────────────────────── */
 .sender-page {
-  height: calc(100vh - 48px - 32px - 24px);
-  min-height: 520px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2050,8 +2205,14 @@ body.body--light .ax-bento-card {
 
 /* ── Registry Page ───────────────────────────────────────── */
 .registry-page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
 }
 
 .registry-header {
@@ -2100,7 +2261,9 @@ body.body--light .ax-bento-card {
   background: var(--ax-surface-low);
   background-image: var(--ax-gradient-surface);
   padding: 8px 10px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:hover {
     border-color: var(--ax-border-hover);
@@ -2140,7 +2303,9 @@ body.body--light .ax-bento-card {
 .registry-card {
   background: var(--ax-surface);
   background-image: var(--ax-gradient-surface);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   border: 1px solid var(--ax-border);
 
   &:hover {
@@ -2211,11 +2376,16 @@ body.body--light .ax-bento-card {
   letter-spacing: 0.1em;
 }
 
-
 /* ── Auth Page ───────────────────────────────────────────── */
 .auth-page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
 }
 
 .auth-head {
@@ -2278,7 +2448,9 @@ body.body--light .ax-bento-card {
   background: var(--ax-surface);
   background-image: var(--ax-gradient-surface);
   border: 1px solid var(--ax-border);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &:hover {
     border-color: var(--ax-border-hover);
@@ -2367,10 +2539,14 @@ body.body--light .ax-bento-card {
 
 /* ── History Page ────────────────────────────────────────── */
 .history-page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  height: calc(100vh - 48px - 32px - 24px);
-  min-height: 520px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .history-head {
@@ -2608,7 +2784,7 @@ body.body--light .ax-bento-card {
   overflow: hidden;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -2646,31 +2822,34 @@ body.body--light .ax-bento-card {
 
 /* Subtle scanline overlay on the entire app (dark mode only) */
 body.body--dark::after {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(168, 85, 247, 0.008) 2px,
-      rgba(168, 85, 247, 0.008) 4px
-    );
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(168, 85, 247, 0.008) 2px,
+    rgba(168, 85, 247, 0.008) 4px
+  );
   mix-blend-mode: overlay;
 }
 
 /* Ambient corner vignette */
 body.body--dark .studio-layout::before,
 body.body--dark .ax-page-container::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(3, 1, 8, 0.4) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(3, 1, 8, 0.4) 100%
+  );
 }
 
 /* Quasar dialog backdrop — dimensional */
@@ -2712,8 +2891,7 @@ body.body--light .q-dialog__backdrop {
 
   .sender-page,
   .history-page {
-    height: calc(100vh - 48px - 32px - 16px);
-    min-height: 480px;
+    min-height: 0;
   }
 
   .sender-intent-row {

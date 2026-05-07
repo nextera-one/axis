@@ -59,7 +59,10 @@
           </q-tabs>
 
           <q-tab-panels v-model="reqTab" animated class="sender-panels">
-            <q-tab-panel name="body" class="sender-tab-panel sender-tab-panel--editor">
+            <q-tab-panel
+              name="body"
+              class="sender-tab-panel sender-tab-panel--editor"
+            >
               <JsonEditor
                 v-model="bodyText"
                 class="sender-editor"
@@ -95,18 +98,22 @@
               <q-card flat bordered class="sender-info-card">
                 <q-card-section>
                   <div class="sender-info-label">Actor ID</div>
-                  <div class="sender-info-value">{{ auth.actorId || 'studio:anonymous' }}</div>
+                  <div class="sender-info-value">
+                    {{ auth.actorId || "studio:anonymous" }}
+                  </div>
                 </q-card-section>
                 <q-separator />
                 <q-card-section>
                   <div class="sender-info-label">Capsule ID</div>
-                  <div class="sender-info-value">{{ auth.capsuleId || 'None' }}</div>
+                  <div class="sender-info-value">
+                    {{ auth.capsuleId || "None" }}
+                  </div>
                 </q-card-section>
                 <q-separator />
                 <q-card-section>
                   <div class="sender-info-label">Secure Alias Mode</div>
                   <div class="sender-info-value">
-                    {{ auth.secureIntentAliasMode ? 'ENABLED' : 'DISABLED' }}
+                    {{ auth.secureIntentAliasMode ? "ENABLED" : "DISABLED" }}
                   </div>
                 </q-card-section>
                 <q-separator />
@@ -115,12 +122,12 @@
                   <div class="sender-info-value">
                     {{
                       !auth.secureIntentAliasMode
-                        ? 'PLAINTEXT_MODE'
+                        ? "PLAINTEXT_MODE"
                         : auth.capsuleId && auth.intentSecret
-                          ? 'ENCRYPTED_ON_WIRE'
+                          ? "ENCRYPTED_ON_WIRE"
                           : auth.capsuleId
-                            ? 'SECRET_MISSING'
-                            : 'BOOTSTRAP_ON_FIRST_SECURE_INTENT'
+                            ? "SECRET_MISSING"
+                            : "BOOTSTRAP_ON_FIRST_SECURE_INTENT"
                     }}
                   </div>
                 </q-card-section>
@@ -178,15 +185,22 @@
 
             <div v-if="lastResult" class="sender-result-meta">
               <span :class="lastResult.ok ? 'text-positive' : 'text-negative'">
-                {{ lastResult.ok ? lastResult.status + ' OK' : 'ERR ' + lastResult.status }}
+                {{
+                  lastResult.ok
+                    ? lastResult.status + " OK"
+                    : "ERR " + lastResult.status
+                }}
               </span>
-              <span>{{ activeSnapshot?.transport || '—' }}</span>
+              <span>{{ activeSnapshot?.transport || "—" }}</span>
               <span>{{ lastResult.durationMs }}ms</span>
             </div>
           </div>
 
           <q-tab-panels v-model="viewTab" animated class="sender-panels">
-            <q-tab-panel name="tree" class="sender-tab-panel sender-tab-panel--result">
+            <q-tab-panel
+              name="tree"
+              class="sender-tab-panel sender-tab-panel--result"
+            >
               <JsonTree
                 v-if="activeSnapshot"
                 :value="activeSnapshot.tree"
@@ -195,12 +209,19 @@
               />
               <div v-else class="sender-empty">
                 <q-icon name="terminal" size="48px" />
-                <span>{{ sending ? 'Intercepting frame…' : 'Idle - awaiting intent' }}</span>
+                <span>{{
+                  sending ? "Intercepting frame…" : "Idle - awaiting intent"
+                }}</span>
               </div>
             </q-tab-panel>
 
-            <q-tab-panel name="raw" class="sender-tab-panel sender-tab-panel--result">
-              <pre v-if="activeSnapshot" class="sender-raw">{{ activeSnapshot.raw }}</pre>
+            <q-tab-panel
+              name="raw"
+              class="sender-tab-panel sender-tab-panel--result"
+            >
+              <pre v-if="activeSnapshot" class="sender-raw">{{
+                activeSnapshot.raw
+              }}</pre>
               <div v-else class="sender-empty">
                 <q-icon name="analytics" size="48px" />
               </div>
@@ -213,7 +234,9 @@
     <section v-if="lastResult?.effect" class="sender-effect-bar">
       <div class="sender-effect-meta">
         <span class="sender-info-label">Protocol Effect</span>
-        <q-badge color="primary" text-color="black">{{ lastResult.effect }}</q-badge>
+        <q-badge color="primary" text-color="black">{{
+          lastResult.effect
+        }}</q-badge>
       </div>
       <q-btn
         flat
@@ -227,26 +250,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import JsonEditor from 'src/components/JsonEditor.vue';
-import JsonTree from 'src/components/JsonTree.vue';
+import { ref, computed, onActivated, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import JsonEditor from "src/components/JsonEditor.vue";
+import JsonTree from "src/components/JsonTree.vue";
 import {
   sendIntent,
-  fetchCatalog,
   type IntentCatalogEntry,
   type SendResult,
-} from 'src/services/axis-client';
-import { useAuthStore } from 'stores/auth';
+} from "src/services/axis-client";
+import { useAuthStore } from "stores/auth";
+import { useRegistryStore } from "stores/registry";
 
 const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const registry = useRegistryStore();
 
 type UploadSpec = {
-  mode: 'base64' | 'typescript';
+  mode: "base64" | "typescript";
   label: string;
   fileLabel: string;
   help: string;
@@ -255,58 +279,58 @@ type UploadSpec = {
 };
 
 const INTENT_UPLOAD_SPECS: Record<string, UploadSpec> = {
-  'upload.uploadFile': {
-    mode: 'base64',
-    label: 'AXIS Upload Payload',
-    fileLabel: 'Select image file',
-    help: 'The studio encodes the selected file into the AXIS body as base64.',
-    accept: 'image/*,.svg,.heic,.heif,.avif,.bmp,.ico,.tiff',
+  "upload.uploadFile": {
+    mode: "base64",
+    label: "AXIS Upload Payload",
+    fileLabel: "Select image file",
+    help: "The studio encodes the selected file into the AXIS body as base64.",
+    accept: "image/*,.svg,.heic,.heif,.avif,.bmp,.ico,.tiff",
     required: true,
   },
-  'node.types.create': {
-    mode: 'typescript',
-    label: 'Optional Script Attach',
-    fileLabel: 'Attach .ts script',
-    help: 'If provided, the script is embedded into the create DTO as text.',
-    accept: '.ts,text/plain,text/typescript,application/typescript',
+  "node.types.create": {
+    mode: "typescript",
+    label: "Optional Script Attach",
+    fileLabel: "Attach .ts script",
+    help: "If provided, the script is embedded into the create DTO as text.",
+    accept: ".ts,text/plain,text/typescript,application/typescript",
     required: false,
   },
-  'node.types.script.swap': {
-    mode: 'typescript',
-    label: 'Node Type Script',
-    fileLabel: 'Select replacement .ts script',
-    help: 'The selected script is sent as AXIS body content, not multipart.',
-    accept: '.ts,text/plain,text/typescript,application/typescript',
+  "node.types.script.swap": {
+    mode: "typescript",
+    label: "Node Type Script",
+    fileLabel: "Select replacement .ts script",
+    help: "The selected script is sent as AXIS body content, not multipart.",
+    accept: ".ts,text/plain,text/typescript,application/typescript",
     required: true,
   },
-  'node.type.engine.script.upload': {
-    mode: 'typescript',
-    label: 'Engine Script',
-    fileLabel: 'Select engine .ts script',
-    help: 'The selected script is sent as AXIS body content, not multipart.',
-    accept: '.ts,text/plain,text/typescript,application/typescript',
+  "node.type.engine.script.upload": {
+    mode: "typescript",
+    label: "Engine Script",
+    fileLabel: "Select engine .ts script",
+    help: "The selected script is sent as AXIS body content, not multipart.",
+    accept: ".ts,text/plain,text/typescript,application/typescript",
     required: true,
   },
 };
 
-const intent = ref<string>('catalog.list');
-const bodyText = ref('{\n  \n}');
+const intent = ref<string>("catalog.list");
+const bodyText = ref("{\n  \n}");
 const selectedFile = ref<File | null>(null);
 const sending = ref(false);
 const lastResult = ref<SendResult | null>(null);
-const viewerTarget = ref<'response' | 'request'>('response');
-const viewTab = ref<'tree' | 'raw'>('tree');
-const reqTab = ref<'body' | 'context' | 'auth'>('body');
+const viewerTarget = ref<"response" | "request">("response");
+const viewTab = ref<"tree" | "raw">("tree");
+const reqTab = ref<"body" | "context" | "auth">("body");
 const splitterModel = ref(44);
 
 const quickPicks = [
-  'catalog.list',
-  'catalog.describe',
-  'catalog.search',
-  'axis.sessions.list',
-  'axis.identities.list',
-  'axis.capsules.list',
-  'projects.page',
+  "catalog.list",
+  "catalog.describe",
+  "catalog.search",
+  "axis.sessions.list",
+  "axis.identities.list",
+  "axis.capsules.list",
+  "projects.page",
 ];
 
 const allOpts = ref<string[]>([...quickPicks]);
@@ -325,9 +349,9 @@ function filterIntents(val: string, update: (fn: () => void) => void) {
 
 onMounted(async () => {
   try {
-    const catalog = await fetchCatalog();
-    catalogEntries.value = catalog;
-    allOpts.value = catalog.map((i) => i.intent);
+    await registry.load();
+    catalogEntries.value = registry.intents as IntentCatalogEntry[];
+    allOpts.value = catalogEntries.value.map((i) => i.intent);
     filteredOpts.value = allOpts.value.slice(0, 60);
     applyIntentDefaults(intent.value);
   } catch {
@@ -338,18 +362,27 @@ onMounted(async () => {
   if (qi) intent.value = qi;
 });
 
+onActivated(() => {
+  const qi = route.query.intent as string | undefined;
+  if (qi && qi !== intent.value) intent.value = qi;
+});
+
 const selectedCatalogEntry = computed(() => {
-  return catalogEntries.value.find((entry) => entry.intent === intent.value) || null;
+  return (
+    catalogEntries.value.find((entry) => entry.intent === intent.value) || null
+  );
 });
 
 function catalogBodyFields(entry: IntentCatalogEntry | null | undefined) {
   const schema =
-    entry?.schema && typeof entry.schema === 'object' && !Array.isArray(entry.schema)
+    entry?.schema &&
+    typeof entry.schema === "object" &&
+    !Array.isArray(entry.schema)
       ? (entry.schema as { fields?: unknown })
       : null;
   const inputSchema =
     entry?.inputSchema &&
-    typeof entry.inputSchema === 'object' &&
+    typeof entry.inputSchema === "object" &&
     !Array.isArray(entry.inputSchema)
       ? (entry.inputSchema as { fields?: unknown })
       : null;
@@ -366,40 +399,53 @@ function catalogBodyFields(entry: IntentCatalogEntry | null | undefined) {
   return candidates
     .flatMap((value) => (Array.isArray(value) ? value : []))
     .filter(
-      (field): field is { name: string; kind: string; required?: boolean; scope?: string } =>
+      (
+        field,
+      ): field is {
+        name: string;
+        kind: string;
+        required?: boolean;
+        scope?: string;
+      } =>
         field &&
-        typeof field === 'object' &&
-        typeof (field as { name?: unknown }).name === 'string' &&
-        typeof (field as { kind?: unknown }).kind === 'string' &&
-        ((field as { scope?: string }).scope || 'body') === 'body',
+        typeof field === "object" &&
+        typeof (field as { name?: unknown }).name === "string" &&
+        typeof (field as { kind?: unknown }).kind === "string" &&
+        ((field as { scope?: string }).scope || "body") === "body",
     );
 }
 
 function defaultFieldValue(kind: string) {
   switch (kind) {
-    case 'bool':
+    case "bool":
       return false;
-    case 'u64':
+    case "u64":
       return 0;
-    case 'obj':
+    case "obj":
       return {};
-    case 'arr':
+    case "arr":
       return [];
     default:
-      return '';
+      return "";
   }
 }
 
-function buildDefaultBody(entry: IntentCatalogEntry | null, nextIntent: string) {
+function buildDefaultBody(
+  entry: IntentCatalogEntry | null,
+  nextIntent: string,
+) {
   const fields = catalogBodyFields(entry);
-  if (nextIntent === 'catalog.list') {
+  if (nextIntent === "catalog.list") {
     return {
       page: 1,
       pageSize: 500,
     };
   }
 
-  if (nextIntent.endsWith('.page') || fields.some((field) => field.name === 'params')) {
+  if (
+    nextIntent.endsWith(".page") ||
+    fields.some((field) => field.name === "params")
+  ) {
     return {
       page: 1,
       limit: 5,
@@ -418,7 +464,7 @@ function buildDefaultBody(entry: IntentCatalogEntry | null, nextIntent: string) 
 
 function canReplaceBody() {
   const trimmed = bodyText.value.trim();
-  return !trimmed || trimmed === '{}' || bodyText.value === lastAutoBody.value;
+  return !trimmed || trimmed === "{}" || bodyText.value === lastAutoBody.value;
 }
 
 function applyIntentDefaults(nextIntent: string) {
@@ -442,11 +488,11 @@ const bodyByteSize = computed(() => {
 const uploadSpec = computed(() => INTENT_UPLOAD_SPECS[intent.value] || null);
 
 const uploadStatus = computed(() => {
-  if (!uploadSpec.value) return 'No upload adapter active';
+  if (!uploadSpec.value) return "No upload adapter active";
   if (!selectedFile.value) {
     return uploadSpec.value.required
-      ? 'File required for this intent'
-      : 'File optional for this intent';
+      ? "File required for this intent"
+      : "File optional for this intent";
   }
 
   const bytes = selectedFile.value.size;
@@ -457,28 +503,28 @@ const uploadStatus = computed(() => {
 
 const activeSnapshot = computed(() => {
   if (!lastResult.value) return null;
-  return viewerTarget.value === 'response'
+  return viewerTarget.value === "response"
     ? lastResult.value.responseSnapshot
     : lastResult.value.requestSnapshot;
 });
 
 function clearForm() {
-  intent.value = '';
-  bodyText.value = '{\n  \n}';
+  intent.value = "";
+  bodyText.value = "{\n  \n}";
   selectedFile.value = null;
   lastResult.value = null;
-  viewerTarget.value = 'response';
+  viewerTarget.value = "response";
 }
 
 async function readFileAsBase64(file: File): Promise<string> {
   return await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const value = String(reader.result || '');
-      const commaIndex = value.indexOf(',');
+      const value = String(reader.result || "");
+      const commaIndex = value.indexOf(",");
       resolve(commaIndex >= 0 ? value.slice(commaIndex + 1) : value);
     };
-    reader.onerror = () => reject(new Error('Unable to read selected file'));
+    reader.onerror = () => reject(new Error("Unable to read selected file"));
     reader.readAsDataURL(file);
   });
 }
@@ -490,26 +536,26 @@ async function decorateUploadPayload(body: unknown): Promise<unknown> {
 
   if (!file) {
     if (spec.required) {
-      throw new Error('Select a file for this intent');
+      throw new Error("Select a file for this intent");
     }
     return body;
   }
 
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    throw new Error('Upload intents expect a JSON object body');
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("Upload intents expect a JSON object body");
   }
 
   const payload = { ...(body as Record<string, unknown>) };
 
-  if (spec.mode === 'base64') {
+  if (spec.mode === "base64") {
     payload.base64 = await readFileAsBase64(file);
     payload.file_name = file.name;
-    payload.mime_type = file.type || 'application/octet-stream';
+    payload.mime_type = file.type || "application/octet-stream";
     return payload;
   }
 
-  if (!file.name.toLowerCase().endsWith('.ts')) {
-    throw new Error('Script uploads require a .ts file');
+  if (!file.name.toLowerCase().endsWith(".ts")) {
+    throw new Error("Script uploads require a .ts file");
   }
 
   payload.script_file_name = file.name;
@@ -523,16 +569,20 @@ async function send() {
   try {
     let body: unknown = {};
     const trimmed = bodyText.value.trim();
-    if (trimmed && trimmed !== '{}') {
+    if (trimmed && trimmed !== "{}") {
       body = JSON.parse(trimmed);
     }
 
     let payload = body;
-    if (intent.value === 'catalog.search' && body && typeof body === 'object') {
-      payload = String((body as Record<string, unknown>).query ?? '');
+    if (intent.value === "catalog.search" && body && typeof body === "object") {
+      payload = String((body as Record<string, unknown>).query ?? "");
     }
-    if (intent.value === 'catalog.describe' && body && typeof body === 'object') {
-      payload = String((body as Record<string, unknown>).intent ?? '');
+    if (
+      intent.value === "catalog.describe" &&
+      body &&
+      typeof body === "object"
+    ) {
+      payload = String((body as Record<string, unknown>).intent ?? "");
     }
     if (uploadSpec.value) {
       payload = await decorateUploadPayload(body);
@@ -541,8 +591,8 @@ async function send() {
     lastResult.value = await sendIntent(intent.value, payload, undefined, {
       metadata: selectedCatalogEntry.value,
     });
-    viewerTarget.value = 'response';
-    viewTab.value = 'tree';
+    viewerTarget.value = "response";
+    viewTab.value = "tree";
   } catch (e: any) {
     lastResult.value = {
       ok: false,
@@ -550,24 +600,24 @@ async function send() {
       durationMs: 0,
       response: { error: e.message },
       raw: e.message,
-      effect: 'PARSE_ERROR',
+      effect: "PARSE_ERROR",
       requestSnapshot: {
-        transport: 'json',
-        tree: { error: 'Request JSON parse failed', bodyText: bodyText.value },
+        transport: "json",
+        tree: { error: "Request JSON parse failed", bodyText: bodyText.value },
         raw: bodyText.value,
       },
       responseSnapshot: {
-        transport: 'text',
+        transport: "text",
         tree: { error: e.message },
         raw: e.message,
       },
       responseHeaders: {},
     };
-    viewerTarget.value = 'response';
+    viewerTarget.value = "response";
     $q.notify({
       message: e.message,
-      color: 'negative',
-      icon: 'error',
+      color: "negative",
+      icon: "error",
       timeout: 3000,
     });
   } finally {

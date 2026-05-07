@@ -62,7 +62,7 @@
         <q-card-section class="registry-card-head">
           <div>
             <q-badge color="primary" text-color="black">
-              {{ item.intent.split('.').pop() }}
+              {{ item.intent.split(".").pop() }}
             </q-badge>
             <q-badge v-if="item.deprecated" color="negative" class="q-ml-sm">
               Deprecated
@@ -80,17 +80,19 @@
 
         <q-card-section>
           <p class="registry-card-desc">
-            {{ item.description || 'No description provided.' }}
+            {{ item.description || "No description provided." }}
           </p>
 
           <div class="registry-card-meta">
             <div>
               <small>Proofs</small>
-              <span>{{ (item.requiredProof || []).join(' / ') || 'None' }}</span>
+              <span>{{
+                (item.requiredProof || []).join(" / ") || "None"
+              }}</span>
             </div>
             <div>
               <small>Schema</small>
-              <span>{{ hasInputSchema(item) ? 'Present' : 'N/A' }}</span>
+              <span>{{ hasInputSchema(item) ? "Present" : "N/A" }}</span>
             </div>
           </div>
         </q-card-section>
@@ -129,10 +131,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { fetchCatalog } from 'src/services/axis-client';
-import { useConnectionStore } from 'stores/connection';
+import { ref, computed, onActivated, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { storeToRefs } from "pinia";
+import { useConnectionStore } from "stores/connection";
+import { useRegistryStore } from "stores/registry";
 
 interface IntentDef {
   intent: string;
@@ -152,13 +155,14 @@ interface IntentDef {
 const route = useRoute();
 const router = useRouter();
 const conn = useConnectionStore();
-const intents = ref<IntentDef[]>([]);
-const search = ref('');
-const loading = ref(false);
-const selectedDomain = ref('');
+const registry = useRegistryStore();
+const { intents: storeIntents, loading } = storeToRefs(registry);
+const intents = computed<IntentDef[]>(() => storeIntents.value as IntentDef[]);
+const search = ref("");
+const selectedDomain = ref("");
 
 const latencyLabel = computed(() => {
-  return conn.latencyMs != null ? `${conn.latencyMs}ms` : '—';
+  return conn.latencyMs != null ? `${conn.latencyMs}ms` : "—";
 });
 
 const filteredIntents = computed(() => {
@@ -171,15 +175,15 @@ const filteredIntents = computed(() => {
     list = list.filter(
       (i) =>
         i.intent.toLowerCase().includes(q) ||
-        (i.description ?? '').toLowerCase().includes(q),
+        (i.description ?? "").toLowerCase().includes(q),
     );
   }
   return list;
 });
 
 function getDomain(intent: string): string {
-  const parts = intent.split('.');
-  return parts.length >= 2 ? parts.slice(0, -1).join('.') : 'other';
+  const parts = intent.split(".");
+  return parts.length >= 2 ? parts.slice(0, -1).join(".") : "other";
 }
 
 const domains = computed(() => {
@@ -190,7 +194,7 @@ const domains = computed(() => {
 
 function getTags(item: IntentDef): string[] {
   const tags: string[] = [];
-  const domain = getDomain(item.intent).split('.').pop();
+  const domain = getDomain(item.intent).split(".").pop();
   if (domain) tags.push(domain);
   if (item.requiredProof?.length) tags.push(item.requiredProof[0]);
   return tags.slice(0, 2);
@@ -199,36 +203,40 @@ function getTags(item: IntentDef): string[] {
 function hasInputSchema(item: IntentDef): boolean {
   return Boolean(
     item.input?.length ||
-      item.fields?.length ||
-      item.schema ||
-      item.inputSchema ||
-      item.bodyProfile,
+    item.fields?.length ||
+    item.schema ||
+    item.inputSchema ||
+    item.bodyProfile,
   );
 }
 
-async function loadCatalog() {
-  loading.value = true;
-  try {
-    intents.value = await fetchCatalog();
-  } finally {
-    loading.value = false;
-  }
+async function loadCatalog(force = false) {
+  await registry.load(force);
 }
 
 function resetFilters() {
-  selectedDomain.value = '';
-  search.value = '';
+  selectedDomain.value = "";
+  search.value = "";
 }
 
 function openInSender(intent: string) {
-  router.push({ path: '/sender', query: { intent } });
+  router.push({ path: "/sender", query: { intent } });
+}
+
+function syncFromRoute() {
+  const q = route.query.q;
+  if (typeof q === "string" && q.trim()) {
+    search.value = q.trim();
+  }
 }
 
 onMounted(() => {
-  const q = route.query.q;
-  if (typeof q === 'string' && q.trim()) {
-    search.value = q.trim();
-  }
+  syncFromRoute();
+  void loadCatalog();
+});
+
+onActivated(() => {
+  syncFromRoute();
   void loadCatalog();
 });
 </script>

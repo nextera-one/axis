@@ -57,7 +57,8 @@
       v-model="leftDrawerOpen"
       show-if-above
       bordered
-      :breakpoint="900"
+      behavior="desktop"
+      :breakpoint="0"
       :width="240"
       class="studio-drawer"
     >
@@ -94,16 +95,18 @@
             size="18px"
             :color="conn.connected ? 'positive' : 'negative'"
           />
-          <span>{{ conn.connected ? 'Connected' : 'Disconnected' }}</span>
+          <span>{{ conn.connected ? "Connected" : "Disconnected" }}</span>
         </div>
       </div>
     </q-drawer>
 
     <q-page-container>
       <q-page class="studio-page">
-        <router-view v-slot="{ Component, route: r }">
+        <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
-            <component :is="Component" :key="r.path" />
+            <keep-alive>
+              <component :is="Component" />
+            </keep-alive>
           </transition>
         </router-view>
       </q-page>
@@ -112,26 +115,29 @@
     <q-footer class="studio-footer">
       <div class="studio-status-item">
         <q-icon name="speed" size="14px" />
-        <span>Latency: {{ conn.latencyMs != null ? conn.latencyMs + 'ms' : '—' }}</span>
+        <span
+          >Latency:
+          {{ conn.latencyMs != null ? conn.latencyMs + "ms" : "—" }}</span
+        >
       </div>
       <div class="studio-status-item studio-status-item--primary">
         <q-icon name="straighten" size="14px" />
-        <span>Frame: {{ conn.connected ? 'Secured' : 'N/A' }}</span>
+        <span>Frame: {{ conn.connected ? "Secured" : "N/A" }}</span>
       </div>
       <div class="studio-status-item">
         <q-icon name="verified_user" size="14px" />
-        <span>Valid: {{ conn.connected ? '100%' : '—' }}</span>
+        <span>Valid: {{ conn.connected ? "100%" : "—" }}</span>
       </div>
       <div class="studio-status-item">
         <q-icon name="terminal" size="14px" />
-        <span>Result: {{ conn.connected ? 'Success' : 'N/A' }}</span>
+        <span>Result: {{ conn.connected ? "Success" : "N/A" }}</span>
       </div>
       <div class="studio-live-indicator">
         <span
           class="studio-live-dot"
           :class="{ 'studio-live-dot--active': conn.connected }"
         />
-        {{ conn.connected ? 'LIVE_PROTOCOL_FEED' : 'DISCONNECTED' }}
+        {{ conn.connected ? "LIVE_PROTOCOL_FEED" : "DISCONNECTED" }}
       </div>
     </q-footer>
 
@@ -167,7 +173,13 @@
                     ? 'cancel'
                     : 'help_outline'
               "
-              :color="conn.connected ? 'positive' : conn.lastError ? 'negative' : 'grey'"
+              :color="
+                conn.connected
+                  ? 'positive'
+                  : conn.lastError
+                    ? 'negative'
+                    : 'grey'
+              "
               size="16px"
             />
             <span>{{ conn.statusLabel }}</span>
@@ -199,11 +211,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useConnectionStore } from 'stores/connection';
-import AxisLogo from 'src/components/AxisLogo.vue';
+import { ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import { useConnectionStore } from "stores/connection";
+import AxisLogo from "src/components/AxisLogo.vue";
 
 const $q = useQuasar();
 const route = useRoute();
@@ -213,13 +225,13 @@ const conn = useConnectionStore();
 const showConn = ref(false);
 const leftDrawerOpen = ref(true);
 const tempUrl = ref(conn.nodeUrl);
-const searchQuery = ref('');
+const searchQuery = ref("");
 
 const navItems = [
-  { label: 'Sender', icon: 'send', to: '/sender' },
-  { label: 'Registry', icon: 'database', to: '/registry' },
-  { label: 'Auth', icon: 'key', to: '/auth' },
-  { label: 'History', icon: 'history', to: '/history' },
+  { label: "Sender", icon: "send", to: "/sender" },
+  { label: "Registry", icon: "database", to: "/registry" },
+  { label: "Auth", icon: "key", to: "/auth" },
+  { label: "History", icon: "history", to: "/history" },
 ];
 
 function openConnDialog() {
@@ -230,13 +242,13 @@ function openConnDialog() {
 function searchProtocol() {
   const q = searchQuery.value.trim();
   if (!q) return;
-  router.push({ path: '/registry', query: { q } });
-  searchQuery.value = '';
+  router.push({ path: "/registry", query: { q } });
+  searchQuery.value = "";
 }
 
 function toggleDark() {
   $q.dark.toggle();
-  localStorage.setItem('axis_dark_mode', String($q.dark.isActive));
+  localStorage.setItem("axis_dark_mode", String($q.dark.isActive));
 }
 
 async function testConn() {
