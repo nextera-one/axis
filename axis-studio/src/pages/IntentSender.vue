@@ -17,6 +17,14 @@
           @filter="filterIntents"
         />
 
+        <q-input
+          v-model="handlerName"
+          outlined
+          dense
+          class="sender-handler-input"
+          placeholder="handler"
+        />
+
         <q-btn
           unelevated
           color="primary"
@@ -314,6 +322,7 @@ const INTENT_UPLOAD_SPECS: Record<string, UploadSpec> = {
 };
 
 const intent = ref<string>("catalog.list");
+const handlerName = ref<string>("");
 const bodyText = ref("{\n  \n}");
 const selectedFile = ref<File | null>(null);
 const sending = ref(false);
@@ -360,16 +369,68 @@ onMounted(async () => {
 
   const qi = route.query.intent as string | undefined;
   if (qi) intent.value = qi;
+  const qh = route.query.handlerName || route.query.handler;
+  if (typeof qh === "string") handlerName.value = qh;
 });
 
 onActivated(() => {
   const qi = route.query.intent as string | undefined;
   if (qi && qi !== intent.value) intent.value = qi;
+  const qh = route.query.handlerName || route.query.handler;
+  if (typeof qh === "string" && qh !== handlerName.value) {
+    handlerName.value = qh;
+  }
 });
 
-const selectedCatalogEntry = computed(() => {
+function splitIntentReference(value: string): {
+  handlerName?: string;
+  intent: string;
+} {
+  const normalized = value.trim();
+  const separatorIndex = normalized.indexOf("...");
+  if (
+    separatorIndex <= 0 ||
+    separatorIndex + 3 >= normalized.length
+  ) {
+    return { intent: normalized };
+  }
+
+  return {
+    handlerName: normalized.slice(0, separatorIndex),
+    intent: normalized.slice(separatorIndex + 3),
+  };
+}
+
+function resolveCatalogIntent(value: string): string {
+  const parsed = splitIntentReference(value);
+  const handler = handlerName.value.trim() || parsed.handlerName?.trim() || "";
+  const actionIntent = parsed.intent;
+  const handlerAction =
+    handler && !actionIntent.startsWith(`${handler}.`)
+      ? `${handler}.${actionIntent}`
+      : actionIntent;
+  const candidates = [
+    value,
+    actionIntent,
+    handlerAction,
+  ].filter((candidate, index, values) => {
+    return candidate && values.indexOf(candidate) === index;
+  });
+
   return (
-    catalogEntries.value.find((entry) => entry.intent === intent.value) || null
+    candidates.find((candidate) =>
+      catalogEntries.value.some((entry) => entry.intent === candidate),
+    ) ||
+    handlerAction ||
+    actionIntent ||
+    value
+  );
+}
+
+const selectedCatalogEntry = computed(() => {
+  const catalogIntent = resolveCatalogIntent(intent.value);
+  return (
+    catalogEntries.value.find((entry) => entry.intent === catalogIntent) || null
   );
 });
 
@@ -480,6 +541,10 @@ watch(intent, (nextIntent) => {
   applyIntentDefaults(nextIntent);
 });
 
+watch(handlerName, () => {
+  applyIntentDefaults(intent.value);
+});
+
 const bodyByteSize = computed(() => {
   const bytes = new TextEncoder().encode(bodyText.value).length;
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`;
@@ -510,6 +575,7 @@ const activeSnapshot = computed(() => {
 
 function clearForm() {
   intent.value = "";
+  handlerName.value = "";
   bodyText.value = "{\n  \n}";
   selectedFile.value = null;
   lastResult.value = null;
@@ -589,6 +655,9 @@ async function send() {
     }
 
     lastResult.value = await sendIntent(intent.value, payload, undefined, {
+      ...(handlerName.value.trim()
+        ? { handlerName: handlerName.value.trim() }
+        : {}),
       metadata: selectedCatalogEntry.value,
     });
     viewerTarget.value = "response";

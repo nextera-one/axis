@@ -2007,12 +2007,13 @@ body.body--light .ax-bento-card {
 
 .sender-intent-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr minmax(140px, 200px) auto auto;
   gap: 8px;
   align-items: center;
 }
 
-.sender-intent-select {
+.sender-intent-select,
+.sender-handler-input {
   min-width: 0;
 }
 

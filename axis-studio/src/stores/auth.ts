@@ -23,6 +23,9 @@ const AXIS_TEST_PRIVATE_KEY_HEX =
   '5ff6cfe25032c3f69cd737157afaa19982bfdb0e2995ee6ecb3711e8814b69d7';
 const AXIS_TEST_PUBLIC_KEY_HEX =
   '82831fc53a4d6ece619023615022caba19ac4dd4ef3c1f1b34a1ca097e6151d9';
+const AXIS_TEST_ACTOR_ID =
+  import.meta.env.VITE_AXIS_ACTOR_ID ||
+  'd612fe8d-5938-482c-8139-6f7c67b6e1af';
 
 function defaultKeys(): KeyEntry[] {
   return [
@@ -59,7 +62,9 @@ export const useAuthStore = defineStore('auth', () => {
   const activeKeyId = ref<string | null>(
     localStorage.getItem('axis_active_key') || keys.value[0]?.id || null,
   );
-  const actorId = ref(localStorage.getItem('axis_actor_id') || '');
+  const actorId = ref(
+    localStorage.getItem('axis_actor_id') || AXIS_TEST_ACTOR_ID,
+  );
   const capsuleId = ref(localStorage.getItem('axis_capsule_id') || '');
   const bearerToken = ref(
     localStorage.getItem('axis_bearer_token') || 'devjwt1010',

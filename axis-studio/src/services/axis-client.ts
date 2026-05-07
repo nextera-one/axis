@@ -10,19 +10,25 @@ import {
   FrameFlags,
   ProofType,
   TLVType,
+  buildIntentReference,
   bytesToUuid,
   decodeVarint,
   decodeTLVs,
   encodeTLVs,
   generateNonce,
   generatePid,
+  parseIntentReference,
   uuidToBytes,
 } from "@nextera.one/axis-client-sdk/browser";
 import * as ed from "@noble/ed25519";
 import { sha256 } from "@noble/hashes/sha256";
 import { sha512 } from "@noble/hashes/sha512";
 
-import { useAuthStore, type AuthenticatedUser } from "stores/auth";
+import {
+  useAuthStore,
+  type AuthenticatedUser,
+  type KeyEntry,
+} from "stores/auth";
 import { AxisMediaTypes } from "./axis-media-types";
 import { useConnectionStore } from "stores/connection";
 import { useHistoryStore } from "stores/history";
@@ -367,6 +373,31 @@ function safeStringify(value: unknown): string {
   }
 }
 
+function sortCanonical(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return value.map(sortCanonical);
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(record).sort()) {
+      const sortedValue = sortCanonical(record[key]);
+      if (sortedValue !== undefined) {
+        sorted[key] = sortedValue;
+      }
+    }
+    return sorted;
+  }
+  return value;
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(sortCanonical(value)) ?? "";
+}
+
 function tryDecodeText(bytes: Uint8Array): string | null {
   try {
     return textDecoder.decode(bytes);
@@ -408,6 +439,35 @@ function safeActorIdToBytes(input: string | null | undefined): Uint8Array {
       return EMPTY_16;
     }
   }
+}
+
+function resolveFrameActorId(input: string | null | undefined): string {
+  return input?.trim() || bytesToUuid(EMPTY_16);
+}
+
+function resolveMetadataIntent(intent: string, handlerName?: string): string {
+  const requestIntent = buildIntentReference(intent, handlerName);
+  const parsed = parseIntentReference(requestIntent);
+  const actionIntent = parsed.intent;
+  const handler = parsed.handlerName?.trim();
+  const handlerAction =
+    handler && !actionIntent.startsWith(`${handler}.`)
+      ? `${handler}.${actionIntent}`
+      : actionIntent;
+  const candidates = [
+    intent,
+    requestIntent,
+    actionIntent,
+    handlerAction,
+  ].filter((value, index, values) => value && values.indexOf(value) === index);
+
+  for (const candidate of candidates) {
+    if (getCatalogEntry(candidate)) {
+      return candidate;
+    }
+  }
+
+  return handlerAction || actionIntent || intent;
 }
 
 function normalizeFieldKey(key: string): string {
@@ -1526,6 +1586,7 @@ function decodeResponseBuffer(
 /* ── main send ───────────────────────────────────────────── */
 
 interface SendIntentOptions {
+  handlerName?: string;
   recordHistory?: boolean;
   forcePlainIntent?: boolean;
   skipCapsuleBootstrap?: boolean;
@@ -1634,9 +1695,19 @@ function requiresCapsuleProof(
   intent: string,
   metadata: IntentCatalogEntry | null | undefined,
 ): boolean {
+  const parsed = parseIntentReference(intent);
+  const handler = parsed.handlerName?.trim();
+  const handlerAction =
+    handler && !parsed.intent.startsWith(`${handler}.`)
+      ? `${handler}.${parsed.intent}`
+      : parsed.intent;
+
   return (
     requiresProof(metadata, "CAPSULE") ||
-    (!metadata && FALLBACK_CAPSULE_INTENTS.has(intent))
+    (!metadata &&
+      (FALLBACK_CAPSULE_INTENTS.has(intent) ||
+        FALLBACK_CAPSULE_INTENTS.has(parsed.intent) ||
+        FALLBACK_CAPSULE_INTENTS.has(handlerAction)))
   );
 }
 
@@ -1667,6 +1738,8 @@ async function issueCapsuleForIntent(
   targetIntent: string,
   targetUrl: string,
   headers: Record<string, string>,
+  activeKey: KeyEntry | null,
+  actorId: string,
 ): Promise<unknown> {
   const capsuleIssueMeta = getCatalogEntry("capsule.issue");
   const capsuleIssueFields = getCatalogBodyFields(capsuleIssueMeta);
@@ -1695,11 +1768,60 @@ async function issueCapsuleForIntent(
     );
   }
 
-  const proof = toCapsuleProof(res.response);
+  const proof = await signCapsuleProof(
+    res.response,
+    targetIntent,
+    actorId,
+    activeKey,
+  );
   if (!extractCapsuleId(proof)) {
     throw new Error("capsule.issue response did not include a capsule id");
   }
   return proof;
+}
+
+async function signCapsuleProof(
+  source: unknown,
+  targetIntent: string,
+  actorId: string,
+  activeKey: KeyEntry | null,
+): Promise<unknown> {
+  const capsule = toCapsuleProof(source);
+  if (!capsule || typeof capsule !== "object") {
+    return capsule;
+  }
+
+  const record = capsule as Record<string, unknown>;
+  const payloadSource = record.payload as Record<string, unknown> | undefined;
+  const payload = {
+    ...(payloadSource ?? {}),
+    v: payloadSource?.v ?? 1,
+    capsuleId: extractCapsuleId(capsule),
+    actorId,
+    intent: targetIntent,
+  };
+
+  if (!payload.capsuleId || !activeKey?.privateKeyHex) {
+    return {
+      ...record,
+      payload,
+    };
+  }
+
+  const signature = await ed.signAsync(
+    textEncoder.encode(canonicalJson(payload)),
+    parsePrivateKeyHex(activeKey.privateKeyHex),
+  );
+
+  return {
+    ...record,
+    payload,
+    sig: {
+      alg: "EdDSA",
+      kid: activeKey.id || "axis-studio-client",
+      value: base64UrlEncode(signature),
+    },
+  };
 }
 
 async function resolveCapsuleProof(
@@ -1708,20 +1830,22 @@ async function resolveCapsuleProof(
   metadata: IntentCatalogEntry | null | undefined,
   options: SendIntentOptions | undefined,
   headers: Record<string, string>,
+  activeKey: KeyEntry | null,
+  actorId: string,
 ): Promise<unknown | undefined> {
   if (options?.capsule === false || options?.skipAutoCapsule) {
     return undefined;
   }
 
   if (options?.capsule) {
-    return toCapsuleProof(options.capsule);
+    return signCapsuleProof(options.capsule, intent, actorId, activeKey);
   }
 
   if (!requiresCapsuleProof(intent, metadata)) {
     return undefined;
   }
 
-  return issueCapsuleForIntent(intent, targetUrl, headers);
+  return issueCapsuleForIntent(intent, targetUrl, headers, activeKey, actorId);
 }
 
 export async function loginWithActiveKey(
@@ -1843,10 +1967,14 @@ export async function sendIntent(
 
   const pid = generatePid();
   const nonce = generateNonce(32);
-  const actorId = safeActorIdToBytes(auth.actorId);
+  const activeKey = auth.getActiveKey();
+  const frameActorId = resolveFrameActorId(auth.actorId);
+  const actorId = safeActorIdToBytes(frameActorId);
+  const requestIntent = buildIntentReference(intent, options?.handlerName);
+  const metadataIntent = resolveMetadataIntent(intent, options?.handlerName);
   const targetUrl = (nodeUrlOverride || conn.nodeUrl).replace(/\/+$/, "");
   const { url: requestUrl, proxyTarget } = resolveRequestUrl(targetUrl);
-  const metadata = options?.metadata ?? getCatalogEntry(intent) ?? null;
+  const metadata = options?.metadata ?? getCatalogEntry(metadataIntent) ?? null;
   const baseHeaders = withDefaultAuthHeaders(options?.headers);
   const secureAliasMode =
     auth.secureIntentAliasMode === true && options?.forcePlainIntent !== true;
@@ -1856,7 +1984,7 @@ export async function sendIntent(
 
   if (
     secureAliasMode &&
-    !isPassthroughIntent(intent) &&
+    !isPassthroughIntent(requestIntent) &&
     !options?.skipCapsuleBootstrap &&
     (!capsuleId || !intentSecret)
   ) {
@@ -1866,11 +1994,13 @@ export async function sendIntent(
   }
 
   let capsuleProof = await resolveCapsuleProof(
-    intent,
+    requestIntent,
     targetUrl,
     metadata,
     options,
     baseHeaders,
+    activeKey,
+    frameActorId,
   );
 
   const proofCapsuleId = extractCapsuleId(capsuleProof);
@@ -1880,13 +2010,13 @@ export async function sendIntent(
     hasCapsule && proofCapsuleId
       ? capsuleProofRefToBytes(proofCapsuleId)
       : EMPTY_16;
-  const wireIntent = await resolveWireIntent(intent, {
+  const wireIntent = await resolveWireIntent(requestIntent, {
     secureAliasMode,
     capsuleId,
     intentSecret,
     forcePlainIntent: options?.forcePlainIntent,
   });
-  const encodedBody = encodeIntentBody(intent, body, {
+  const encodedBody = encodeIntentBody(metadataIntent, body, {
     metadata,
     bodyEncoding: options?.bodyEncoding,
   });
@@ -1911,8 +2041,7 @@ export async function sendIntent(
     );
   }
 
-  const activeKey = auth.getActiveKey();
-  const signFrame = shouldSignFrame(intent, metadata, hasCapsule);
+  const signFrame = shouldSignFrame(requestIntent, metadata, hasCapsule);
   let frameBytes: Uint8Array;
 
   if (signFrame && activeKey?.privateKeyHex) {
@@ -1935,7 +2064,7 @@ export async function sendIntent(
   }
   const requestSnapshot = buildRequestSnapshot(
     frameBytes,
-    intent,
+    requestIntent,
     targetUrl,
     body,
     requestHeaders,
@@ -2000,7 +2129,7 @@ export async function sendIntent(
     history.push({
       id: bytesToHex(pid),
       ts: Date.now(),
-      intent,
+      intent: requestIntent,
       requestBody: safeStringify(sanitizeHistoryValue(body)),
       responseBody: safeStringify(result.response),
       responseEffect: result.effect,
